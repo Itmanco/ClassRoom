@@ -49,7 +49,8 @@ export default {
       // 以下のリストは初期データとして使用される / The following lists are used for initial data
       c1List: [],
       c2List: [],
-      c3List: []
+      c3List: [],
+      c4List: []
     };
   },
   async created() {
@@ -117,9 +118,86 @@ export default {
       ];
 
       // c1, c2, c3リストも初期データとして定義されている / c1, c2, and c3 lists are also defined as initial data
-      this.c1List = [ /* ... */ ];
-      this.c2List = [ /* ... */ ];
-      this.c3List = [ /* ... */ ];
+      this.c1List = [
+        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 }, 
+        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 }, 
+        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
+        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },  
+        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }
+      ];
+      this.c2List = [
+        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },
+        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
+        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }, 
+        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 }, 
+        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 }
+      ];
+      this.c3List = [
+        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },  
+        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },  
+        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
+        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+
+        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 }
+      ];
+
+      this.c4List = [
+        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
+        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },        
+        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },        
+        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 }
+      ];
 
       // 新しく初期化されたリストからallStudentsMapを作成 / Populate allStudentsMap from this newly initialized list
       this.masterStudentList.forEach(student => {

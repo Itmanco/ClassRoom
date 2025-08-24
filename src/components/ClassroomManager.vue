@@ -6,14 +6,18 @@
         v-for="tab in tabs"
         :key="tab.id"
         @click="selectTab(tab.id)"
-        :class="{ 'active-tab': tab.id === activeTabId }"
+        :class="{ 'active-tab': tab.id === activeTabId, 'temporary-tab': tab.id === 'temp-randomized' }"
         :title="tab.title + ' (Created: ' + tab.creationDate + ')'"
       >
         {{ tab.title }}
       </button>
-      <button @click="randomizeCurrentList" >再編成する</button>
-      <button @click="saveAsNewTab" :disabled="!currentTab">新しい組織を決定する</button>
     </div>
+      <div class="tabs-container action-buttons">
+        <button @click="randomizeCurrentList" >再編成する</button>
+        <button @click="saveAsNewTab" :disabled="!currentTab">選択内容を保存</button> 
+      </div>
+           
+    
 
     <MyClassroom
       :desks="currentDeskLayout"
@@ -23,13 +27,18 @@
     <div v-else class="loading-message">
       教室のレイアウトを読み込み中．．．
     </div>
+    <div class="tabs-container">
+      <button @click="downloadCurrentTab" :disabled="!currentTab">Excelにダウンロード</button>
+    </div>
+    
   </div>
 </template>
 
 <script>
 import MyClassroom from './MyClassroom.vue';
 import { db, auth, authReadyPromise, appId } from '../firebase-init';
-import { collection, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore'; // Added getDoc
+import { collection, doc, setDoc, onSnapshot, getDoc, getDocs } from 'firebase/firestore'; // Added getDocs
+import * as XLSX from 'xlsx-js-style';
 
 export default {
   name: 'ClassroomManager',
@@ -47,10 +56,10 @@ export default {
       initialLoadComplete: false, // 初期データロードが完了したかを示すフラグ / Flag to indicate if the initial data load is complete
       masterListSaved: false, // マスターリストが最初に保存されたかどうかを示すフラグ / Flag to indicate if master list has been saved initially
       // 以下のリストは初期データとして使用される / The following lists are used for initial data
-      c1List: [],
-      c2List: [],
-      c3List: [],
-      c4List: []
+      c1: Object,
+      c2: Object,
+      c3: Object,
+      c4: Object
     };
   },
   async created() {
@@ -93,121 +102,217 @@ export default {
   methods: {
     /**
      * デフォルトのマスター生徒リストを初期化する。 / Initializes the default master student list.
-     * このデータは、後でFirestoreに永続化される。 / This data will then be persisted to Firestore in a separate collection.
+     * `isActive`プロパティを追加しました。 / Added `isActive` property.
      */
     initializeDefaultMasterStudentList() {
       this.masterStudentList = [
-        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
-        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
-        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
-        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
-        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
-        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
-        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
-        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
-        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
-        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
-        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
-        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },
-        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },         
-        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
-        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
-        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },         
-        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },         
-        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },       
+        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2, isActive: true },
+        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1, isActive: true },
+        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2, isActive: true },
+        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1, isActive: true },
+        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2, isActive: true },
+        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2, isActive: true },
+        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1, isActive: true },
+        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1, isActive: true },
+        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1, isActive: true },
+        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1, isActive: true },
+        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2, isActive: true },
+        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2, isActive: false },
+        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1, isActive: true }, 
+        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1, isActive: true },
+        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2, isActive: true },
+        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1, isActive: true }, 
+        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1, isActive: true }, 
+        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1, isActive: true }, 
       ];
 
-      // c1, c2, c3リストも初期データとして定義されている / c1, c2, and c3 lists are also defined as initial data
-      this.c1List = [
-        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
-        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
-        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
-        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
-        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
-        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
-        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 }, 
-        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
-        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
-        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
-        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 }, 
-        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
-        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
-        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
-        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
-        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
-        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },  
-        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }
-      ];
-      this.c2List = [
-        { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },
-        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
-        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
-        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
-        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
-        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
-        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
-        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
-        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
-        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
-        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }, 
-        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 }, 
-        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
-        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
-        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
-        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
-        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
-        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 }
-      ];
-      this.c3List = [
-        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
-        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },  
-        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
-        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },  
-        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
-        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
-        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
-        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
-        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
-        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
-        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
-        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+            // c1, c2, c3リストも初期データとして定義されている / c1, c2, and c3 lists are also defined as initial data
+      this.c1 = {
+        creationDate: "2025年5月22日",
+        studentAssignments: [        
+        { studentId: 16, deskNumber: 1 },
+        { studentId: 3, deskNumber: 1 },
+        { studentId: 15, deskNumber: 2 },
+        { studentId: 7, deskNumber: 2 },
+        { studentId: 10, deskNumber: 3 },
+        { studentId: 5, deskNumber: 3 },
+        { studentId: 14, deskNumber: 4 },
+        { studentId: 11, deskNumber: 4 },
+        { studentId: 19, deskNumber: 5 },
+        { studentId: 18, deskNumber: 5 },
+        { studentId: 17, deskNumber: 6 },
+        { studentId: 6, deskNumber: 6 },
+        { studentId: 8, deskNumber: 7 },
+        { studentId: 9, deskNumber: 7 },
+        { studentId: 2, deskNumber: 8 },
+        { studentId: 4, deskNumber: 8 },
+        { studentId: 13, deskNumber: 9 },
+        { studentId: 12, deskNumber: 9 }
+        ],
+        title: "一第"
+      };
 
-        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
-        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
-        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
-        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
-        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 }
-      ];
+        // { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+        // { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+        // { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+        // { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+        // { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+        // { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+        // { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 }, 
+        // { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+        // { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+        // { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+        // { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 }, 
+        // { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+        // { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
+        // { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+        // { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+        // { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+        // { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },  
+        // { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }
+      
+      this.c2 = {
+        creationDate: "2025年7月7日",
+        studentAssignments: [
+          { studentId: 13, deskNumber: 1 },
+          { studentId: 10, deskNumber: 1 },
+          { studentId: 8, deskNumber: 2 },
+          { studentId: 6, deskNumber: 2 },
+          { studentId: 11, deskNumber: 3 },
+          { studentId: 19, deskNumber: 3 },
+          { studentId: 9, deskNumber: 4 },
+          { studentId: 18, deskNumber: 4 },
+          { studentId: 3, deskNumber: 5 },
+          { studentId: 17, deskNumber: 5 },
+          { studentId: 12, deskNumber: 6 },
+          { studentId: 2, deskNumber: 6 },
+          { studentId: 4, deskNumber: 7 },
+          { studentId: 5, deskNumber: 7 },
+          { studentId: 15, deskNumber: 8 },
+          { studentId: 14, deskNumber: 8 },
+          { studentId: 16, deskNumber: 9 },
+          { studentId: 7, deskNumber: 9 }
+        ],
+        title: "二第"
+      };
+      // this.c2List = [
+      //   { id: 13, name: "堀口", hiragana: "ほりぐち", gender_id: 2 },
+      //   { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+      //   { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },
+      //   { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+      //   { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+      //   { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+      //   { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+      //   { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+      //   { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+      //   { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+      //   { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 }, 
+      //   { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 }, 
+      //   { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+      //   { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+      //   { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+      //   { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+      //   { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+      //   { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 }
+      // ];
 
-      this.c4List = [
-        { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
-        { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
-        { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
-        { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
-        { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
-        { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
-        { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
-        { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
-        { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
-        { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
-        { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
-        { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },        
-        { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
-        { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
-        { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
-        { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },        
-        { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 }
-      ];
+      this.c3 = {
+        creationDate: "2025年7月30日",
+        studentAssignments: [
+          { studentId: 4, deskNumber: 1 },
+          { studentId: 8, deskNumber: 1 },
+          { studentId: 5, deskNumber: 2 },
+          { studentId: 15, deskNumber: 2 },
+          { studentId: 17, deskNumber: 3 },
+          { studentId: 2, deskNumber: 3 },
+          { studentId: 18, deskNumber: 4 },
+          { studentId: 10, deskNumber: 4 },
+          { studentId: 7, deskNumber: 5 },
+          { studentId: 12, deskNumber: 5 },
+          { studentId: 11, deskNumber: 6 },
+          { studentId: 9, deskNumber: 6 },
+          { studentId: 6, deskNumber: 7 },
+          { studentId: 14, deskNumber: 7 },
+          { studentId: 3, deskNumber: 8 },
+          { studentId: 19, deskNumber: 8 },
+          { studentId: 16, deskNumber: 9 },
+        ],
+        title: "三第"
+      };
 
-      // 新しく初期化されたリストからallStudentsMapを作成 / Populate allStudentsMap from this newly initialized list
+      // this.c3List = [
+      //   { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+      //   { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },  
+      //   { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+      //   { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },  
+      //   { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+      //   { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+      //   { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+      //   { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+      //   { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+      //   { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
+      //   { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+      //   { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 },
+
+      //   { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },
+      //   { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+      //   { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+      //   { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+      //   { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 }
+      // ];
+
+      this.c4 = {
+        creationDate: "2025年8月22日",
+        studentAssignments: [
+          { studentId: 12, deskNumber: 1 },
+          { studentId: 17, deskNumber: 1 },
+          { studentId: 19, deskNumber: 2 },
+          { studentId: 10, deskNumber: 2 },
+          { studentId: 4, deskNumber: 3 },
+          { studentId: 18, deskNumber: 3 },
+          { studentId: 16, deskNumber: 4 },
+          { studentId: 2, deskNumber: 4 },
+          { studentId: 11, deskNumber: 5 },
+          { studentId: 5, deskNumber: 5 },
+          { studentId: 14, deskNumber: 6 },
+          { studentId: 8, deskNumber: 6 },
+          { studentId: 15, deskNumber: 7 },
+          { studentId: 3, deskNumber: 7 },
+          { studentId: 7, deskNumber: 8 },
+          { studentId: 6, deskNumber: 8 },
+          { studentId: 9, deskNumber: 9 },
+        ],
+        title: "四第"
+      };
+
+      // this.c4List = [
+      //   { id: 12, name: "樋口", hiragana: "ひぐち", gender_id: 2 },
+      //   { id: 17, name: "宮澤", hiragana: "みやざわ", gender_id: 1 },
+      //   { id: 19, name: "山田", hiragana: "やまだ", gender_id: 1 },
+      //   { id: 10, name: "塩田", hiragana: "しおた", gender_id: 1 },
+      //   { id: 4, name: "岡田", hiragana: "おかだ", gender_id: 2 },
+      //   { id: 18, name: "山角", hiragana: "やまかど", gender_id: 1 },
+      //   { id: 16, name: "水上", hiragana: "みずかみ", gender_id: 2 },
+      //   { id: 2, name: "熱田", hiragana: "あつた", gender_id: 2 },
+      //   { id: 11, name: "新岡", hiragana: "にいおか", gender_id: 1 },
+      //   { id: 5, name: "河井", hiragana: "かわい", gender_id: 1 },
+      //   { id: 14, name: "松井", hiragana: "まつい", gender_id: 1 },
+      //   { id: 8, name: "MOTTA", hiragana: "もった", gender_id: 1 },        
+      //   { id: 15, name: "松川", hiragana: "まつかわ", gender_id: 1 },
+      //   { id: 3, name: "大塚", hiragana: "おおつか", gender_id: 1 },
+      //   { id: 7, name: "川田", hiragana: "かわた", gender_id: 2 },
+      //   { id: 6, name: "川口", hiragana: "かわぐち", gender_id: 2 },        
+      //   { id: 9, name: "里舘", hiragana: "さとだて", gender_id: 1 }
+      // ];
+
       this.masterStudentList.forEach(student => {
         this.allStudentsMap.set(student.id, student);
       });
     },
 
     /**
-     * Firestoreに初期のmasterStudentListを永続化するワンタイムメソッド。 / One-time method to persist the initial masterStudentList to Firestore.
-     * 各生徒が/studentsコレクションのドキュメントになる。 / Each student becomes a document in the /students collection.
+     * Firestoreに初期のmasterStudentListと事前定義されたレイアウトを永続化する。 / Persists the initial master student list and predefined layouts to Firestore.
+     * `isActive`プロパティもFirestoreに保存されます。 / The `isActive` property is now also saved to Firestore.
      */
     async saveMasterStudentListInit() {
       if (!auth.currentUser || !this.isFirestoreReady) {
@@ -223,16 +328,37 @@ export default {
 
       try {
         for (const student of this.masterStudentList) {
-          // student.idをドキュメントIDとして使用する / Use student.id as the document ID
-          await setDoc(doc(studentsCollectionRef, String(student.id)), { // IDを文字列に変換 / Convert ID to string
+          await setDoc(doc(studentsCollectionRef, String(student.id)), {
             name: student.name,
             hiragana: student.hiragana,
-            gender_id: student.gender_id
+            gender_id: student.gender_id,
+            isActive: student.isActive // 新しいプロパティを追加しました / Added the new property
           });
         }
         console.log("Master student list successfully saved to /students collection.");
+
+        // `classrooms`コレクションが空の場合、cListを保存する / If the `classrooms` collection is empty, save the cLists
+        const classroomsCollectionRef = collection(db, `artifacts/${appId}/classrooms`);
+        const classroomsSnapshot = await getDocs(classroomsCollectionRef);
+        
+        if (classroomsSnapshot.empty) {
+            console.log("No classroom tabs found. Creating initial layouts from cLists.");
+            
+            const initialLists = [
+                { title: this.c1.title, studentAssignments: this.c1.studentAssignments, creationDate:this.c1.creationDate },
+                { title: this.c2.title, studentAssignments: this.c2.studentAssignments, creationDate:this.c2.creationDate },
+                { title: this.c3.title, studentAssignments: this.c3.studentAssignments, creationDate:this.c3.creationDate },
+                { title: this.c4.title, studentAssignments: this.c4.studentAssignments, creationDate:this.c4.creationDate }
+            ];
+
+            for (const { title, list } of initialLists) {
+                await this.addTab(title, list, true);
+            }
+            console.log("Initial cLists successfully saved as tabs.");
+        }
+
         alert("マスター学生リストがFirestoreに保存されました。");
-        this.masterListSaved = true; // 保存済みとマークする / Mark as saved
+        this.masterListSaved = true;
       } catch (e) {
         console.error("Error saving master student list:", e);
         alert("マスター学生リストの保存中にエラーが発生しました。");
@@ -259,7 +385,7 @@ export default {
             tempStudentMap.set(studentData.id, studentData);
           });
           this.masterStudentList = loadedStudents;
-          this.allStudentsMap = tempStudentMap; // ルックアップ用にマップを更新 / Update the map for lookups
+          this.allStudentsMap = tempStudentMap;
           console.log("Master student list loaded from Firestore.");
           if (loadedStudents.length > 0) {
             this.masterListSaved = true;
@@ -267,9 +393,8 @@ export default {
         }, (error) => {
           console.error("Error listening to master student list from Firestore:", error);
         });
-
       } catch (e) {
-        console.error("Error setting up master student list listener:", e);
+        console.error("Error setting up Firestore listener:", e);
       }
     },
 
@@ -300,13 +425,11 @@ export default {
         students: []
       }));
 
-      // deskNumberを修正するためにstudentListの作業用コピーを作成する / Create a working copy of studentList to modify deskNumber
       const studentsToAssign = studentList.map(s => ({ ...s })); 
       
-      // ステップ1: 事前に割り当てられた生徒を座席番号ごとにグループ化して配置する / Step 1: Place pre-assigned students first, grouped by desk number.
       const preAssignedStudentsMap = new Map();
       studentsToAssign.forEach(student => {
-        if (student.deskNumber && !student.isEmpty) { // 空のプレースホルダーではないことを確認する / Ensure it's not an empty placeholder
+        if (student.deskNumber && !student.isEmpty) {
           if (!preAssignedStudentsMap.has(student.deskNumber)) {
             preAssignedStudentsMap.set(student.deskNumber, []);
           }
@@ -314,14 +437,11 @@ export default {
         }
       });
 
-      // 配置された生徒を追跡する / Track students that have been placed
       const placedStudentIds = new Set();
       
-      // 事前に割り当てられた生徒を座席配列に配置する / Place pre-assigned students into the desks array
       preAssignedStudentsMap.forEach((studentsAtDesk, deskNumber) => {
-        const deskIndex = deskNumber - 1; // 座席番号を配列インデックスに変換 / Convert desk number to array index
+        const deskIndex = deskNumber - 1;
         if (desks[deskIndex]) {
-          // 座席に最大2人の生徒を配置する / Place up to 2 students at the desk
           for (let k = 0; k < Math.min(studentsAtDesk.length, 2); k++) {
             desks[deskIndex].students.push(studentsAtDesk[k]);
             placedStudentIds.add(studentsAtDesk[k].id);
@@ -329,26 +449,22 @@ export default {
         }
       });
 
-      // ステップ2: まだ配置されていないすべての生徒を取得する / Step 2: Get all students who have not been placed yet (from original list).
       const unassignedStudents = studentsToAssign.filter(s => !placedStudentIds.has(s.id));
       let unassignedIndex = 0;
 
-      // ステップ3: 残りの空のスロットを未割り当ての生徒で埋める / Step 3: Fill any remaining empty slots with unassigned students.
       desks.forEach(desk => {
         while (desk.students.length < 2) {
           if (unassignedIndex < unassignedStudents.length) {
             const student = unassignedStudents[unassignedIndex++];
-            student.deskNumber = parseInt(desk.name); // 未割り当ての生徒に座席番号を割り当てる / Assign desk number to the unassigned student
+            student.deskNumber = parseInt(desk.name);
             desk.students.push(student);
-            placedStudentIds.add(student.id); // 配置済みとマークする / Mark as placed
+            placedStudentIds.add(student.id);
           } else {
-            // これ以上生徒がいない場合は、空のプレースホルダーを追加する / Add empty placeholder if there are no more students
             desk.students.push({ ...this.emptyStudentPlaceholder, id: `empty-${desk.name}-${desk.students.length + 1}` });
           }
         }
       });
 
-      // ステップ4: 保存用の最終的な更新済みリストを作成する / Step 4: Create the final updated list for saving.
       const studentsWithDeskNumbers = desks.flatMap(desk => 
         desk.students.filter(s => !s.isEmpty)
       );
@@ -370,10 +486,8 @@ export default {
       const newTabId = this.tabs.length > 0 ? Math.max(...this.tabs.map(t => t.id)) + 1 : 1;
       const creationDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
       
-      // 座席を割り当て、座席番号を持つ更新された生徒のリストを取得する / Assign desks and get the updated list of students with desk numbers
       const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(studentsArray);
 
-      // Firestore用にstudentAssignmentsを準備する（IDと座席番号のみ） / Prepare studentAssignments for Firestore (only IDs and deskNumbers)
       const studentAssignments = studentsWithDeskNumbers.map(s => ({
         studentId: s.id,
         deskNumber: s.deskNumber
@@ -383,13 +497,13 @@ export default {
         id: newTabId,
         title: title,
         creationDate: creationDate,
-        studentAssignments: studentAssignments, // Firestore用にIDと座席番号のみを保存 / Store only IDs and desk numbers for Firestore
-        deskLayout: deskLayout, // ローカル表示用に完全なレイアウトを保存 / Store the full layout for local display
+        studentAssignments: studentAssignments,
+        deskLayout: deskLayout,
         firestoreDocId: null
       };
 
       this.tabs.push(newTab);
-      this.tabs.sort((a, b) => a.id - b.id); // タブをIDでソートしておく / Keep tabs sorted by ID
+      this.tabs.sort((a, b) => a.id - b.id);
       if (autoSave && this.isFirestoreReady) {
         const docRefId = await this.saveTabToFirestore(newTab);
         newTab.firestoreDocId = docRefId;
@@ -402,21 +516,17 @@ export default {
         return;
       }
 
-      // 現在のタブのレイアウトからすべての生徒のコピーを取得する。 / Get a copy of all students from the current tab's layout.
       const studentsToRandomize = this.currentTab.deskLayout.flatMap(desk => 
         desk.students.filter(s => !s.isEmpty)
       );
 
-      // 制約のために既存のすべてのタブから履歴データを取得する。 / Get historical data from all existing tabs for constraints.
       const historicalTabs = this.tabs.filter(tab => tab.id !== this.currentTab.id);
       const { studentsByDesk, deskmates } = this.getHistoricalData(historicalTabs);
 
-      // 2. 再編成アルゴリズムを実装する。 / 2. Implement the randomization algorithm.
       const availableDesks = Array.from({ length: 9 }, (_, i) => i + 1);
       const newStudentAssignments = [];
       const assignedStudentIds = new Set();
       
-      // 始点をランダム化するために生徒をシャッフルする / Shuffle the students to randomize the starting point
       this.shuffleArray(studentsToRandomize);
 
       for (const deskNumber of availableDesks) {
@@ -434,14 +544,12 @@ export default {
           if (studentToPlace) {
             deskStudents.push(studentToPlace);
             assignedStudentIds.add(studentToPlace.id);
-            // 利用可能な生徒のプールから生徒を削除する / Remove the student from the pool of available students
             studentsToRandomize.splice(studentsToRandomize.findIndex(s => s.id === studentToPlace.id), 1);
           } else {
-            break; // このスロットに適した生徒が見つからない / No valid student found for this slot
+            break;
           }
         }
       
-        // 割り当てられた生徒を新しいリストに追加する / Add the assigned students to the new list.
         deskStudents.forEach(s => {
           if (!s.isEmpty) {
             newStudentAssignments.push({ studentId: s.id, deskNumber: deskNumber });
@@ -449,12 +557,10 @@ export default {
         });
       }
 
-      // 3. ローカルに新しい一時的なタブオブジェクトを作成する。 / 3. Create a NEW temporary tab object locally.
-      const tempTabId = 'temp-randomized'; // 一時的なタブ用の特別な非数値IDを使用 / Use a special, non-numeric ID for temporary tabs
+      const tempTabId = 'temp-randomized';
       const creationDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-      const newTitle = `再編成 ${creationDate}`;
+      const newTitle = `おすすめの順番`;
 
-      // マスターマップからの完全な詳細で生徒オブジェクトを再水和する。 / Rehydrate student objects with full details from the master map.
       const rehydratedStudents = newStudentAssignments.map(assignment => ({
         id: assignment.studentId,
         deskNumber: assignment.deskNumber,
@@ -469,23 +575,20 @@ export default {
         creationDate: creationDate,
         studentAssignments: studentsWithDeskNumbers.map(s => ({ studentId: s.id, deskNumber: s.deskNumber })),
         deskLayout: deskLayout,
-        firestoreDocId: null // Firestoreにまだないのでこれはnull / This is null since it's not in Firestore yet
+        firestoreDocId: null
       };
 
-      // 4. ローカルのタブ配列を更新する。 / 4. Update the local tabs array.
       const existingTempIndex = this.tabs.findIndex(t => t.id === tempTabId);
       if (existingTempIndex !== -1) {
         this.tabs.splice(existingTempIndex, 1);
       }
       
-      // 新しい一時的なタブを追加する / Then, add the new temporary tab.
       this.tabs.push(newTempTab);
 
-      // 5. タブをソートし、新しい一時的なタブをアクティブにする。 / 5. Sort the tabs and make the new temporary tab the active one.
       this.tabs.sort((a, b) => {
         if (a.id === tempTabId) return 1;
         if (b.id === tempTabId) return -1;
-        return a.id - b.id; // 他のタブをIDでソートする / Sort other tabs by ID
+        return a.id - b.id;
       });
 
       this.activeTabId = tempTabId;
@@ -495,24 +598,25 @@ export default {
      * 履歴的な配置と同級生を考慮して、特定の座席に適した生徒を見つける。 / Finds a valid student for a given desk, considering historical placements and deskmates.
      */
     findValidStudent(allStudents, deskNumber, currentDeskmates, studentsByDesk, deskmates, assignedStudentIds) {
-      // 検索順序をランダム化するために生徒をシャッフルする / Shuffle the students to randomize the search order
       const shuffledStudents = this.shuffleArray([...allStudents]);
 
       for (const student of shuffledStudents) {
         const studentId = student.id;
+
+        // 生徒がアクティブでない場合はスキップする / Skip student if they are not active
+        if (student.isActive === false) {
+          continue;
+        }
         
-        // この再編成実行で既に生徒が割り当てられているか確認する / Check if student has already been assigned in this randomization run
         if (assignedStudentIds.has(studentId)) {
           continue;
         }
         
-        // ルール1: 既に座ったことがある座席に座ることはできない / Rule 1: Cannot sit at a desk they have already sat at
         const previousDesks = studentsByDesk.get(studentId) || new Set();
         if (previousDesks.has(String(deskNumber))) {
           continue;
         }
         
-        // ルール2: 以前の同級生と一緒に座ることはできない / Rule 2: Cannot sit with a former deskmate
         let isValidDeskmate = true;
         const previousDeskmates = deskmates.get(studentId) || new Set();
         for (const deskmate of currentDeskmates) {
@@ -523,11 +627,11 @@ export default {
         }
         
         if (isValidDeskmate) {
-          return student; // 適した生徒が見つかった！ / Found a valid student!
+          return student;
         }
       }
       
-      return null; // 利用可能なすべての生徒をチェックしても適した生徒が見つからない場合 / If no valid student is found after checking all available students
+      return null;
     },
 
     /**
@@ -541,7 +645,7 @@ export default {
       
       const studentsToSave = this.currentTab 
         ? this.currentTab.deskLayout.flatMap(desk => desk.students.filter(s => !s.isEmpty))
-        : [...this.masterStudentList]; // 現在のタブが選択されていない場合はマスターリストをベースにする / Use master list if no current tab selected
+        : [...this.masterStudentList];
 
       const newTitle = `${this.convertToKanji(this.tabs.length)} 第`;
 
@@ -582,7 +686,7 @@ export default {
         await setDoc(docRef, {
           title: tabData.title,
           creationDate: tabData.creationDate,
-          studentAssignments: tabData.studentAssignments // 生徒のIDと座席番号のみを保存 / Only save student IDs and their desk numbers
+          studentAssignments: tabData.studentAssignments
         });
         console.log("Classroom layout document successfully written with ID: ", docRef.id);
         return docRef.id;
@@ -740,7 +844,181 @@ export default {
       } else {
         return num.toString();
       }
+    },
+    
+    dateShortFormat(dateString) {
+      // Split the string by '年', '月', and '日' to get the numeric parts.
+      const parts = dateString.split(/年|月|日/).filter(Boolean);
+
+      // Extract the month and day parts.
+      const month = parts[1];
+      const day = parts[2];
+
+      // Combine the two-digit month and day.
+      const formattedDate = month.padStart(2, '0') + day.padStart(2, '0');
+
+      return formattedDate;
+    },
+
+    /**
+     * 現在のタブの座席レイアウトをExcelファイルとしてダウンロードします。
+     * このメソッドは、教師の視点からのレイアウト（提供された画像）を再現します。
+     *
+     * @English
+     * Downloads the current tab's seating layout as an Excel file.
+     * This method replicates the teacher's perspective layout by
+     * reordering desks and students.
+     */
+    downloadCurrentTab() {
+      if (!this.currentTab || !this.currentTab.deskLayout) {
+        alert("ダウンロードする教室のタブを選択してください。");
+        return;
+      }
+
+      const desks = this.currentTab.deskLayout;
+      const totalDeskRows = 5;
+
+      const getStudent = (deskNumber, studentIndex) => {
+        const desk = desks.find(d => d.name === deskNumber.toString());
+        return desk && desk.students.length > studentIndex ? desk.students[studentIndex] : null;
+      };
+
+      const formatStudentData = (student) => {
+        if (!student) return '';
+        return `${student.name || ''}\n${student.hiragana || ''}`;
+      };
+
+      // Create a master data array with the correct dimensions and fill it with empty strings
+      // 新しい空白の列のために、7列で配列を初期化します
+      // Initialize array with 7 columns for the new blank column
+      const masterData = Array(totalDeskRows + 2).fill().map(() => Array(7).fill(''));
+
+      desks.forEach(desk => {
+        const deskNumber = parseInt(desk.name);
+        let newCol1 = -1, newCol2 = -1;
+        let newRow = -1;
+
+        const originalRowIndex = Math.floor((deskNumber - 1) / 2);
+        newRow = totalDeskRows - 1 - originalRowIndex;
+
+        if (deskNumber % 2 !== 0) {
+          // 右ブロックの列を1つ右にずらします
+          // Shift right block columns one to the right
+          newCol1 = 5; // ExcelのF列 (以前のE列)
+          newCol2 = 6; // ExcelのG列 (以前のF列)
+        } else {
+          // 左ブロックの列を1つ右にずらします
+          // Shift left block columns one to the right
+          newCol1 = 1; // ExcelのB列 (以前のA列)
+          newCol2 = 2; // ExcelのC列 (以前のB列)
+        }
+
+        if (desk.students[0]) {
+          masterData[newRow][newCol2] = formatStudentData(desk.students[0]);
+        }
+        if (desk.students[1]) {
+          masterData[newRow][newCol1] = formatStudentData(desk.students[1]);
+        }
+      });
+
+      // ラベルの列を右に1つずらします
+      // Shift label columns one to the right
+      masterData[totalDeskRows + 1][1] = 'K09 ' + this.dateShortFormat(this.currentTab.creationDate);
+      masterData[totalDeskRows + 1][5] = '講師席';
+
+      const worksheet = XLSX.utils.aoa_to_sheet(masterData);
+
+      const cellStyle = {
+        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin' },
+          bottom: { style: 'thin' },
+          left: { style: 'thin' },
+          right: { style: 'thin' }
+        },
+        font: {
+          sz: 14
+        }
+      };
+
+      // K09コード専用のカスタムスタイル（フォントサイズ16）。
+      // Custom style for the K09 code cell (font size 16).
+      const codeCellStyle = {
+          font: {          
+            sz: 16 // フォントサイズを16に増やす
+        }
+      };
+
+      worksheet['!pageSetup'] = { orientation: 'landscape' };
+
+      // 新しい空白のA列の幅を追加し、他の列のインデックスを更新します
+      // Add width for the new blank column A and update other column indices
+      worksheet['!cols'] = [
+        { wch: 4 }, // New blank column A
+        { wch: 23 }, { wch: 23 }, // B, C - Left block
+        { wch: 2 }, { wch: 2 }, // D, E - Spacer
+        { wch: 23 }, { wch: 23 } // F, G - Right block
+      ];
+      
+      // Set row heights for multi-line cells
+      // 複数行のセルのために行の高さを設定
+      worksheet['!rows'] = Array(masterData.length).fill({ hpt: 70 });
+      
+      // Reduce the height of the instructor row at the bottom
+      // 下部の講師席の行の高さを減らす
+      if (worksheet['!rows'][totalDeskRows + 1]) {
+          worksheet['!rows'][totalDeskRows + 1] = { hpt: 20 };
+      }
+
+      // ループの列インデックスを更新します
+      // Update the column indices for the loop
+      const studentCols = [1, 2, 5, 6];
+      for (let r = 0; r < totalDeskRows; r++) {
+        for (const c of studentCols) {
+          const cellAddress = XLSX.utils.encode_cell({ r: r, c: c });
+          if (worksheet[cellAddress] && worksheet[cellAddress].v) {
+            if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+            Object.assign(worksheet[cellAddress].s, cellStyle);
+          }
+        }
+      }
+
+      // B7セルのアドレスを取得し、カスタムスタイルを適用します。
+      // Get the cell address for B7 and apply the custom style.
+      const codeCellAddress = XLSX.utils.encode_cell({ r: totalDeskRows + 1, c: 1 });
+      if (worksheet[codeCellAddress]) {
+        if (!worksheet[codeCellAddress].s) worksheet[codeCellAddress].s = {};
+        Object.assign(worksheet[codeCellAddress].s, codeCellStyle);
+      }
+
+
+      // // 講師席のセルのインデックスを更新します
+      // // Update the index for the instructor cell
+      const instructorCellAddress = XLSX.utils.encode_cell({ r: totalDeskRows + 1, c: 5 });
+      if (worksheet[instructorCellAddress]) {
+        if (!worksheet[instructorCellAddress].s) worksheet[instructorCellAddress].s = {};
+        Object.assign(worksheet[instructorCellAddress].s, cellStyle);
+      }
+
+      // マージするセルのインデックスを更新します
+      // Update merge indices to new position
+      // if (!worksheet['!merges']) worksheet['!merges'] = [];
+      // worksheet['!merges'].push({ s: { r: totalDeskRows + 1, c: 5 }, e: { r: totalDeskRows + 1, c: 6 } });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '座席表');
+
+      const file_options = {
+        pageSetup: {
+          orientation: "landscape"
+        }
+      };
+
+      const fileName = `${this.currentTab.title}_座席表.xlsx`;
+      XLSX.writeFile(workbook, fileName, file_options);
     }
+
+   
   }
 };
 </script>
@@ -770,6 +1048,11 @@ h1 {
   max-width: 100%;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 .tabs-container button {
   padding: 8px 15px;
   border: 1px solid #ccc;
@@ -796,6 +1079,18 @@ h1 {
   cursor: not-allowed;
   background-color: #f8f9fa;
   color: #6c757d;
+}
+
+.tabs-container button.temporary-tab {
+  background-color: #f0ad4e; /* Orange background */
+  border-color: #eea236;
+  color: white;
+}
+
+.tabs-container button.temporary-tab.active-tab {
+  background-color: #ec971f; /* A darker shade for the active state */
+  border-color: #d58512;
+  color: white;
 }
 
 .loading-message {

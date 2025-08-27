@@ -52,6 +52,7 @@
 <script>
 import MyClassroom from './MyClassroom.vue';
 import LoginModal from './LoginModal.vue';
+import { onBeforeUnmount } from 'vue';
 import { db, auth, authReadyPromise, appId } from '../firebase-init';
 import { collection, doc, setDoc, onSnapshot, getDoc, getDocs } from 'firebase/firestore'; 
 import {
@@ -85,6 +86,7 @@ export default {
       isFirestoreReady: false,
       initialLoadComplete: false,
       masterListSaved: false,
+      user: null, // Add a user property to hold the Firebase user object
       c1: {
         creationDate: "2025年5月22日",
         studentAssignments: [
@@ -147,22 +149,18 @@ export default {
       },
       studentsUnsubscribe: null,
       tabsUnsubscribe: null,
+      unsubscribeAuth: null
     };
   },
   async created() {
     await authReadyPromise;
     this.isFirestoreReady = true;
 
-    onAuthStateChanged(auth, async (user) => {     
+    // Store the unsubscribe function from onAuthStateChanged in your data
+    this.unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      this.user = user;
       this.isLoggedIn = !!user && !user.isAnonymous;
       this.isAnonymous = !!user && user.isAnonymous;
-
-      // this.masterStudentList = [];
-      // this.allStudentsMap = new Map();
-      // this.tabs = [];
-      // this.activeTabId = null;
-      // this.initialLoadComplete = false;
-      // this.masterListSaved = false;
 
       if (user) {
         console.log('ユーザーがログインしました。UID:', user.uid, '匿名ユーザー:', user.isAnonymous);
@@ -171,14 +169,22 @@ export default {
         }
       } else {
         console.log('ユーザーが見つかりませんでした。匿名でサインインします...');
-        try {
-          await signInAnonymously(auth);
-          console.log('匿名ユーザーがサインインしました。');
-        } catch (error) {
-          console.error("匿名サインインに失敗しました:", error);
+        if (!auth.currentUser) {
+            try {
+              await signInAnonymously(auth);
+              console.log('匿名ユーザーがサインインしました。');
+            } catch (error) {
+              console.error("匿名サインインに失敗しました:", error);
+            }
         }
       }
     });
+  },
+  beforeUnmount() {
+    // Call the unsubscribe function here to clean up the listener
+    if (this.unsubscribeAuth) {
+        this.unsubscribeAuth();
+    }
   },
   computed: {
     currentTab() {
@@ -189,35 +195,12 @@ export default {
     }
   },
   methods: {
-    async loadInitialDataAndSetupListeners() {
-      if (this.studentsUnsubscribe) this.studentsUnsubscribe();
-      if (this.tabsUnsubscribe) this.tabsUnsubscribe();
-      
-      this.initialLoadComplete = false;
-
-      const studentsCollectionRef = collection(db, `artifacts/${appId}/students`);
-      const studentsSnapshot = await getDocs(studentsCollectionRef);
-      const loadedStudents = [];
-      const tempStudentMap = new Map();
-      studentsSnapshot.forEach((doc) => {
-        const studentData = { id: parseInt(doc.id), ...doc.data() };
-        loadedStudents.push(studentData);
-        tempStudentMap.set(studentData.id, studentData);
-      });
-      this.masterStudentList = loadedStudents;
-      this.allStudentsMap = tempStudentMap;
-
-      if (this.masterStudentList.length === 0) {
-        console.log("マスター生徒リストが見つかりませんでした。デフォルトを初期化します。");
-        this.initializeDefaultMasterStudentList();
-        await this.saveMasterStudentListInit();
-      }
-
-      const classroomsCollectionRef = collection(db, `artifacts/${appId}/classrooms`);
-      const classroomsSnapshot = await getDocs(classroomsCollectionRef);
+    
+    // Step 1: Centralized data processing helper method
+    async fetchAndProcessClassrooms(querySnapshot) {
       const loadedTabsData = [];
       const studentIdsToFetch = new Set();
-      classroomsSnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc) => {
           const data = doc.data();
           const assignments = Array.isArray(data.studentAssignments) ? data.studentAssignments : [];
           assignments.forEach(assignment => studentIdsToFetch.add(assignment.studentId));
@@ -246,15 +229,55 @@ export default {
               deskLayout: deskLayout
           };
       });
-      this.tabs.sort((a, b) => a.id - b.id);
+      
+      // this.tabs.sort((a, b) => a.id - b.id);
+      this.tabs.sort((a, b) => {
+          // Keep the temporary tab at the end of the list
+          if (a.id === 'temp-randomized') return 1;
+          if (b.id === 'temp-randomized') return -1;
+
+          // Sort regular tabs by their numerical kanji value
+          const numA = this.convertKanjiToNumber(a.title);
+          const numB = this.convertKanjiToNumber(b.title);
+          return numA - numB;
+      });
+
       if (this.tabs.length > 0 && !this.activeTabId) {
           this.activeTabId = this.tabs[0].id;
       }
+        },
+
+    // Step 2: Simplify initial load to just call listener setup
+    async loadInitialDataAndSetupListeners() {
+      if (this.studentsUnsubscribe) this.studentsUnsubscribe();
+      if (this.tabsUnsubscribe) this.tabsUnsubscribe();
+      
+      this.initialLoadComplete = false;
+
+      const studentsCollectionRef = collection(db, `artifacts/${appId}/students`);
+      const studentsSnapshot = await getDocs(studentsCollectionRef);
+      const loadedStudents = [];
+      const tempStudentMap = new Map();
+      studentsSnapshot.forEach((doc) => {
+        const studentData = { id: parseInt(doc.id), ...doc.data() };
+        loadedStudents.push(studentData);
+        tempStudentMap.set(studentData.id, studentData);
+      });
+      this.masterStudentList = loadedStudents;
+      this.allStudentsMap = tempStudentMap;
+
+      if (this.masterStudentList.length === 0) {
+        console.log("マスター生徒リストが見つかりませんでした。デフォルトを初期化します。");
+        this.initializeDefaultMasterStudentList();
+        await this.saveMasterStudentListInit();
+      }
+      
       this.initialLoadComplete = true;
       console.log("Initial data load complete.");
       this.setupRealtimeListeners();
     },
 
+    // Step 2 (cont.): Consolidate all listening logic here
     setupRealtimeListeners() {
       if (!auth.currentUser || !this.isFirestoreReady) {
         console.warn("Cannot set up real-time listeners: user not authenticated or Firestore not ready.");
@@ -278,41 +301,8 @@ export default {
       
       const classroomsCollectionRef = collection(db, `artifacts/${appId}/classrooms`);
       this.tabsUnsubscribe = onSnapshot(classroomsCollectionRef, async (querySnapshot) => {
-        const loadedTabsData = [];
-        const studentIdsToFetch = new Set();
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const assignments = Array.isArray(data.studentAssignments) ? data.studentAssignments : [];
-            assignments.forEach(assignment => studentIdsToFetch.add(assignment.studentId));
-            loadedTabsData.push({ ...data, id: doc.id, firestoreDocId: doc.id, studentAssignments: assignments, deskLayout: [] });
-        });
-        const fetchedStudentsMap = new Map();
-        if (studentIdsToFetch.size > 0) {
-            const studentDocPromises = Array.from(studentIdsToFetch).map(id => getDoc(doc(db, `artifacts/${appId}/students`, String(id))));
-            const studentDocs = await Promise.all(studentDocPromises);
-            studentDocs.forEach(docSnap => {
-                if (docSnap.exists()) {
-                    const studentData = { id: parseInt(docSnap.id), ...docSnap.data() };
-                    fetchedStudentsMap.set(studentData.id, studentData);
-                }
-            });
-        }
-        this.tabs = loadedTabsData.map(tab => {
-            const rehydratedStudents = tab.studentAssignments.map(assignment => {
-                const fullStudentData = fetchedStudentsMap.get(assignment.studentId);
-                return fullStudentData ? { ...fullStudentData, deskNumber: assignment.deskNumber } : { ...this.emptyStudentPlaceholder };
-            }).filter(s => !s.isEmpty);
-            const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(rehydratedStudents);
-            return {
-                ...tab,
-                studentAssignments: studentsWithDeskNumbers.map(s => ({ studentId: s.id, deskNumber: s.deskNumber })),
-                deskLayout: deskLayout
-            };
-        });
-        this.tabs.sort((a, b) => a.id - b.id);
-        if (this.tabs.length > 0 && !this.activeTabId) {
-            this.activeTabId = this.tabs[0].id;
-        }
+        // Use the new helper method here
+          await this.fetchAndProcessClassrooms(querySnapshot);
       }, (error) => { console.error("Error listening to tabs from Firestore:", error); });
     },
 
@@ -385,14 +375,6 @@ export default {
         console.error("Error saving master student list:", e);
         alert("マスター学生リストの保存中にエラーが発生しました。");
       }
-    },
-
-    shuffleArray(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
     },
 
     assignStudentsToDesks(studentList) {
@@ -476,53 +458,83 @@ export default {
     
     handleLoginSuccess() {
       this.showLoginModal = false;
-      this.isLoggedIn = true;
+      //this.isLoggedIn = true;
     },
 
     async randomizeCurrentList() {
-      if (!this.currentTab) { console.warn("No active tab selected. Cannot randomize."); return; }
-      const studentsToRandomize = this.currentTab.deskLayout.flatMap(desk => desk.students.filter(s => !s.isEmpty));
-      const historicalTabs = this.tabs.filter(tab => tab.id !== this.currentTab.id);
-      const { studentsByDesk, deskmates } = this.getHistoricalData(historicalTabs);
-      const availableDesks = Array.from({ length: 9 }, (_, i) => i + 1);
-      const newStudentAssignments = [];
-      const assignedStudentIds = new Set();
-      this.shuffleArray(studentsToRandomize);
-      for (const deskNumber of availableDesks) {
-        const deskStudents = [];
-        while (deskStudents.length < 2 && studentsToRandomize.length > 0) {
-          const studentToPlace = this.findValidStudent(
-            studentsToRandomize, deskNumber, deskStudents, studentsByDesk, deskmates, assignedStudentIds
-          );
-          if (studentToPlace) {
-            deskStudents.push(studentToPlace);
-            assignedStudentIds.add(studentToPlace.id);
-            studentsToRandomize.splice(studentsToRandomize.findIndex(s => s.id === studentToPlace.id), 1);
-          } else {
-            break;
-          }
+        if (!this.masterStudentList.length > 0) { 
+            alert("マスター学生リストが空です。"); 
+            return; 
         }
-        deskStudents.forEach(s => { if (!s.isEmpty) { newStudentAssignments.push({ studentId: s.id, deskNumber: deskNumber }); } });
-      }
-      const tempTabId = 'temp-randomized';
-      const creationDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-      const newTitle = `おすすめの順番`;
-      const rehydratedStudents = newStudentAssignments.map(assignment => ({
-        id: assignment.studentId, deskNumber: assignment.deskNumber, ...this.allStudentsMap.get(assignment.studentId)
-      }));
-      const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(rehydratedStudents);
-      const newTempTab = {
-        id: tempTabId, title: newTitle, creationDate: creationDate,
-        studentAssignments: studentsWithDeskNumbers.map(s => ({ studentId: s.id, deskNumber: s.deskNumber })),
-        deskLayout: deskLayout, firestoreDocId: null
-      };
-      const existingTempIndex = this.tabs.findIndex(t => t.id === tempTabId);
-      if (existingTempIndex !== -1) { this.tabs.splice(existingTempIndex, 1); }
-      this.tabs.push(newTempTab);
-      this.tabs.sort((a, b) => { if (a.id === tempTabId) return 1; if (b.id === tempTabId) return -1; return a.id - b.id; });
-      this.activeTabId = tempTabId;
-    },
+        
+        const studentsToRandomize = this.masterStudentList.filter(student => student.isActive);
+        
+        if (studentsToRandomize.length === 0) {
+            alert("アクティブな学生がマスター学生リストに見つかりませんでした。");
+            return;
+        }
 
+        const { studentsByDesk, deskmates } = this.getHistoricalData(this.tabs);
+        
+        const availableDesks = Array.from({ length: 9 }, (_, i) => i + 1);
+        const newStudentAssignments = [];
+        const assignedStudentIds = new Set();
+        this.shuffleArray(studentsToRandomize);
+        for (const deskNumber of availableDesks) {
+            const deskStudents = [];
+            while (deskStudents.length < 2 && studentsToRandomize.length > 0) {
+                const studentToPlace = this.findValidStudent(
+                    studentsToRandomize, deskNumber, deskStudents, studentsByDesk, deskmates, assignedStudentIds
+                );
+                if (studentToPlace) {
+                    deskStudents.push(studentToPlace);
+                    assignedStudentIds.add(studentToPlace.id);
+                    studentsToRandomize.splice(studentsToRandomize.findIndex(s => s.id === studentToPlace.id), 1);
+                } else {
+                    break;
+                }
+            }
+            deskStudents.forEach(s => { if (!s.isEmpty) { newStudentAssignments.push({ studentId: s.id, deskNumber: deskNumber }); } });
+        }
+        
+        const tempTabId = 'temp-randomized';
+        const creationDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+        const newTitle = `おすすめの順番`;
+        const rehydratedStudents = newStudentAssignments.map(assignment => ({
+            id: assignment.studentId, deskNumber: assignment.deskNumber, ...this.allStudentsMap.get(assignment.studentId)
+        }));
+        const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(rehydratedStudents);
+        const newTempTab = {
+            id: tempTabId, title: newTitle, creationDate: creationDate,
+            studentAssignments: studentsWithDeskNumbers.map(s => ({ studentId: s.id, deskNumber: s.deskNumber })),
+            deskLayout: deskLayout, firestoreDocId: null
+        };
+        
+        // Create a local copy of the tabs array
+        let updatedTabs = [...this.tabs];
+
+        // Remove the old temporary tab if it exists
+        const existingTempIndex = updatedTabs.findIndex(t => t.id === tempTabId);
+        if (existingTempIndex !== -1) {
+            updatedTabs.splice(existingTempIndex, 1);
+        }
+        
+        // Push the new temporary tab
+        updatedTabs.push(newTempTab);
+        
+        // Sort the new array
+        updatedTabs.sort((a, b) => {
+            if (a.id === 'temp-randomized') return 1;
+            if (b.id === 'temp-randomized') return -1;
+            const numA = this.convertKanjiToNumber(a.title);
+            const numB = this.convertKanjiToNumber(b.title);
+            return numA - numB;
+        });
+
+        // Update the component's state with the single, final array
+        this.tabs = updatedTabs;
+        this.activeTabId = tempTabId;
+    },
     findValidStudent(allStudents, deskNumber, currentDeskmates, studentsByDesk, deskmates, assignedStudentIds) {
       const shuffledStudents = this.shuffleArray([...allStudents]);
       for (const student of shuffledStudents) {
@@ -567,49 +579,6 @@ export default {
       } catch (e) { console.error("Error writing document to Firestore: ", e); return null; }
     },
 
-    async loadTabsFromFirestore() {
-      if (!auth.currentUser || !this.isFirestoreReady) { console.warn("Firestore not ready or user not authenticated, cannot load tabs."); return; }
-      const collectionRef = collection(db, `artifacts/${appId}/classrooms`);
-      try {
-        onSnapshot(collectionRef, async (querySnapshot) => {
-          const loadedTabsData = [];
-          const studentIdsToFetch = new Set();
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const assignments = Array.isArray(data.studentAssignments) ? data.studentAssignments : [];
-            assignments.forEach(assignment => studentIdsToFetch.add(assignment.studentId));
-            loadedTabsData.push({ ...data, id: doc.id, firestoreDocId: doc.id, studentAssignments: assignments, deskLayout: [] });
-          });
-          const fetchedStudentsMap = new Map();
-          if (studentIdsToFetch.size > 0) {
-            const studentDocPromises = Array.from(studentIdsToFetch).map(id => getDoc(doc(db, `artifacts/${appId}/students`, String(id))));
-            const studentDocs = await Promise.all(studentDocPromises);
-            studentDocs.forEach(docSnap => {
-                if (docSnap.exists()) {
-                    const studentData = { id: parseInt(docSnap.id), ...docSnap.data() };
-                    fetchedStudentsMap.set(studentData.id, studentData);
-                }
-            });
-          }
-          this.tabs = loadedTabsData.map(tab => {
-              const rehydratedStudents = tab.studentAssignments.map(assignment => {
-                  const fullStudentData = fetchedStudentsMap.get(assignment.studentId);
-                  return fullStudentData ? { ...fullStudentData, deskNumber: assignment.deskNumber } : { ...this.emptyStudentPlaceholder };
-              }).filter(s => !s.isEmpty);
-              const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(rehydratedStudents);
-              return {
-                  ...tab,
-                  studentAssignments: studentsWithDeskNumbers.map(s => ({ studentId: s.id, deskNumber: s.deskNumber })),
-                  deskLayout: deskLayout
-              };
-          });
-          this.tabs.sort((a, b) => a.id - b.id);
-          if (this.tabs.length > 0 && !this.activeTabId) {
-              this.activeTabId = this.tabs[0].id;
-          }
-        }, (error) => { console.error("Error listening to tabs from Firestore:", error); });
-      } catch (e) { console.error("Error setting up Firestore listener:", e); }
-    },
     
     dateShortFormat(dateString) {
       const parts = dateString.split(/年|月|日/).filter(Boolean);
@@ -651,6 +620,14 @@ export default {
       return { studentsByDesk, deskmates };
     },
       
+        // A helper method that was not there
+    shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    },
 
     convertToKanji(num){
       const kanjiMap = [
@@ -662,6 +639,30 @@ export default {
       } else {
         return num.toString();
       }
+    },
+    
+    convertKanjiToNumber(title) {
+        const kanjiMap = {
+          '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+          '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+          '十一': 11, '十二': 12, '十三': 13, '十四': 14,
+          '十五': 15, '十六': 16, '十七': 17, '十八': 18, '十九': 19,
+          '二十': 20, '二十一': 21, '二十二': 22, '二十三': 23, '二十四': 24,
+          '二十五': 25, '二十六': 26, '二十七': 27, '二十八': 28, '二十九': 29,
+          // 您可以根据需要继续添加更多数字
+        };
+        
+        // 移除标题中的非数字部分，只留下汉字数字
+        const kanjiNumberString = title.replace(/[^零一二三四五六七八九十]/g, '');
+        
+        // 使用 Object.keys 找到匹配的键，以处理像“十一”这样的多字符数字
+        for (const key of Object.keys(kanjiMap)) {
+          if (kanjiNumberString.startsWith(key)) {
+            return kanjiMap[key];
+          }
+        }
+        
+        return 0;
     },
 
     downloadCurrentTab() {

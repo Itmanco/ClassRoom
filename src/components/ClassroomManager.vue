@@ -387,6 +387,14 @@ export default {
       }
     },
 
+    shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    },
+
     assignStudentsToDesks(studentList) {
       const numDesks = 9;
       const desks = Array.from({ length: numDesks }, (_, i) => ({ id: `desk-${i + 1}`, name: `${i + 1}`, students: [] }));
@@ -533,7 +541,7 @@ export default {
 
     async saveAsNewTab() {
       if (!this.masterStudentList.length > 0) { alert("まず、マスター学生リストを保存してください。"); return; }
-      const newTitle = `${this.convertToKanji(this.tabs.length)} 第`;
+      const newTitle = `第${this.convertToKanji(this.tabs.length)}回`;
       if (this.tabs.some(tab => tab.title === newTitle)) {
         alert("このタイトルの教室は既に存在します。");
         return;

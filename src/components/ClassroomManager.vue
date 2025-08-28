@@ -437,18 +437,14 @@ export default {
     },
 
     toggleLoginStatus() {
-        console.log("doing: his.isLoggedIn = false");
       if (this.isAnonymous) {
-        console.log("->: if (this.isAnonymous)");
         this.showLoginModal = true;
         this.isLoggedIn = false;
       } else if (this.isLoggedIn) {
         try {
-            console.log("->: if (this.isLoggedIn)");
             signOut(auth);
             console.log("after: signOut(auth)");
-            alert("ログアウトしました。");    
-            window.location.reload();       
+            alert("ログアウトしました。");       
           
         } catch (error) {
           console.error("ログアウトに失敗しました:", error);

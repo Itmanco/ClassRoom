@@ -27,7 +27,7 @@
       </button>
     </div>
     <div class="tabs-container action-buttons">
-      <button @click="randomizeCurrentList" v-if="isLoggedIn">再編成する</button>
+      <button @click="randomizeCurrentList">再編成する</button>
       <button @click="saveAsNewTab" v-if="currentTab && isLoggedIn">選択内容を保存</button> 
     </div>
             
@@ -40,7 +40,7 @@
       教室のレイアウトを読み込み中．．．
     </div>
     <div class="tabs-container">
-      <button @click="downloadCurrentTab" v-if="currentTab && isLoggedIn">Excelにダウンロード</button>
+      <button @click="downloadCurrentTab" v-if="currentTab">Excelにダウンロード</button>
     </div>
     
     <LoginModal :isVisible="showLoginModal" @close="showLoginModal = false" @login-success="handleLoginSuccess" />

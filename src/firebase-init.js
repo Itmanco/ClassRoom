@@ -1,6 +1,6 @@
 // src/firebase-init.js
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Conditionally use global Canvas variables or .env variables
@@ -15,7 +15,6 @@ const firebaseConfig = typeof __firebase_config !== 'undefined'
       appId: process.env.VUE_APP_FIREBASE_APP_ID // This is for client-side use
     };
 
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // __app_id is primarily for Firestore pathing in Canvas. For local dev,
 // you might derive it from projectId or use a hardcoded value if needed.
@@ -27,23 +26,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let authReadyPromise = new Promise(resolve => {
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, (user) => {
     if (user) {
-      console.log("Firebase authenticated. User ID:", user.uid);
-      resolve(user.uid);
+      console.log("Logged in:", user.email);
+      resolve(user);
     } else {
-      try {
-        if (initialAuthToken) {
-          await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-          await signInAnonymously(auth);
-        }
-        console.log("Firebase auth attempt complete.");
-        resolve(auth.currentUser ? auth.currentUser.uid : null);
-      } catch (error) {
-        console.error("Firebase authentication failed:", error);
-        resolve(null);
-      }
+      console.log("No authenticated user.");
+      resolve(null);
     }
   });
 });

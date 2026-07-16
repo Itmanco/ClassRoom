@@ -43,39 +43,32 @@
       <button @click="downloadCurrentTab" v-if="currentTab">Excelにダウンロード</button>
     </div>
     
-    <LoginModal :isVisible="showLoginModal" @close="showLoginModal = false" @login-success="handleLoginSuccess" />
-
   </div>
 </template>
 
 <script>
-import MyClassroom from './MyClassroom.vue';
-import LoginModal from './LoginModal.vue';
-import { onBeforeUnmount } from 'vue';
-import { db, auth, authReadyPromise, appId } from '../firebase-init';
+import MyClassroom from '../components/MyClassroom.vue';
+import LoginModal from '../components/LoginModal.vue';
+import {
+    getStudents,
+    saveStudents,
+    watchStudents
+} from "../services/studentService";
+import { db, auth, authReadyPromise, appId } from '../firebase-init.js';
 import { collection, doc, setDoc, onSnapshot, getDoc, getDocs } from 'firebase/firestore'; 
 import {
-  GoogleAuthProvider,
-  signInWithPopup,
   signOut,
-  onAuthStateChanged,
-  signInAnonymously,
-  linkWithCredential,
-  EmailAuthProvider,
 } from 'firebase/auth';
 import * as XLSX from 'xlsx-js-style';
 
 export default {
-  name: 'ClassroomManager',
+  name: 'ClassroomPage',
   components: {
-    MyClassroom,
-    LoginModal,
-  },
+    MyClassroom,  },
   data() {
     return { 
       isLoggedIn: false, 
       isAnonymous: false, 
-      showLoginModal: false,
       classroomName: "Java プログラミング①",
       numberOfDesks: 9,
       masterStudentList: [], 
@@ -87,100 +80,28 @@ export default {
       initialLoadComplete: false,
       masterListSaved: false,
       user: null, // Add a user property to hold the Firebase user object
-      c1: {
-        creationDate: "2025年5月22日",
-        studentAssignments: [
-          { studentId: 16, deskNumber: 1 }, { studentId: 3, deskNumber: 1 },
-          { studentId: 15, deskNumber: 2 }, { studentId: 7, deskNumber: 2 },
-          { studentId: 10, deskNumber: 3 }, { studentId: 5, deskNumber: 3 },
-          { studentId: 14, deskNumber: 4 }, { studentId: 11, deskNumber: 4 },
-          { studentId: 19, deskNumber: 5 }, { studentId: 18, deskNumber: 5 },
-          { studentId: 17, deskNumber: 6 }, { studentId: 6, deskNumber: 6 },
-          { studentId: 8, deskNumber: 7 }, { studentId: 9, deskNumber: 7 },
-          { studentId: 2, deskNumber: 8 }, { studentId: 4, deskNumber: 8 },
-          { studentId: 13, deskNumber: 9 }, { studentId: 12, deskNumber: 9 }
-        ],
-        title: "一第"
-      },
-      c2: {
-        creationDate: "2025年7月7日",
-        studentAssignments: [
-          { studentId: 13, deskNumber: 1 }, { studentId: 10, deskNumber: 1 },
-          { studentId: 8, deskNumber: 2 }, { studentId: 6, deskNumber: 2 },
-          { studentId: 11, deskNumber: 3 }, { studentId: 19, deskNumber: 3 },
-          { studentId: 9, deskNumber: 4 }, { studentId: 18, deskNumber: 4 },
-          { studentId: 3, deskNumber: 5 }, { studentId: 17, deskNumber: 5 },
-          { studentId: 12, deskNumber: 6 }, { studentId: 2, deskNumber: 6 },
-          { studentId: 4, deskNumber: 7 }, { studentId: 5, deskNumber: 7 },
-          { studentId: 15, deskNumber: 8 }, { studentId: 14, deskNumber: 8 },
-          { studentId: 16, deskNumber: 9 }, { studentId: 7, deskNumber: 9 }
-        ],
-        title: "二第"
-      },
-      c3: {
-        creationDate: "2025年7月30日",
-        studentAssignments: [
-          { studentId: 4, deskNumber: 1 }, { studentId: 8, deskNumber: 1 },
-          { studentId: 5, deskNumber: 2 }, { studentId: 15, deskNumber: 2 },
-          { studentId: 17, deskNumber: 3 }, { studentId: 2, deskNumber: 3 },
-          { studentId: 18, deskNumber: 4 }, { studentId: 10, deskNumber: 4 },
-          { studentId: 7, deskNumber: 5 }, { studentId: 12, deskNumber: 5 },
-          { studentId: 11, deskNumber: 6 }, { studentId: 9, deskNumber: 6 },
-          { studentId: 6, deskNumber: 7 }, { studentId: 14, deskNumber: 7 },
-          { studentId: 3, deskNumber: 8 }, { studentId: 19, deskNumber: 8 },
-          { studentId: 16, deskNumber: 9 },
-        ],
-        title: "三第"
-      },
-      c4: {
-        creationDate: "2025年8月22日",
-        studentAssignments: [
-          { studentId: 12, deskNumber: 1 }, { studentId: 17, deskNumber: 1 },
-          { studentId: 19, deskNumber: 2 }, { studentId: 10, deskNumber: 2 },
-          { studentId: 4, deskNumber: 3 }, { studentId: 18, deskNumber: 3 },
-          { studentId: 16, deskNumber: 4 }, { studentId: 2, deskNumber: 4 },
-          { studentId: 11, deskNumber: 5 }, { studentId: 5, deskNumber: 5 },
-          { studentId: 14, deskNumber: 6 }, { studentId: 8, deskNumber: 6 },
-          { studentId: 15, deskNumber: 7 }, { studentId: 3, deskNumber: 7 },
-          { studentId: 7, deskNumber: 8 }, { studentId: 6, deskNumber: 8 },
-          { studentId: 9, deskNumber: 9 },
-        ],
-        title: "四第"
-      },
+      
       studentsUnsubscribe: null,
       tabsUnsubscribe: null,
       unsubscribeAuth: null,
       showStudentEditor: false,
     };
   },
+
   async created() {
-    await authReadyPromise;
-    this.isFirestoreReady = true;
 
-    // Store the unsubscribe function from onAuthStateChanged in your data
-    this.unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      this.user = user;
-      this.isLoggedIn = !!user && !user.isAnonymous;
-      this.isAnonymous = !!user && user.isAnonymous;
+      await authReadyPromise;
+      this.isFirestoreReady = true;
 
-      if (user) {
-        console.log('ユーザーがログインしました。UID:', user.uid, '匿名ユーザー:', user.isAnonymous);
-        if (!this.initialLoadComplete) {
-            await this.loadInitialDataAndSetupListeners();
-        }
-      } else {
-        console.log('ユーザーが見つかりませんでした。匿名でサインインします...');
-        if (!auth.currentUser) {
-            try {
-              await signInAnonymously(auth);
-              console.log('匿名ユーザーがサインインしました。');
-            } catch (error) {
-              console.error("匿名サインインに失敗しました:", error);
-            }
-        }
+      if (auth.currentUser) {
+          this.user = auth.currentUser;
+          this.isLoggedIn = true;
+          this.isAnonymous = false;
+
+          await this.loadInitialDataAndSetupListeners();
       }
-    });
   },
+
   beforeUnmount() {
     // Call the unsubscribe function here to clean up the listener
     if (this.unsubscribeAuth) {
@@ -255,15 +176,15 @@ export default {
       
       this.initialLoadComplete = false;
 
-      const studentsCollectionRef = collection(db, `artifacts/${appId}/students`);
-      const studentsSnapshot = await getDocs(studentsCollectionRef);
-      const loadedStudents = [];
+      const students = await getStudents(appId);
+      const loadedStudents = students;
+
       const tempStudentMap = new Map();
-      studentsSnapshot.forEach((doc) => {
-        const studentData = { id: parseInt(doc.id), ...doc.data() };
-        loadedStudents.push(studentData);
-        tempStudentMap.set(studentData.id, studentData);
+
+      loadedStudents.forEach(student => {
+          tempStudentMap.set(student.id, student);
       });
+
       this.masterStudentList = loadedStudents;
       this.allStudentsMap = tempStudentMap;
 
@@ -280,31 +201,52 @@ export default {
 
     // Step 2 (cont.): Consolidate all listening logic here
     setupRealtimeListeners() {
-      if (!auth.currentUser || !this.isFirestoreReady) {
-        console.warn("Cannot set up real-time listeners: user not authenticated or Firestore not ready.");
-        return;
-      }
-      const studentsCollectionRef = collection(db, `artifacts/${appId}/students`);
-      this.studentsUnsubscribe = onSnapshot(studentsCollectionRef, (querySnapshot) => {
-        const loadedStudents = [];
-        const tempStudentMap = new Map();
-        querySnapshot.forEach((doc) => {
-            const studentData = { id: parseInt(doc.id), ...doc.data() };
-            loadedStudents.push(studentData);
-            tempStudentMap.set(studentData.id, studentData);
-        });
-        this.masterStudentList = loadedStudents;
-        this.allStudentsMap = tempStudentMap;
-        if (loadedStudents.length > 0) {
+
+  if (!auth.currentUser || !this.isFirestoreReady) {
+    console.warn("Cannot set up real-time listeners: user not authenticated or Firestore not ready.");
+    return;
+  }
+
+  // Student listener (using the service)
+  this.studentsUnsubscribe = watchStudents(
+    appId,
+    (students) => {
+
+          this.masterStudentList = students;
+
+          const map = new Map();
+
+          students.forEach(student => {
+            map.set(student.id, student);
+          });
+
+          this.allStudentsMap = map;
+
+          if (students.length > 0) {
             this.masterListSaved = true;
+          }
+
         }
-      }, (error) => { console.error("Error listening to master student list from Firestore:", error); });
-      
-      const classroomsCollectionRef = collection(db, `artifacts/${appId}/classrooms`);
-      this.tabsUnsubscribe = onSnapshot(classroomsCollectionRef, async (querySnapshot) => {
-        // Use the new helper method here
+      );
+
+      // Classroom listener (keep this as-is for now)
+      const classroomsCollectionRef = collection(
+        db,
+        `artifacts/${appId}/classrooms`
+      );
+
+      this.tabsUnsubscribe = onSnapshot(
+        classroomsCollectionRef,
+        async (querySnapshot) => {
           await this.fetchAndProcessClassrooms(querySnapshot);
-      }, (error) => { console.error("Error listening to tabs from Firestore:", error); });
+        },
+        (error) => {
+          console.error(
+            "Error listening to tabs from Firestore:",
+            error
+          );
+        }
+      );
     },
 
     initializeDefaultMasterStudentList() {
@@ -334,48 +276,55 @@ export default {
     },
 
     async saveMasterStudentListInit() {
-      if (!auth.currentUser || !this.isFirestoreReady) {
-        console.warn("Firestore not ready or user not authenticated, cannot save.");
-        return;
-      }
-      if (this.masterListSaved) {
-        alert("マスター学生リストはすでに保存されています。");
-        return;
-      }
-      const studentsCollectionRef = collection(db, `artifacts/${appId}/students`);
-      try {
-        const studentsSnapshot = await getDocs(studentsCollectionRef);
-        if (!studentsSnapshot.empty) {
-          console.log("Master student list already exists in Firestore. Skipping save.");
-          alert("マスター学生リストはすでに存在します。");
-          this.masterListSaved = true;
-          return;
-        }
-        for (const student of this.masterStudentList) {
-          await setDoc(doc(studentsCollectionRef, String(student.id)), {
-            name: student.name,
-            hiragana: student.hiragana,
-            gender_id: student.gender_id,
-            isActive: student.isActive
-          });
-        }
-        console.log("Master student list successfully saved to /students collection.");
-        const classroomsCollectionRef = collection(db, `artifacts/${appId}/classrooms`);
+
+        if (!auth.currentUser || !this.isFirestoreReady)
+            return;
+
+        if (this.masterListSaved)
+            return;
+
+        const students = await getStudents(this.schoolId);
+
+        if (students.length > 0)
+            return;
+
+        await saveStudents(
+            this.schoolId,
+            this.masterStudentList
+        );
+
+        const classroomsCollectionRef = collection(
+            db,
+            `artifacts/${appId}/classrooms`
+        );
+
         const classroomsSnapshot = await getDocs(classroomsCollectionRef);
+
         if (classroomsSnapshot.empty) {
+
             console.log("No classroom tabs found. Creating initial layouts from cLists.");
-            const initialLists = [this.c1, this.c2, this.c3, this.c4];
+
+            const initialLists = [
+                this.c1,
+                this.c2,
+                this.c3,
+                this.c4
+            ];
+
             for (const item of initialLists) {
-                await this.addTab(item.title, item.studentAssignments, true);
+                await this.addTab(
+                    item.title,
+                    item.studentAssignments,
+                    true
+                );
             }
+
             console.log("Initial cLists successfully saved as tabs.");
+
         }
-        alert("マスター学生リストがFirestoreに保存されました。");
+
         this.masterListSaved = true;
-      } catch (e) {
-        console.error("Error saving master student list:", e);
-        alert("マスター学生リストの保存中にエラーが発生しました。");
-      }
+
     },
 
     assignStudentsToDesks(studentList) {
@@ -438,7 +387,6 @@ export default {
 
     toggleLoginStatus() {
       if (this.isAnonymous) {
-        this.showLoginModal = true;
         this.isLoggedIn = false;
       } else if (this.isLoggedIn) {
         try {
@@ -451,11 +399,6 @@ export default {
           alert("ログアウト中にエラーが発生しました。");
         }
       }
-    },
-    
-    handleLoginSuccess() {
-      this.showLoginModal = false;
-      //this.isLoggedIn = true;
     },
 
     async randomizeCurrentList() {

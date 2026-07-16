@@ -9,13 +9,13 @@ import {
     setDoc,
 } from "firebase/firestore";
 
-export async function getClassrooms(appId) {
+export async function getClassrooms(schoolId) {
 
     const snapshot = await getDocs(
 
         collection(
             db,
-            `artifacts/${appId}/classrooms`
+            `artifacts/${schoolId}/classrooms`
         )
 
     );
@@ -31,7 +31,7 @@ export async function getClassrooms(appId) {
 }
 
 export function watchClassrooms(
-    appId,
+    schoolId,
     onChange,
     onError
 ) {
@@ -40,7 +40,7 @@ export function watchClassrooms(
 
         collection(
             db,
-            `artifacts/${appId}/classrooms`
+            `artifacts/${schoolId}/classrooms`
         ),
 
         snapshot => {
@@ -59,10 +59,10 @@ export function watchClassrooms(
     );
 
 }
-export async function saveClassroomLayout(appId, tabData, docId = null) {
+export async function saveClassroomLayout(schoolId, tabData, docId = null) {
   const classroomsRef = collection(
     db,
-    `artifacts/${appId}/classrooms`,
+    `artifacts/${schoolId}/classrooms`,
   );
 
   const documentRef = docId

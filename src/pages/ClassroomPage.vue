@@ -85,6 +85,14 @@ export default {
   components: {
     MyClassroom,
   },
+
+  props: {
+      schoolId: {
+          type: String,
+          required: true
+      }
+  },
+
   data() {
     return {
       isLoggedIn: false,
@@ -115,6 +123,9 @@ export default {
   },
 
   async created() {
+
+    console.log("School:", this.schoolId);
+    
     await authReadyPromise;
     this.isFirestoreReady = true;
 

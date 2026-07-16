@@ -22,7 +22,7 @@
     <main>
 
         <ClassroomPage
-            v-if="currentPage==='classroom'"
+            v-if="currentPage==='classroom'" :schoolId="session.activeSchool"
         />
 
         <StudentManager

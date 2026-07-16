@@ -9,11 +9,11 @@ import {
     onSnapshot
 } from "firebase/firestore";
 
-export async function getStudents(appId) {
+export async function getStudents(schoolId) {
 
     const studentsCollectionRef = collection(
         db,
-        `artifacts/${appId}/students`
+        `artifacts/${schoolId}/students`
     );
 
     const snapshot = await getDocs(studentsCollectionRef);
@@ -24,11 +24,11 @@ export async function getStudents(appId) {
     }));
 }
 
-export async function saveStudents(appId, students) {
+export async function saveStudents(schoolId, students) {
 
     const studentsCollectionRef = collection(
         db,
-        `artifacts/${appId}/students`
+        `artifacts/${schoolId}/students`
     );
 
     for (const student of students) {
@@ -48,11 +48,11 @@ export async function saveStudents(appId, students) {
 
 }
 
-export function watchStudents(appId, callback) {
+export function watchStudents(schoolId, callback) {
 
     const studentsCollectionRef = collection(
         db,
-        `artifacts/${appId}/students`
+        `artifacts/${schoolId}/students`
     );
 
     return onSnapshot(

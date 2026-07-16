@@ -6,7 +6,7 @@
 
   <!-- Show login if no user is authenticated -->
   <LoginModal
-    v-else-if="!user"
+    v-else-if="!session.firebaseUser"
     :isVisible="true"
     @login-success="onLoginSuccess"
   />
@@ -70,41 +70,55 @@ SettingsPage
 },
 
 data(){
-    return {
-      user: null,
-      userProfile: null,
+  return {
       loading: true,
-      currentPage: "classroom"
-    };  
-},
+
+      currentPage: "classroom",
+
+      session: {
+          firebaseUser: null,
+          profile: null,
+          activeSchool: null,
+          initialized: false
+      }
+    };
+  },
 
 mounted() {
-    onAuthStateChanged(auth, (user) => {
-      this.user = user;
+    onAuthStateChanged(auth, async (user) => {
       this.loading = false;
 
-      if (user) {
-        console.log("Logged in:", user.email);
-      } else {
+      if (!user) {
         console.log("No authenticated user.");
+        this.session.firebaseUser = null;
+        return;
       }
+      console.log("Logged in:", user.email);
+      await this.initializeSession(user);
     });
   },
 
   methods: {
-    async onLoginSuccess() {
-        this.user = auth.currentUser;
 
-        console.log("UID:", auth.currentUser.uid);
-        console.log("Email:", auth.currentUser.email);
-
+    async initializeSession(firebaseUser) {
+        console.log("Initializing session...");
         const profile = await getCurrentUserProfile(
-            auth.currentUser.uid
+            firebaseUser.uid
         );
 
-        console.log("User profile:", profile);
-        this.userProfile = profile;
+        this.session.firebaseUser = firebaseUser;
+        this.session.profile = profile;
 
+        if (profile) {
+            this.session.activeSchool = profile.activeSchool;
+        }
+
+        this.session.initialized = true;
+        console.log("Session ready:", this.session);
+    },
+
+    async onLoginSuccess() {
+      console.log("Login successful.");
     },
   },
 };

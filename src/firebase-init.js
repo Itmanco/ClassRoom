@@ -28,10 +28,10 @@ const db = getFirestore(app);
 let authReadyPromise = new Promise(resolve => {
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      console.log("Logged in:", user.email);
+      // console.log("Logged in:", user.email);
       resolve(user);
     } else {
-      console.log("No authenticated user.");
+      //console.log("No authenticated user.");
       resolve(null);
     }
   });

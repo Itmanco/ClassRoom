@@ -48,7 +48,6 @@
 
 <script>
 import MyClassroom from '../components/MyClassroom.vue';
-import LoginModal from '../components/LoginModal.vue';
 import {
     getStudents,
     saveStudents,
@@ -103,7 +102,16 @@ export default {
   },
 
   beforeUnmount() {
-    // Call the unsubscribe function here to clean up the listener
+    console.log("Destroying ClassroomPage");
+
+    if (this.studentsUnsubscribe) {
+        this.studentsUnsubscribe();
+    }
+
+    if (this.tabsUnsubscribe) {
+        this.tabsUnsubscribe();
+    }
+
     if (this.unsubscribeAuth) {
         this.unsubscribeAuth();
     }
@@ -128,20 +136,10 @@ export default {
           assignments.forEach(assignment => studentIdsToFetch.add(assignment.studentId));
           loadedTabsData.push({ ...data, id: doc.id, firestoreDocId: doc.id, studentAssignments: assignments, deskLayout: [] });
       });
-      const fetchedStudentsMap = new Map();
-      if (studentIdsToFetch.size > 0) {
-        const studentDocPromises = Array.from(studentIdsToFetch).map(id => getDoc(doc(db, `artifacts/${appId}/students`, String(id))));
-        const studentDocs = await Promise.all(studentDocPromises);
-        studentDocs.forEach(docSnap => {
-          if (docSnap.exists()) {
-            const studentData = { id: parseInt(docSnap.id), ...docSnap.data() };
-            fetchedStudentsMap.set(studentData.id, studentData);
-          }
-        });
-      }
+
       this.tabs = loadedTabsData.map(tab => {
           const rehydratedStudents = tab.studentAssignments.map(assignment => {
-              const fullStudentData = fetchedStudentsMap.get(assignment.studentId);
+              const fullStudentData = this.allStudentsMap.get(assignment.studentId);
               return fullStudentData ? { ...fullStudentData, deskNumber: assignment.deskNumber } : { ...this.emptyStudentPlaceholder };
           }).filter(s => !s.isEmpty);
           const { deskLayout, studentsWithDeskNumbers } = this.assignStudentsToDesks(rehydratedStudents);
@@ -385,20 +383,20 @@ export default {
       }
     },
 
-    toggleLoginStatus() {
-      if (this.isAnonymous) {
-        this.isLoggedIn = false;
-      } else if (this.isLoggedIn) {
-        try {
-            signOut(auth);
-            console.log("after: signOut(auth)");
-            alert("ログアウトしました。");       
-          
-        } catch (error) {
-          console.error("ログアウトに失敗しました:", error);
-          alert("ログアウト中にエラーが発生しました。");
+    async toggleLoginStatus() {
+        if (!this.isLoggedIn)
+            return;
+
+        if (this.studentsUnsubscribe) {
+            this.studentsUnsubscribe();
+            this.studentsUnsubscribe = null;
         }
-      }
+
+        if (this.tabsUnsubscribe) {
+            this.tabsUnsubscribe();
+            this.tabsUnsubscribe = null;
+        }
+        await signOut(auth);
     },
 
     async randomizeCurrentList() {

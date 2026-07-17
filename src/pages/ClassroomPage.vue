@@ -237,13 +237,14 @@ export default {
       this.initialLoadComplete = false;
 
       try {
-        const students = await getStudents(appId);
+        const students = await getStudents(this.schoolId);
 
         this.masterStudentList = students;
         this.allStudentsMap = new Map(
           students.map((student) => [student.id, student]),
         );
 
+        /** 
         if (students.length === 0) {
           console.log(
             "マスター生徒リストが見つかりませんでした。デフォルトを初期化します。",
@@ -252,6 +253,7 @@ export default {
           this.initializeDefaultMasterStudentList();
           await this.saveMasterStudentListInit();
         }
+          */
 
         this.startRealtimeListeners();
 
@@ -274,7 +276,7 @@ export default {
         return;
       }
 
-      this.studentsUnsubscribe = watchStudents(appId, (students) => {
+      this.studentsUnsubscribe = watchStudents(this.schoolId, (students) => {
         this.masterStudentList = students;
 
         this.allStudentsMap = new Map(

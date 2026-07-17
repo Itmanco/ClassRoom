@@ -2,71 +2,55 @@
 
 import { db } from "../firebase-init";
 import {
-    collection,
-    getDocs,
-    setDoc,
-    doc,
-    onSnapshot
+  collection,
+  doc,
+  getDocs,
+  onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 
+function getStudentsRef(schoolId) {
+  if (!schoolId) {
+    throw new Error("A schoolId is required to access students.");
+  }
+
+  return collection(db, "schools", schoolId, "students");
+}
+
 export async function getStudents(schoolId) {
+  const snapshot = await getDocs(getStudentsRef(schoolId));
 
-    const studentsCollectionRef = collection(
-        db,
-        `artifacts/${schoolId}/students`
-    );
-
-    const snapshot = await getDocs(studentsCollectionRef);
-
-    return snapshot.docs.map(doc => ({
-        id: parseInt(doc.id),
-        ...doc.data()
-    }));
+  return snapshot.docs.map((document) => ({
+    id: Number(document.id),
+    ...document.data(),
+  }));
 }
 
 export async function saveStudents(schoolId, students) {
+  const studentsRef = getStudentsRef(schoolId);
 
-    const studentsCollectionRef = collection(
-        db,
-        `artifacts/${schoolId}/students`
-    );
-
-    for (const student of students) {
-
-        await setDoc(
-            doc(studentsCollectionRef, String(student.id)),
-            {
-                name: student.name,
-                hiragana: student.hiragana,
-                gender_id: student.gender_id,
-                isActive: student.isActive,
-                country: student.country ?? ""
-            }
-        );
-
-    }
-
+  for (const student of students) {
+    await setDoc(doc(studentsRef, String(student.id)), {
+      name: student.name,
+      hiragana: student.hiragana,
+      gender_id: student.gender_id,
+      country: student.country ?? "",
+      isActive: student.isActive,
+    });
+  }
 }
 
-export function watchStudents(schoolId, callback) {
+export function watchStudents(schoolId, onChange, onError) {
+  return onSnapshot(
+    getStudentsRef(schoolId),
+    (snapshot) => {
+      const students = snapshot.docs.map((document) => ({
+        id: Number(document.id),
+        ...document.data(),
+      }));
 
-    const studentsCollectionRef = collection(
-        db,
-        `artifacts/${schoolId}/students`
-    );
-
-    return onSnapshot(
-        studentsCollectionRef,
-        (snapshot) => {
-
-            const students = snapshot.docs.map(doc => ({
-                id: parseInt(doc.id),
-                ...doc.data()
-            }));
-
-            callback(students);
-
-        }
-    );
-
+      onChange(students);
+    },
+    onError,
+  );
 }

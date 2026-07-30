@@ -121,3 +121,21 @@ Reason: readable IDs simplify references and debugging, while lifecycle metadata
 Before creating `legacy_class_2025`, define and introduce the building, room, course, and class schemas. Create real domain records where the historical relationships are known. Use `null` only when a legacy course or room cannot be identified truthfully.
 
 Reason: this avoids unnecessary placeholder relationships and ensures the first migrated class uses the same model as future production classes.
+
+---
+
+## Decision 011 — Do not migrate disposable sandbox seating data
+
+The legacy documents under `artifacts/{appId}/classrooms` will not be migrated. New seating plans are created directly under:
+
+`schools/{schoolId}/classes/{classId}/seatingPlans/{seatingPlanId}`
+
+Reason: the legacy records were test data and have no production or historical value. Skipping migration reduces temporary compatibility code and lets the new seating model become the source of truth immediately.
+
+---
+
+## Decision 012 — Store explicit seat positions
+
+Each assignment stores `studentId`, `deskNumber`, and `seatNumber`.
+
+Reason: desk number alone is ambiguous when a desk contains more than one seat. Explicit seat positions support deterministic editing, display, exporting, and future history analysis.

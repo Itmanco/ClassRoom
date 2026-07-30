@@ -14,13 +14,13 @@
 - [ ] Create the initial A1 rooms
 - [x] Add the Course service and validation
 - [ ] Create the course associated with the historical class, if known
-- [ ] Add the Class service and validation
-- [ ] Create `legacy_class_2025` with truthful course and room references
-- [ ] Create `scripts/migrateLegacySeatingPlans.js`
-- [ ] Migrate six legacy seating-plan documents
-- [ ] Verify historical seating layouts
+- [x] Add the Class service and validation
+- [x] Cancel `legacy_class_2025`; legacy data was disposable sandbox data
+- [x] Cancel legacy seating-plan migration script
+- [x] Skip migration of six sandbox seating-plan documents
+- [x] Historical sandbox layouts are not required
 - [ ] Verify saving a new seating plan
-- [ ] Add a compatibility seating-plan service
+- [x] Compatibility service is unnecessary for disposable sandbox data
 
 
 ## Student management
@@ -35,8 +35,8 @@
 ## Medium Priority
 
 - [x] Add building, room, and course management UI
-- [ ] Add class management UI
-- [ ] Add enrollments
+- [x] Add class management UI
+- [x] Add enrollments
 - [ ] Use seating history when generating new assignments
 - [ ] Add multi-school selector
 - [ ] Improve permissions
@@ -61,7 +61,7 @@
 - [ ] Create the first building document (`A1`)
 - [x] Add Room service
 - [x] Add Course service
-- [ ] Add Class service
+- [x] Add Class service
 
 ## Room management
 
@@ -72,7 +72,8 @@
 - [ ] Add courses after room verification
 
 - [x] Implement Course service and Course Management UI.
-- [ ] Implement Classes that connect courses, rooms, and students.
+- [x] Implement Classes that connect courses and rooms.
+- [x] Implement class-scoped student enrollments.
 
 ## Class Management
 - [x] Add `classService.js` with real-time CRUD operations.
@@ -80,7 +81,7 @@
 - [x] Connect classes to courses and physical rooms.
 - [x] Validate academic year and semester.
 - [ ] Add student enrollments under each class.
-- [ ] Migrate historical seating plans into the appropriate class.
+- [x] Decide not to migrate disposable sandbox seating data.
 
 ## Enrollment Management
 - [x] Add class-scoped enrollment service.
@@ -89,7 +90,14 @@
 - [x] Archive and reactivate enrollments without deleting history.
 - [ ] Add optional enrollment dates/status reasons if future requirements need them.
 
+## Seating Plan Management
+- [x] Add class-scoped seating-plan service.
+- [x] Add manual seating-plan creation and editing.
+- [x] Use class enrollments and the assigned room capacity.
+- [x] Archive plans instead of deleting them.
+- [ ] Verify create, edit, archive, and archived-plan display in Firebase.
+
 ## Next
-- [ ] Migrate legacy classroom documents into class-scoped seating plans.
-- [ ] Build seating-plan management UI.
-- [ ] Build history-aware seating generation.
+- [ ] Build random seating generation.
+- [ ] Use seating history to reduce repeated desk partners.
+- [ ] Add visual classroom layout and export support.

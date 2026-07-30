@@ -144,3 +144,10 @@ Class CRUD now exists at `schools/{schoolId}/classes`. The next migration step i
 - Class-scoped enrollment service and UI implemented.
 - Students can be added, archived, and reactivated within a selected class.
 - Ready for historical seating-plan migration and seating-plan management.
+
+## Seating-plan direction update — 2026-07-30
+
+- Legacy classroom documents were confirmed to be disposable sandbox data.
+- Historical seating migration is cancelled.
+- New seating plans are created directly under each class.
+- Manual Seating Plan Management is implemented as the new source of truth.

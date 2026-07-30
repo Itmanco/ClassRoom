@@ -1,3 +1,11 @@
+
+## 2026-07-30 — Seating Plan Management
+
+- Added `seatingPlanService.js` for class-scoped seating-plan CRUD.
+- Added manual seating assignment using active enrollments and room capacity.
+- Added seating-plan editing, history display, and archiving.
+- Added the Seating Plans navigation page.
+- Removed legacy seating migration from the active roadmap because the old records were sandbox data.
 # Changelog
 
 ## Building Management UI

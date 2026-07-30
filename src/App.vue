@@ -55,6 +55,11 @@
             :schoolId="session.activeSchool"
         />
 
+        <SeatingPlanManager
+            v-if="currentPage==='seating-plans'"
+            :schoolId="session.activeSchool"
+        />
+
         <SettingsPage
             v-if="currentPage==='settings'"
         />
@@ -81,6 +86,7 @@ import BuildingManager from "./pages/BuildingManager.vue"
 import RoomManager from "./pages/RoomManager.vue"
 import ClassManager from "./pages/ClassManager.vue"
 import EnrollmentManager from "./pages/EnrollmentManager.vue"
+import SeatingPlanManager from "./pages/SeatingPlanManager.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 
 export default{
@@ -96,6 +102,7 @@ BuildingManager,
 RoomManager,
 ClassManager,
 EnrollmentManager,
+SeatingPlanManager,
 SettingsPage
 },
 

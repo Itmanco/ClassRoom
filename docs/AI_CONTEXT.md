@@ -51,3 +51,7 @@ Class Management is implemented. A class references `courseId` and `roomId` and 
 
 ## Current Implementation Update: Enrollments
 Enrollment Management is implemented at `schools/{schoolId}/classes/{classId}/enrollments/{studentId}`. Enrollment documents reference existing school students; student data is not duplicated. Archiving sets `active: false` so historical class membership remains available.
+
+## Current implementation update — Seating Plans
+
+The application now includes manual class-scoped Seating Plan Management. A plan uses the selected class, its active enrollments, and its assigned room's `deskCount` and `seatsPerDesk`. Assignments store `studentId`, `deskNumber`, and `seatNumber`. Legacy seating records are disposable sandbox data and will not be migrated. The next major feature is history-aware random seating generation.

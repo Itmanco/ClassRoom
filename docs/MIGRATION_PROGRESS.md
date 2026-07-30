@@ -2,70 +2,133 @@
 
 ## Completed
 
-✔ Login no longer depends on appId
+✔ Login no longer depends on `appId`
 
-✔ Session stores activeSchool
+✔ Session stores `activeSchool`
 
-✔ App.vue passes schoolId
+✔ `App.vue` passes `schoolId`
 
-✔ ClassroomPage accepts schoolId
+✔ `ClassroomPage` accepts `schoolId`
 
-✔ studentService
-
-appId
-
-↓
-
-schoolId
-
-✔ classroomService
-
-appId
-
-↓
-
-schoolId
+✔ Student and classroom services renamed from `appId` to `schoolId`
 
 ✔ Firestore rules updated
 
+✔ 18 legacy student documents copied to `schools/school_japan/students`
+
+✔ Student document IDs preserved
+
+✔ No legacy student IDs missing at the destination
+
+✔ Application loads and runs correctly after student migration
+
+✔ New domain model approved: buildings, rooms, courses, classes, enrollments, and seating plans
+
+✔ Legacy `classrooms` documents identified as historical seating plans
+
 ---
 
-## Current
+## Current Architecture Work
 
-Migrating Firestore data
+The old plan to copy:
 
-Old
-
-artifacts/classroom-b81c6
-
+```text
+artifacts/classroom-b81c6/classrooms
 ↓
+schools/school_japan/classrooms
+```
 
-New
+has been replaced.
 
-schools/school_japan
+Revised target:
+
+```text
+artifacts/classroom-b81c6/classrooms/{documentId}
+↓
+schools/school_japan/classes/legacy_class_2025/seatingPlans/{documentId}
+```
+
+The six legacy documents must keep their current IDs and fields.
 
 ---
 
-## Remaining
+## Next
 
-Students
+### Domain foundation
 
-☐ copy documents
+☐ implement Building service and validation
 
-☐ verify listener
+☐ create Building A1
 
-☐ verify save
+☐ implement Room service and validation
 
-Classrooms
+☐ create the initial A1 rooms
 
-☐ migrate collection
+☐ implement Course service and validation
 
-☐ verify layout loading
+☐ identify or create the course associated with the historical class
 
-Cleanup
+☐ implement Class service and validation
 
-☐ remove artifacts references
+### Historical class and seating plans
 
-☐ delete old collection
+☐ create `schools/school_japan/classes/legacy_class_2025`
 
-☐ simplify code
+☐ use real `courseId` and `roomId` references when known
+
+☐ use `null` only for relationships that cannot be established truthfully
+
+☐ create `scripts/migrateLegacySeatingPlans.js`
+
+☐ add `migrate:seating-plans` npm command
+
+☐ migrate six documents
+
+☐ verify source IDs exist at destination
+
+☐ verify layout loading in the application
+
+☐ verify saving a new seating plan
+
+### Compatibility
+
+☐ introduce seating-plan service using `schoolId` and `classId`
+
+☐ keep the existing classroom UI working during transition
+
+### Future domain work
+
+☐ building, room, course, and class management UI
+
+☐ enrollments
+
+☐ seating-history assignment rules
+
+### Cleanup
+
+☐ remove remaining `artifacts` references
+
+☐ delete old collections only after full verification
+
+☐ simplify migration-only compatibility code
+
+## Domain foundation implementation
+
+✔ Building service implemented
+✔ Building UI implemented
+☐ First building document created
+☐ Room, course, and class services implemented
+
+## Room foundation implementation
+
+✔ `roomService.js` added
+
+✔ Room Management page added
+
+✔ Rooms reference active buildings through `buildingId`
+
+✔ Room capacity is calculated as `deskCount × seatsPerDesk`
+
+☐ Create the initial physical rooms for Building A1
+
+- Course service and Course Management UI implemented under `schools/{schoolId}/courses`.

@@ -54,8 +54,12 @@ Tasks
 
 ### Firestore
 
-- [ ] Migrate Students
-- [ ] Migrate Classrooms
+- [x] Migrate Students
+- [x] Define field-level domain schemas
+- [ ] Add Building, Room, Course, and Class services
+- [ ] Create the initial domain records
+- [ ] Create the historical class
+- [ ] Migrate legacy classroom documents as seating plans
 - [ ] Verify listeners
 - [ ] Remove artifacts collection
 
@@ -91,7 +95,13 @@ schools
 
         settings
 
-        classrooms
+        buildings
+
+        rooms
+
+        courses
+
+        classes
 
         students
 
@@ -173,9 +183,9 @@ Archive
 
 ---
 
-# Phase 6 - Classroom Management
+# Phase 6 - Buildings, Rooms, Courses, Classes, and Seating Management
 
-Improve classroom editing.
+Manage the physical and academic foundations separately, then improve seating-plan editing and historical assignment rules.
 
 Features
 
@@ -473,7 +483,7 @@ The migration is complete when:
 - No reference to appId exists in the frontend.
 - Firestore uses only schools/{schoolId}.
 - Students load correctly.
-- Classrooms load correctly.
+- Classes and historical seating plans load correctly.
 - Realtime listeners work.
 - Save operations work.
 - Legacy artifacts collection can be safely removed.

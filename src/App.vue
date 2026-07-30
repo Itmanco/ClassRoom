@@ -31,6 +31,17 @@
 
         <CourseManager
             v-if="currentPage==='courses'"
+            :schoolId="session.activeSchool"
+        />
+
+        <BuildingManager
+            v-if="currentPage==='buildings'"
+            :schoolId="session.activeSchool"
+        />
+
+        <RoomManager
+            v-if="currentPage==='rooms'"
+            :schoolId="session.activeSchool"
         />
 
         <SettingsPage
@@ -55,6 +66,8 @@ import LoginModal from "./components/LoginModal.vue";
 import ClassroomPage from "./pages/ClassroomPage.vue"
 import StudentManager from "./pages/StudentManager.vue"
 import CourseManager from "./pages/CourseManager.vue"
+import BuildingManager from "./pages/BuildingManager.vue"
+import RoomManager from "./pages/RoomManager.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 
 export default{
@@ -66,6 +79,8 @@ LoginModal,
 ClassroomPage,
 StudentManager,
 CourseManager,
+BuildingManager,
+RoomManager,
 SettingsPage
 },
 

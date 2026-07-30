@@ -19,13 +19,7 @@ Important rules
 
 Current goal
 
-Finish migration from
-
-artifacts/{appId}
-
-to
-
-schools/{schoolId}
+Finish the multi-school migration while separating physical rooms, classes, and historical seating plans.
 
 Current school
 
@@ -35,6 +29,15 @@ Legacy app
 
 classroom-b81c6
 
-Current issue
+Current status
 
-Student collection has not yet been fully migrated.
+Students have been migrated and verified. The domain schemas are defined. The next task is to implement the Building service, create Building A1, and then proceed through Rooms, Courses, and Classes before migrating the six historical seating plans.
+## Current implementation status
+
+The Building service and Building management UI are implemented. The next task is to verify the screen locally and create the first `A1` building document through the application.
+
+## Current implementation checkpoint — Rooms
+
+Building Management is working. Room Management has now been added using `schools/{schoolId}/rooms/{roomId}`. Rooms reference buildings by `buildingId`, calculate capacity from desks and seats per desk, and are archived rather than deleted. The next verification task is to create and inspect the first A1 rooms before implementing Courses.
+
+- Course Management is implemented using `courseService.js` and `CourseManager.vue`.

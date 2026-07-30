@@ -25,6 +25,20 @@
     </button>
 
     <button
+      @click="$emit('change-page','buildings')"
+      :class="{active: currentPage==='buildings'}"
+    >
+      🏫 Buildings
+    </button>
+
+    <button
+      @click="$emit('change-page','rooms')"
+      :class="{active: currentPage==='rooms'}"
+    >
+      🚪 Rooms
+    </button>
+
+    <button
       @click="$emit('change-page','settings')"
       :class="{active: currentPage==='settings'}"
     >

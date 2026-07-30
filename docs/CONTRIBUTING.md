@@ -215,15 +215,24 @@ Always migrate in this order.
 Students
 
 2.
-Classrooms
+Domain-model documentation and field-level schemas
 
 3.
-Layouts
+Buildings and rooms
 
 4.
-Verification
+Courses and classes
 
 5.
+Legacy class and historical seating plans
+
+6.
+Compatibility service
+
+7.
+Verification and enrollments
+
+8.
 Cleanup
 
 Never skip steps.
@@ -380,13 +389,11 @@ classroom-b81c6
 
 Current Task
 
-Finish migration from
+Migrate the six legacy `classrooms` documents as historical seating plans under:
 
-artifacts/{appId}
+`schools/school_japan/classes/legacy_class_2025/seatingPlans`
 
-↓
-
-schools/{schoolId}
+Do not migrate those documents into the physical `rooms` collection.
 
 ---
 

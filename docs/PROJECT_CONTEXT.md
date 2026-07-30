@@ -2,26 +2,30 @@
 
 ## Overview
 
-Classroom Manager is a Vue 3 + Firebase application used by schools to manage:
+Classroom Manager is a Vue 3 + Firebase application for schools to manage:
 
-- Students
-- Classrooms
-- Seating layouts
-- Attendance
-- Future multi-school support
+- students
+- buildings and physical rooms
+- courses and classes
+- class enrollment
+- current and historical seating plans
+- future attendance features
+- multiple schools
 
-The project originally supported only one school and is being migrated to support multiple schools.
+The project originally supported one school and used the ambiguous term `classrooms` for saved seating arrangements. It is being migrated to a clearer multi-school domain model.
 
 ---
 
 ## Tech Stack
 
-Frontend
+Frontend:
+
 - Vue 3
 - Vue Router
-- Vite
+- Vue CLI
 
-Backend
+Backend:
+
 - Firebase Authentication
 - Firestore
 - Firebase Storage
@@ -30,7 +34,7 @@ Backend
 
 ## Current Branch
 
-migration/schools
+`feature/student-management`
 
 ---
 
@@ -40,44 +44,81 @@ migration/schools
 
 ✅ Session initialization works
 
-✅ User Profile loading works
+✅ User profile loading works
 
-✅ activeSchool stored in session
+✅ `activeSchool` is stored in the session
 
-✅ ClassroomPage receives schoolId
+✅ Components receive `schoolId`
 
-✅ Services renamed appId → schoolId
+✅ Services use `schoolId` instead of `appId`
 
-🚧 Firestore migration in progress
+✅ 18 students migrated with unchanged IDs
 
----
+✅ Application works after the student migration
 
-## Firestore
+✅ New domain model approved
 
-Old
-
-artifacts/{appId}/
-
-New
-
-schools/{schoolId}/
-
-Current school
-
-school_japan
-
-Old app id
-
-classroom-b81c6
+🚧 Building, room, course, and class foundations are next
 
 ---
 
-## Current Issue
+## Domain Language
 
-Students are not loading because data has not yet been migrated from
+### Room
 
-artifacts/classroom-b81c6/students
+A physical location such as `A1F1C1`.
 
-to
+### Course
 
-schools/school_japan/students
+A subject or program offered by the school.
+
+### Class
+
+A group of enrolled students taking a course. It may be assigned to a room.
+
+### Seating Plan
+
+A dated seating arrangement for a class. Previous plans remain available so future seat generation can consider previous desks and desk partners.
+
+---
+
+## Firestore Migration
+
+Legacy root:
+
+`artifacts/classroom-b81c6`
+
+New school root:
+
+`schools/school_japan`
+
+Students have been migrated from:
+
+`artifacts/classroom-b81c6/students`
+
+into:
+
+`schools/school_japan/students`
+
+The six legacy documents under:
+
+`artifacts/classroom-b81c6/classrooms`
+
+are historical seating plans, not physical classroom records.
+
+Their revised destination is:
+
+`schools/school_japan/classes/legacy_class_2025/seatingPlans`
+
+Before that migration, the project will introduce the Building, Room, Course, and Class services so the historical class can use real relationships wherever they are known.
+
+---
+
+## Compatibility Rule
+
+Do not delete the old collections or remove the existing classroom UI until:
+
+- all six seating plans are migrated;
+- their document IDs and assignments are verified;
+- historical plans load correctly;
+- saving a new plan works through the new path.

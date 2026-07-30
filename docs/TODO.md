@@ -81,3 +81,15 @@
 - [x] Validate academic year and semester.
 - [ ] Add student enrollments under each class.
 - [ ] Migrate historical seating plans into the appropriate class.
+
+## Enrollment Management
+- [x] Add class-scoped enrollment service.
+- [x] Add class selection and enrolled-student view.
+- [x] Add active student search and enrollment action.
+- [x] Archive and reactivate enrollments without deleting history.
+- [ ] Add optional enrollment dates/status reasons if future requirements need them.
+
+## Next
+- [ ] Migrate legacy classroom documents into class-scoped seating plans.
+- [ ] Build seating-plan management UI.
+- [ ] Build history-aware seating generation.

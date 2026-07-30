@@ -46,6 +46,13 @@
     </button>
 
     <button
+      @click="$emit('change-page','enrollments')"
+      :class="{active: currentPage==='enrollments'}"
+    >
+      👥 Enrollments
+    </button>
+
+    <button
       @click="$emit('change-page','settings')"
       :class="{active: currentPage==='settings'}"
     >

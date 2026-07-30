@@ -1,0 +1,223 @@
+<template>
+  <div class="page">
+    <header class="page-header">
+      <h1>👥 Enrollment Management</h1>
+      <p>Assign school students to a class without duplicating student records.</p>
+    </header>
+
+    <section class="panel">
+      <label class="class-select">
+        Class
+        <select v-model="selectedClassId">
+          <option value="">Select a class</option>
+          <option v-for="item in activeClasses" :key="item.id" :value="item.id">
+            {{ item.code }} — {{ item.name }}
+          </option>
+        </select>
+      </label>
+      <p v-if="classes.length === 0" class="error">Create an active class before managing enrollments.</p>
+      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+      <p v-if="message" class="success">{{ message }}</p>
+    </section>
+
+    <template v-if="selectedClassId">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Available students</h2>
+            <p>{{ availableStudents.length }} students can be added.</p>
+          </div>
+          <input v-model.trim="search" class="search" placeholder="Search students" />
+        </div>
+
+        <p v-if="loadingStudents || loadingEnrollments">Loading students...</p>
+        <p v-else-if="filteredAvailableStudents.length === 0">No matching available students.</p>
+
+        <article v-for="student in filteredAvailableStudents" :key="student.id" class="card">
+          <div>
+            <h3>#{{ student.id }} — {{ student.name }}</h3>
+            <p>{{ student.hiragana }}<span v-if="student.country"> · {{ student.country }}</span></p>
+          </div>
+          <button class="primary" :disabled="savingStudentId === String(student.id)" @click="addStudent(student)">
+            {{ savingStudentId === String(student.id) ? "Adding..." : "Add" }}
+          </button>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Enrolled students</h2>
+            <p>{{ activeEnrollments.length }} active · {{ archivedEnrollments.length }} archived</p>
+          </div>
+          <label class="archived-toggle"><input v-model="showArchived" type="checkbox" /> Show archived</label>
+        </div>
+
+        <p v-if="visibleEnrollments.length === 0">No students are enrolled in this class yet.</p>
+
+        <article v-for="enrollment in visibleEnrollments" :key="enrollment.id" class="card" :class="{ archived: !enrollment.active }">
+          <div>
+            <h3>{{ studentLabel(enrollment.studentId) }}</h3>
+            <p>{{ enrollment.active ? "Active enrollment" : "Archived enrollment" }}</p>
+          </div>
+          <div class="actions">
+            <button v-if="!enrollment.active" class="primary" @click="reactivateStudent(enrollment)">Reactivate</button>
+            <button v-else class="archive" @click="confirmArchive(enrollment)">Archive</button>
+          </div>
+        </article>
+      </section>
+    </template>
+  </div>
+</template>
+
+<script>
+import { watchClasses } from "../services/classService";
+import { watchStudents } from "../services/studentService";
+import {
+  archiveEnrollment,
+  enrollStudent,
+  watchEnrollments,
+} from "../services/enrollmentService";
+
+export default {
+  name: "EnrollmentManager",
+  props: { schoolId: { type: String, required: true } },
+  data() {
+    return {
+      classes: [],
+      students: [],
+      enrollments: [],
+      selectedClassId: "",
+      search: "",
+      showArchived: false,
+      loadingStudents: true,
+      loadingEnrollments: false,
+      savingStudentId: "",
+      message: "",
+      errorMessage: "",
+      unsubscribeClasses: null,
+      unsubscribeStudents: null,
+      unsubscribeEnrollments: null,
+    };
+  },
+  computed: {
+    activeClasses() { return this.classes.filter((item) => item.active !== false); },
+    enrollmentByStudentId() {
+      return new Map(this.enrollments.map((item) => [String(item.studentId), item]));
+    },
+    availableStudents() {
+      return this.students.filter((student) => {
+        const enrollment = this.enrollmentByStudentId.get(String(student.id));
+        return student.isActive !== false && !enrollment;
+      });
+    },
+    filteredAvailableStudents() {
+      const query = this.search.toLowerCase();
+      if (!query) return this.availableStudents;
+      return this.availableStudents.filter((student) =>
+        [student.id, student.name, student.hiragana, student.country]
+          .some((value) => String(value || "").toLowerCase().includes(query)),
+      );
+    },
+    activeEnrollments() { return this.enrollments.filter((item) => item.active !== false); },
+    archivedEnrollments() { return this.enrollments.filter((item) => item.active === false); },
+    visibleEnrollments() {
+      return this.enrollments.filter((item) => this.showArchived || item.active !== false);
+    },
+  },
+  mounted() { this.startBaseListeners(); },
+  beforeUnmount() { this.stopAllListeners(); },
+  watch: {
+    schoolId() {
+      this.selectedClassId = "";
+      this.startBaseListeners();
+    },
+    selectedClassId(classId) {
+      this.startEnrollmentListener(classId);
+      this.message = "";
+      this.errorMessage = "";
+    },
+  },
+  methods: {
+    startBaseListeners() {
+      this.stopAllListeners();
+      this.loadingStudents = true;
+      try {
+        this.unsubscribeClasses = watchClasses(
+          this.schoolId,
+          (items) => {
+            this.classes = items;
+            if (this.selectedClassId && !items.some((item) => item.id === this.selectedClassId && item.active !== false)) {
+              this.selectedClassId = "";
+            }
+          },
+          (error) => { this.errorMessage = `Unable to load classes: ${error.message}`; },
+        );
+        this.unsubscribeStudents = watchStudents(
+          this.schoolId,
+          (items) => { this.students = items; this.loadingStudents = false; },
+          (error) => { this.loadingStudents = false; this.errorMessage = `Unable to load students: ${error.message}`; },
+        );
+      } catch (error) {
+        this.loadingStudents = false;
+        this.errorMessage = error.message;
+      }
+    },
+    startEnrollmentListener(classId) {
+      if (this.unsubscribeEnrollments) this.unsubscribeEnrollments();
+      this.unsubscribeEnrollments = null;
+      this.enrollments = [];
+      if (!classId) return;
+      this.loadingEnrollments = true;
+      this.unsubscribeEnrollments = watchEnrollments(
+        this.schoolId,
+        classId,
+        (items) => { this.enrollments = items; this.loadingEnrollments = false; },
+        (error) => { this.loadingEnrollments = false; this.errorMessage = `Unable to load enrollments: ${error.message}`; },
+      );
+    },
+    stopAllListeners() {
+      [this.unsubscribeClasses, this.unsubscribeStudents, this.unsubscribeEnrollments]
+        .forEach((unsubscribe) => unsubscribe && unsubscribe());
+      this.unsubscribeClasses = null;
+      this.unsubscribeStudents = null;
+      this.unsubscribeEnrollments = null;
+    },
+    studentLabel(studentId) {
+      const student = this.students.find((item) => String(item.id) === String(studentId));
+      return student ? `#${student.id} — ${student.name}` : `Student #${studentId}`;
+    },
+    async addStudent(student) {
+      this.savingStudentId = String(student.id);
+      this.message = "";
+      this.errorMessage = "";
+      try {
+        await enrollStudent(this.schoolId, this.selectedClassId, student.id);
+        this.message = `${student.name} was added to the class.`;
+      } catch (error) {
+        this.errorMessage = error.message;
+      } finally {
+        this.savingStudentId = "";
+      }
+    },
+    async reactivateStudent(enrollment) {
+      try {
+        await enrollStudent(this.schoolId, this.selectedClassId, enrollment.studentId);
+        this.message = `${this.studentLabel(enrollment.studentId)} was reactivated.`;
+      } catch (error) { this.errorMessage = error.message; }
+    },
+    async confirmArchive(enrollment) {
+      const label = this.studentLabel(enrollment.studentId);
+      if (!window.confirm(`Archive the enrollment for ${label}?`)) return;
+      try {
+        await archiveEnrollment(this.schoolId, this.selectedClassId, enrollment.studentId);
+        this.message = `${label} was archived.`;
+      } catch (error) { this.errorMessage = error.message; }
+    },
+  },
+};
+</script>
+
+<style scoped>
+.page{padding:30px;max-width:1100px;margin:0 auto}.page-header{margin-bottom:24px}.page-header h1,.panel h2{margin-top:0}.page-header p,.section-heading p{color:#666}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:24px;margin-bottom:24px}.class-select{display:flex;flex-direction:column;gap:8px;font-weight:600}.class-select select,.search{box-sizing:border-box;border:1px solid #bbb;border-radius:8px;padding:10px 12px;font:inherit}.section-heading,.card,.actions,.archived-toggle{display:flex;align-items:center;gap:12px}.section-heading,.card{justify-content:space-between}.section-heading{margin-bottom:12px}.section-heading h2,.section-heading p,.card h3,.card p{margin:4px 0}.search{min-width:260px}.card{border-top:1px solid #eee;padding:16px 0}.primary{background:#42b883;color:#fff}.archive{background:#b63b3b;color:#fff}button{border:0;border-radius:8px;padding:10px 14px;cursor:pointer}.archived{opacity:.62}.success{color:#18794e}.error{color:#b42318}@media(max-width:700px){.section-heading,.card{align-items:stretch;flex-direction:column}.search{min-width:0;width:100%}}
+</style>

@@ -139,3 +139,8 @@ The migrated `schools/{schoolId}/students` collection now has a complete managem
 
 ### Class foundation implemented
 Class CRUD now exists at `schools/{schoolId}/classes`. The next migration step is to create enrollments and move legacy seating layouts beneath the class that owns them.
+
+### Enrollment foundation completed
+- Class-scoped enrollment service and UI implemented.
+- Students can be added, archived, and reactivated within a selected class.
+- Ready for historical seating-plan migration and seating-plan management.

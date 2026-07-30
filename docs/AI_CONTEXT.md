@@ -48,3 +48,6 @@ Student Management is now a complete school-scoped CRUD feature. It uses `studen
 
 ### Current implementation status
 Class Management is implemented. A class references `courseId` and `roomId` and stores an academic year, semester, and active state. Enrollments and seating plans remain the next features.
+
+## Current Implementation Update: Enrollments
+Enrollment Management is implemented at `schools/{schoolId}/classes/{classId}/enrollments/{studentId}`. Enrollment documents reference existing school students; student data is not duplicated. Archiving sets `active: false` so historical class membership remains available.

@@ -60,3 +60,8 @@
 - Added school-scoped Class CRUD backed by `schools/{schoolId}/classes`.
 - Added course and room selectors with real-time reference data.
 - Added archive/reactivate-compatible class records and academic period validation.
+
+## Enrollment Management
+- Added class-scoped enrollment CRUD using student IDs as enrollment document IDs.
+- Added real-time class, student, and enrollment listeners.
+- Added enrollment archive/reactivation instead of destructive deletion.

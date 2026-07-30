@@ -55,3 +55,8 @@
 - Added automatic next-ID selection and duplicate-ID validation.
 - Extended `studentService.js` with single-student save and archive operations.
 - Updated `App.vue` to pass the active school into Student Management.
+
+## Class Management
+- Added school-scoped Class CRUD backed by `schools/{schoolId}/classes`.
+- Added course and room selectors with real-time reference data.
+- Added archive/reactivate-compatible class records and academic period validation.

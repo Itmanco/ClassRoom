@@ -45,6 +45,11 @@
             :schoolId="session.activeSchool"
         />
 
+        <ClassManager
+            v-if="currentPage==='classes'"
+            :schoolId="session.activeSchool"
+        />
+
         <SettingsPage
             v-if="currentPage==='settings'"
         />
@@ -69,6 +74,7 @@ import StudentManager from "./pages/StudentManager.vue"
 import CourseManager from "./pages/CourseManager.vue"
 import BuildingManager from "./pages/BuildingManager.vue"
 import RoomManager from "./pages/RoomManager.vue"
+import ClassManager from "./pages/ClassManager.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 
 export default{
@@ -82,6 +88,7 @@ StudentManager,
 CourseManager,
 BuildingManager,
 RoomManager,
+ClassManager,
 SettingsPage
 },
 

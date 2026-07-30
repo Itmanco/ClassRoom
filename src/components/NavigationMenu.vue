@@ -39,6 +39,13 @@
     </button>
 
     <button
+      @click="$emit('change-page','classes')"
+      :class="{active: currentPage==='classes'}"
+    >
+      🏷️ Classes
+    </button>
+
+    <button
       @click="$emit('change-page','settings')"
       :class="{active: currentPage==='settings'}"
     >

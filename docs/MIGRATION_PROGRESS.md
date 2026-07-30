@@ -136,3 +136,6 @@ The six legacy documents must keep their current IDs and fields.
 ## Student CRUD implementation — completed 2026-07-30
 
 The migrated `schools/{schoolId}/students` collection now has a complete management UI. Administrators can create, edit, search, reactivate, and archive students without deleting historical references. Student IDs remain immutable after creation because legacy and future seating plans use them as references.
+
+### Class foundation implemented
+Class CRUD now exists at `schools/{schoolId}/classes`. The next migration step is to create enrollments and move legacy seating layouts beneath the class that owns them.

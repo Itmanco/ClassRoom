@@ -45,3 +45,6 @@ Building Management is working. Room Management has now been added using `school
 ## Student Management status
 
 Student Management is now a complete school-scoped CRUD feature. It uses `studentService.js`, listens to `schools/{schoolId}/students` in real time, preserves numeric IDs, and archives records through `isActive: false` rather than deletion. Class and enrollment work should build on these student records.
+
+### Current implementation status
+Class Management is implemented. A class references `courseId` and `roomId` and stores an academic year, semester, and active state. Enrollments and seating plans remain the next features.

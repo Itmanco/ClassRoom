@@ -73,3 +73,11 @@
 
 - [x] Implement Course service and Course Management UI.
 - [ ] Implement Classes that connect courses, rooms, and students.
+
+## Class Management
+- [x] Add `classService.js` with real-time CRUD operations.
+- [x] Add Class Management UI.
+- [x] Connect classes to courses and physical rooms.
+- [x] Validate academic year and semester.
+- [ ] Add student enrollments under each class.
+- [ ] Migrate historical seating plans into the appropriate class.

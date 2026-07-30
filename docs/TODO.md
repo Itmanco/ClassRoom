@@ -8,11 +8,11 @@
 - [x] Define rooms, courses, classes, enrollments, and seating plans
 - [x] Revise the migration target for legacy seating plans
 - [x] Define field-level schemas for buildings, rooms, courses, and classes
-- [ ] Add the Building service and validation
+- [x] Add the Building service and validation
 - [ ] Create Building A1
-- [ ] Add the Room service and validation
+- [x] Add the Room service and validation
 - [ ] Create the initial A1 rooms
-- [ ] Add the Course service and validation
+- [x] Add the Course service and validation
 - [ ] Create the course associated with the historical class, if known
 - [ ] Add the Class service and validation
 - [ ] Create `legacy_class_2025` with truthful course and room references
@@ -22,9 +22,20 @@
 - [ ] Verify saving a new seating plan
 - [ ] Add a compatibility seating-plan service
 
+
+## Student management
+
+- [x] Add school-scoped Student service
+- [x] Add Student Management CRUD page
+- [x] Preserve immutable numeric student IDs
+- [x] Add real-time updates and search
+- [x] Archive students instead of deleting them
+- [ ] Verify creating, editing, archiving, and reactivating students in Firebase
+
 ## Medium Priority
 
-- [ ] Add building, room, course, and class management UI
+- [x] Add building, room, and course management UI
+- [ ] Add class management UI
 - [ ] Add enrollments
 - [ ] Use seating history when generating new assignments
 - [ ] Add multi-school selector
@@ -48,8 +59,8 @@
 - [x] Add Building service
 - [x] Add Building management UI
 - [ ] Create the first building document (`A1`)
-- [ ] Add Room service
-- [ ] Add Course service
+- [x] Add Room service
+- [x] Add Course service
 - [ ] Add Class service
 
 ## Room management

@@ -132,3 +132,7 @@ The six legacy documents must keep their current IDs and fields.
 ☐ Create the initial physical rooms for Building A1
 
 - Course service and Course Management UI implemented under `schools/{schoolId}/courses`.
+
+## Student CRUD implementation — completed 2026-07-30
+
+The migrated `schools/{schoolId}/students` collection now has a complete management UI. Administrators can create, edit, search, reactivate, and archive students without deleting historical references. Student IDs remain immutable after creation because legacy and future seating plans use them as references.

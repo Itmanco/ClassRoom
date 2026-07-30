@@ -41,3 +41,7 @@ The Building service and Building management UI are implemented. The next task i
 Building Management is working. Room Management has now been added using `schools/{schoolId}/rooms/{roomId}`. Rooms reference buildings by `buildingId`, calculate capacity from desks and seats per desk, and are archived rather than deleted. The next verification task is to create and inspect the first A1 rooms before implementing Courses.
 
 - Course Management is implemented using `courseService.js` and `CourseManager.vue`.
+
+## Student Management status
+
+Student Management is now a complete school-scoped CRUD feature. It uses `studentService.js`, listens to `schools/{schoolId}/students` in real time, preserves numeric IDs, and archives records through `isActive: false` rather than deletion. Class and enrollment work should build on these student records.

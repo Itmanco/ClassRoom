@@ -46,3 +46,12 @@
 - Added a Room Management navigation page.
 
 - Added Firestore-backed Course Management with create, edit, archive, and real-time updates.
+
+## 2026-07-30 — Student Management CRUD
+
+- Replaced the Student Management placeholder with a school-scoped CRUD page.
+- Added create, edit, search, archive, active-status, and real-time update workflows.
+- Preserved numeric student document IDs because historical seating plans reference them.
+- Added automatic next-ID selection and duplicate-ID validation.
+- Extended `studentService.js` with single-student save and archive operations.
+- Updated `App.vue` to pass the active school into Student Management.

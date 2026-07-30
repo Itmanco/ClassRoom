@@ -27,6 +27,7 @@
 
         <StudentManager
             v-if="currentPage==='students'"
+            :schoolId="session.activeSchool"
         />
 
         <CourseManager

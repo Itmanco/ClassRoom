@@ -37,7 +37,7 @@
 - [x] Add building, room, and course management UI
 - [x] Add class management UI
 - [x] Add enrollments
-- [ ] Use seating history when generating new assignments
+- [x] Use seating history when generating new assignments
 - [ ] Add multi-school selector
 - [ ] Improve permissions
 
@@ -97,7 +97,29 @@
 - [x] Archive plans instead of deleting them.
 - [ ] Verify create, edit, archive, and archived-plan display in Firebase.
 
+## Intelligent Seating Generator
+- [x] Add a framework-independent seating planning engine.
+- [x] Add rerunnable randomized previews.
+- [x] Add selectable previous-partner, previous-desk, and latest-seat constraints.
+- [x] Use weighted best-effort scoring when a perfect result is impossible.
+- [x] Explain unavoidable historical repetitions.
+- [ ] Add automated unit tests for engine and constraints.
+- [ ] Add pinned-student and teacher-defined constraints.
+- [ ] Add multiple saved candidate previews.
+- [ ] Add student candidate voting as a separate future feature.
+
 ## Next
-- [ ] Build random seating generation.
-- [ ] Use seating history to reduce repeated desk partners.
+- [ ] Verify intelligent generation against several saved seating plans.
 - [ ] Add visual classroom layout and export support.
+
+## Planning Engine v1 — prioritized recommendations
+
+- [x] Document the Planning Engine philosophy.
+- [x] Replace weighted total scoring with priority-based comparison.
+- [x] Compare repeated partners before repeated desks and exact seats.
+- [x] Generate three distinct recommendations.
+- [x] Let the teacher preview and select a recommendation.
+- [x] Show objective counts instead of an arbitrary public score.
+- [ ] Add automated tests for candidate comparison and top-three uniqueness.
+- [ ] Add visual side-by-side classroom layouts for the three recommendations.
+- [ ] Design room zones and student support preferences for Planning Engine v2.

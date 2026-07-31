@@ -45,10 +45,75 @@
             This class has more active students than the room can seat.
           </p>
 
+          <section class="generator-box">
+            <div class="section-heading">
+              <div>
+                <h3>Classroom Planning Engine</h3>
+                <p>Generate the three strongest recommendations. The teacher chooses the final plan.</p>
+              </div>
+              <label>Attempts
+                <select v-model.number="generatorOptions.attempts">
+                  <option :value="100">100</option>
+                  <option :value="500">500</option>
+                  <option :value="1000">1,000</option>
+                  <option :value="2500">2,500</option>
+                  <option :value="5000">5,000</option>
+                </select>
+              </label>
+            </div>
+            <div class="constraint-grid">
+              <label><input v-model="generatorOptions.avoidPreviousPartners" type="checkbox" /> Prefer new desk partners</label>
+              <label><input v-model="generatorOptions.avoidPreviousDesks" type="checkbox" /> Prefer desks not previously used</label>
+              <label><input v-model="generatorOptions.avoidPreviousSeat" type="checkbox" /> Prefer a different exact seat</label>
+            </div>
+            <div class="actions generator-actions">
+              <button type="button" class="primary" :disabled="enrolledStudents.length === 0 || enrolledStudents.length > roomCapacity" @click="generateRecommendations">
+                {{ generationResult ? "Generate three new recommendations" : "Generate three recommendations" }}
+              </button>
+              <span v-if="generationResult">
+                {{ generationResult.uniqueCandidatesEvaluated }} unique candidates evaluated ·
+                {{ generationResult.historyPlansConsidered }} historical plan(s)
+              </span>
+            </div>
+
+            <div v-if="generationResult" class="candidate-grid">
+              <article
+                v-for="(candidate, index) in generationResult.candidates"
+                :key="candidateKey(candidate)"
+                class="candidate-card"
+                :class="{ selected: selectedCandidateIndex === index }"
+              >
+                <div class="candidate-heading">
+                  <div>
+                    <strong>Recommendation {{ candidate.rank }}</strong>
+                    <span class="quality">{{ candidate.quality }}</span>
+                  </div>
+                  <button type="button" @click="selectCandidate(index)">
+                    {{ selectedCandidateIndex === index ? "Selected" : "Preview this plan" }}
+                  </button>
+                </div>
+                <dl>
+                  <div><dt>Repeated partners</dt><dd>{{ candidate.objectives.repeatedPartners }}</dd></div>
+                  <div><dt>Repeated desks</dt><dd>{{ candidate.objectives.repeatedDesks }}</dd></div>
+                  <div><dt>Repeated exact seats</dt><dd>{{ candidate.objectives.repeatedSeats }}</dd></div>
+                </dl>
+                <details v-if="candidate.violations.length">
+                  <summary>Review compromises</summary>
+                  <ul>
+                    <li v-for="(violation, violationIndex) in candidate.violations" :key="`${violation.type}-${violationIndex}`">
+                      {{ violationText(violation) }}
+                    </li>
+                  </ul>
+                </details>
+                <p v-else class="success">No selected historical repetitions.</p>
+              </article>
+            </div>
+          </section>
+
           <div class="seat-grid">
             <article v-for="seat in seats" :key="seat.key" class="seat-card">
               <strong>Desk {{ seat.deskNumber }} · Seat {{ seat.seatNumber }}</strong>
-              <select v-model="seat.studentId">
+              <select v-model="seat.studentId" @change="generationResult = null">
                 <option value="">Empty</option>
                 <option
                   v-for="student in availableForSeat(seat)"
@@ -99,6 +164,7 @@ import { watchEnrollments } from "../services/enrollmentService";
 import { watchRooms } from "../services/roomService";
 import { watchStudents } from "../services/studentService";
 import { archiveSeatingPlan, saveSeatingPlan, watchSeatingPlans } from "../services/seatingPlanService";
+import { generateSeatingCandidates } from "../engine/seating/SeatingEngine";
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
@@ -111,6 +177,14 @@ export default {
       selectedClassId: "", editingPlanId: "", showArchived: false,
       loadingPlans: false, saving: false, message: "", errorMessage: "",
       form: { title: "", planDate: today() },
+      generatorOptions: {
+        avoidPreviousPartners: true,
+        avoidPreviousDesks: true,
+        avoidPreviousSeat: true,
+        attempts: 1000,
+        resultCount: 3,
+      },
+      generationResult: null, selectedCandidateIndex: 0,
       unsubscribers: [], enrollmentUnsubscribe: null, plansUnsubscribe: null,
     };
   },
@@ -180,11 +254,64 @@ export default {
       this.clearAssignments();
       this.enrolledStudents.slice(0, this.seats.length).forEach((student, index) => { this.seats[index].studentId = String(student.id); });
     },
-    clearAssignments() { this.seats.forEach((seat) => { seat.studentId = ""; }); },
-    resetForm() { this.editingPlanId = ""; this.form = { title: "", planDate: today() }; this.buildSeats(); },
+    clearAssignments() { this.seats.forEach((seat) => { seat.studentId = ""; }); this.generationResult = null; },
+    generateRecommendations() {
+      this.errorMessage = "";
+      this.message = "";
+      try {
+        this.generationResult = generateSeatingCandidates({
+          students: this.enrolledStudents,
+          positions: this.seats,
+          historyPlans: this.plans.filter((plan) => plan.active !== false),
+          options: this.generatorOptions,
+        });
+        this.selectedCandidateIndex = 0;
+        this.applyCandidate(this.generationResult.candidates[0]);
+        this.message = "Three recommendations were generated. Review them and choose the final arrangement.";
+      } catch (error) {
+        this.generationResult = null;
+        this.errorMessage = error.message;
+      }
+    },
+    candidateKey(candidate) {
+      return candidate.assignments
+        .map((item) => `${item.studentId}:${item.deskNumber}:${item.seatNumber}`)
+        .join("|");
+    },
+    applyCandidate(candidate) {
+      if (!candidate) return;
+      const assignmentMap = new Map(candidate.assignments.map((item) => [
+        `${item.deskNumber}:${item.seatNumber}`,
+        String(item.studentId),
+      ]));
+      this.seats.forEach((seat) => {
+        seat.studentId = assignmentMap.get(seat.key) || "";
+      });
+    },
+    selectCandidate(index) {
+      this.selectedCandidateIndex = index;
+      this.applyCandidate(this.generationResult?.candidates[index]);
+      this.message = `Recommendation ${index + 1} is now selected for preview.`;
+    },
+    studentName(studentId) {
+      const student = this.students.find((item) => String(item.id) === String(studentId));
+      return student ? student.name : `Student #${studentId}`;
+    },
+    violationText(violation) {
+      if (violation.type === "previous-partner") {
+        return `${this.studentName(violation.studentA)} and ${this.studentName(violation.studentB)} previously shared a desk.`;
+      }
+      if (violation.type === "previous-desk") {
+        return `${this.studentName(violation.studentId)} previously used desk ${violation.deskNumber}.`;
+      }
+      return `${this.studentName(violation.studentId)} used desk ${violation.deskNumber}, seat ${violation.seatNumber} in the most recent plan.`;
+    },
+    resetForm() { this.editingPlanId = ""; this.form = { title: "", planDate: today() }; this.generationResult = null; this.selectedCandidateIndex = 0; this.buildSeats(); },
     editPlan(plan) {
       this.editingPlanId = plan.id;
       this.form = { title: plan.title, planDate: plan.planDate };
+      this.generationResult = null;
+      this.selectedCandidateIndex = 0;
       this.buildSeats(plan.assignments || []);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
@@ -226,6 +353,21 @@ label { display: flex; flex-direction: column; gap: 6px; }
 .section-heading, .plan-card, .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .seat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
 .seat-card, .plan-card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+.generator-box { border: 1px solid #c9d7e6; background: #f7fbff; border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+.constraint-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin: 12px 0; }
+.constraint-grid label { flex-direction: row; align-items: center; }
+.generator-actions { justify-content: flex-start; flex-wrap: wrap; }
+.candidate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+.candidate-card { border: 2px solid #d7e1ea; border-radius: 8px; padding: 14px; background: white; }
+.candidate-card.selected { border-color: #2767a7; box-shadow: 0 0 0 2px rgba(39, 103, 167, 0.12); }
+.candidate-heading { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.candidate-heading > div { display: flex; flex-direction: column; gap: 4px; }
+.quality { font-size: 0.9rem; color: #46627a; }
+.candidate-card dl { margin: 14px 0; }
+.candidate-card dl div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #edf1f4; }
+.candidate-card dt, .candidate-card dd { margin: 0; }
+.candidate-card dd { font-weight: 700; }
+.candidate-card details ul { padding-left: 20px; }
 .seat-card { display: flex; flex-direction: column; gap: 8px; }
 .plan-card { margin-top: 10px; }
 button { padding: 9px 14px; border: 0; border-radius: 6px; cursor: pointer; }

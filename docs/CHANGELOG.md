@@ -73,3 +73,21 @@
 - Added class-scoped enrollment CRUD using student IDs as enrollment document IDs.
 - Added real-time class, student, and enrollment listeners.
 - Added enrollment archive/reactivation instead of destructive deletion.
+
+## Intelligent seating generator
+
+- Added a framework-independent seating planning engine.
+- Added weighted historical constraints for previous partners, desks, and the most recent exact seat.
+- Added rerunnable teacher previews without automatic persistence.
+- Added best-effort scoring and readable unavoidable-conflict reports.
+- Added `docs/SEATING_ENGINE.md`.
+
+## 2026-07-31 — Planning Engine v1 recommendations
+
+- Replaced weighted total scoring with priority-based candidate comparison.
+- Made repeated desk partnerships the first optimization objective.
+- Added generation and deduplication of the three strongest recommendations.
+- Added teacher preview and selection before saving.
+- Replaced the public numeric score with understandable objective counts and quality labels.
+- Added `PLANNING_ENGINE.md` and `PLANNING_ENGINE_ROADMAP.md`.
+- Kept student voting outside the engine as a future application workflow.

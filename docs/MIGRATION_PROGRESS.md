@@ -151,3 +151,16 @@ Class CRUD now exists at `schools/{schoolId}/classes`. The next migration step i
 - Historical seating migration is cancelled.
 - New seating plans are created directly under each class.
 - Manual Seating Plan Management is implemented as the new source of truth.
+
+## Intelligent seating generation
+
+- Added fresh-history planning directly against new class-scoped seating plans.
+- No legacy sandbox migration is required.
+- The engine evaluates only active saved plans for the selected class.
+
+## Planning Engine v1 — completed 2026-07-31
+
+- Weighted scoring was replaced by priority-based objective comparison.
+- The engine now returns the best three distinct teacher recommendations.
+- The teacher previews and selects the final arrangement before saving.
+- Planning philosophy and roadmap documents were added for future version reviews.

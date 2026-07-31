@@ -139,3 +139,51 @@ Reason: the legacy records were test data and have no production or historical v
 Each assignment stores `studentId`, `deskNumber`, and `seatNumber`.
 
 Reason: desk number alone is ambiguous when a desk contains more than one seat. Explicit seat positions support deterministic editing, display, exporting, and future history analysis.
+
+---
+
+## Decision 013 — Isolate seating generation from Vue and Firebase
+
+The planning engine is stored under `src/engine/seating` and receives plain data as input.
+
+Reason: generation and constraint evaluation should be independently testable and should not depend on UI state or persistence technology.
+
+---
+
+## Decision 014 — Treat historical preferences as weighted soft constraints
+
+Room capacity and one-position-per-student are hard requirements. Avoiding previous partners, desks, and exact seats are weighted preferences.
+
+Reason: historical combinations eventually make perfect avoidance impossible. Returning the best available candidate with a transparent violation report is more useful than failing generation.
+
+---
+
+## Decision 015 — Keep student candidate voting for a future release
+
+The first planning-engine release generates one teacher preview at a time. Student voting across several candidates will be implemented as a separate feature with its own sessions, eligibility, deadlines, and vote records.
+
+Reason: voting is an application workflow and authorization problem, not a seating constraint.
+
+---
+
+## Decision 016 — Compare objectives by priority, not a weighted total
+
+Candidate arrangements are compared lexicographically: repeated partners first, repeated desks second, and repeated exact seats third.
+
+Reason: a lower-priority improvement must not compensate for a repeated partnership. This mirrors the teacher's definition of fairness and avoids arbitrary public scores.
+
+---
+
+## Decision 017 — Recommend the best three distinct arrangements
+
+The engine evaluates many candidates, removes duplicate arrangements, and returns the three strongest recommendations. The teacher previews and selects the final arrangement.
+
+Reason: classroom knowledge cannot be fully represented in the algorithm. The engine supports teacher judgement rather than replacing it.
+
+---
+
+## Decision 018 — Treat Planning Engine philosophy as a version-review document
+
+Before implementing or reviewing a Planning Engine version, contributors should review `PLANNING_ENGINE.md`, `PLANNING_ENGINE_ROADMAP.md`, and this decision log.
+
+Reason: new objectives and workflows must remain aligned with fairness, explainability, and teacher control.

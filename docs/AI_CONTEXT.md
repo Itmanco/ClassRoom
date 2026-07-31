@@ -55,3 +55,17 @@ Enrollment Management is implemented at `schools/{schoolId}/classes/{classId}/en
 ## Current implementation update — Seating Plans
 
 The application now includes manual class-scoped Seating Plan Management. A plan uses the selected class, its active enrollments, and its assigned room's `deskCount` and `seatsPerDesk`. Assignments store `studentId`, `deskNumber`, and `seatNumber`. Legacy seating records are disposable sandbox data and will not be migrated. The next major feature is history-aware random seating generation.
+
+## Current seating engine state
+
+The Seating Plan page now calls a pure JavaScript planning engine under `src/engine/seating`. The teacher can select historical constraints, generate or rerun previews, inspect a score and violation report, manually adjust the preview, and save only the accepted plan. Student voting on multiple candidate plans is deferred.
+
+## Planning Engine development rule
+
+Before implementing any Planning Engine change, review:
+
+- `docs/PLANNING_ENGINE.md`
+- `docs/PLANNING_ENGINE_ROADMAP.md`
+- `docs/DECISIONS.md`
+
+Planning Engine v1 uses priority-based comparison, not weighted scoring. It recommends the three strongest distinct arrangements and lets the teacher choose which one to save. Student voting is a separate future workflow.

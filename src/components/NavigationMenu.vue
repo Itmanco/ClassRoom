@@ -1,107 +1,115 @@
+```vue
 <template>
   <nav class="sidebar">
-
-    <h2>📚 Classroom Manager</h2>
+    <h2>📚 {{ $t('app.name') }}</h2>
 
     <button
-      @click="$emit('change-page','classroom')"
-      :class="{active: currentPage==='classroom'}"
+      @click="$emit('change-page', 'classroom')"
+      :class="{ active: currentPage === 'classroom' }"
     >
-      🏠 Classroom
+      🏠 {{ $t('navigation.classroom') }}
     </button>
 
     <button
-      @click="$emit('change-page','students')"
-      :class="{active: currentPage==='students'}"
+      @click="$emit('change-page', 'students')"
+      :class="{ active: currentPage === 'students' }"
     >
-      👨‍🎓 Students
+      👨‍🎓 {{ $t('navigation.students') }}
     </button>
 
     <button
-      @click="$emit('change-page','courses')"
-      :class="{active: currentPage==='courses'}"
+      @click="$emit('change-page', 'courses')"
+      :class="{ active: currentPage === 'courses' }"
     >
-      📚 Courses
+      📚 {{ $t('navigation.courses') }}
     </button>
 
     <button
-      @click="$emit('change-page','buildings')"
-      :class="{active: currentPage==='buildings'}"
+      @click="$emit('change-page', 'buildings')"
+      :class="{ active: currentPage === 'buildings' }"
     >
-      🏫 Buildings
+      🏫 {{ $t('navigation.buildings') }}
     </button>
 
     <button
-      @click="$emit('change-page','rooms')"
-      :class="{active: currentPage==='rooms'}"
+      @click="$emit('change-page', 'rooms')"
+      :class="{ active: currentPage === 'rooms' }"
     >
-      🚪 Rooms
+      🚪 {{ $t('navigation.rooms') }}
     </button>
 
     <button
-      @click="$emit('change-page','classes')"
-      :class="{active: currentPage==='classes'}"
+      @click="$emit('change-page', 'classes')"
+      :class="{ active: currentPage === 'classes' }"
     >
-      🏷️ Classes
+      🏷️ {{ $t('navigation.classes') }}
     </button>
 
     <button
-      @click="$emit('change-page','enrollments')"
-      :class="{active: currentPage==='enrollments'}"
+      @click="$emit('change-page', 'enrollments')"
+      :class="{ active: currentPage === 'enrollments' }"
     >
-      👥 Enrollments
+      👥 {{ $t('navigation.enrollments') }}
     </button>
 
     <button
-      @click="$emit('change-page','seating-plans')"
-      :class="{active: currentPage==='seating-plans'}"
+      @click="$emit('change-page', 'seating-plans')"
+      :class="{ active: currentPage === 'seating-plans' }"
     >
-      🪑 Seating Plans
+      🪑 {{ $t('navigation.seatingPlans') }}
     </button>
 
     <button
-      @click="$emit('change-page','settings')"
-      :class="{active: currentPage==='settings'}"
+      @click="$emit('change-page', 'settings')"
+      :class="{ active: currentPage === 'settings' }"
     >
-      ⚙ Settings
+      ⚙️ {{ $t('navigation.settings') }}
     </button>
-
   </nav>
 </template>
 
 <script>
-export default{
-    name:"NavigationMenu",
+export default {
+  name: 'NavigationMenu',
 
-    props:{
-        currentPage:String
+  props: {
+    currentPage: {
+      type: String,
+      required: true
     }
-}
+  },
+
+  emits: ['change-page']
+};
 </script>
 
 <style scoped>
-
-.sidebar{
-    width:220px;
-    background:#f5f5f5;
-    height:100vh;
-    padding:20px;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
+.sidebar {
+  width: 220px;
+  background: #f5f5f5;
+  height: 100vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
 }
 
-button{
-    text-align:left;
-    padding:12px;
-    border:none;
-    cursor:pointer;
-    border-radius:8px;
+.sidebar h2 {
+  margin: 0 0 10px;
 }
 
-button.active{
-    background:#42b883;
-    color:white;
+button {
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
 }
 
+button.active {
+  background: #42b883;
+  color: white;
+}
 </style>

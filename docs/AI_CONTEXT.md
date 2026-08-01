@@ -1,71 +1,74 @@
 # AI Context
 
-This project is actively developed together with ChatGPT.
+## Project
 
-When continuing work:
+Classroom Manager is a Vue 3 and Firebase classroom planning application.
 
-- Read PROJECT_CONTEXT.md
-- Read MIGRATION_PROGRESS.md
-- Read FIRESTORE_SCHEMA.md
-- Read DECISIONS.md
+Documentation under `docs/` is the source of truth.
 
-Important rules
+## Rules
 
-- Never change architecture without discussion.
-- Prefer small commits.
-- Keep backward compatibility until migration finishes.
-- Explain code before making major changes.
-- Avoid unnecessary refactors.
+Always:
 
-Current goal
+- Explain architecture changes before implementation
+- Prefer small commits
+- Preserve backward compatibility
+- Avoid unnecessary refactors
+- Update documentation
+- Explain reasoning
+- Update `TODO.md`
 
-Finish the multi-school migration while separating physical rooms, classes, and historical seating plans.
+## Current branch
 
-Current school
+`feature/internationalization-foundation`
 
-school_japan
+## Current task
 
-Legacy app
+Complete English/Japanese support.
 
-classroom-b81c6
+Completed:
 
-Current status
+- Vue I18n
+- Settings
+- Navigation
+- Student Management
+- Course Management
 
-Students have been migrated and verified. The domain schemas are defined. The next task is to implement the Building service, create Building A1, and then proceed through Rooms, Courses, and Classes before migrating the six historical seating plans.
-## Current implementation status
+Next:
 
-The Building service and Building management UI are implemented. The next task is to verify the screen locally and create the first `A1` building document through the application.
+- Building Management
+- Room Management
+- Class Management
+- Enrollment Management
+- Seating Plan Management
+- Planning Engine UI
+- Classroom
+- Login
 
-## Current implementation checkpoint — Rooms
+## Internationalization rule
 
-Building Management is working. Room Management has now been added using `schools/{schoolId}/rooms/{roomId}`. Rooms reference buildings by `buildingId`, calculate capacity from desks and seats per desk, and are archived rather than deleted. The next verification task is to create and inspect the first A1 rooms before implementing Courses.
+No new hardcoded user-facing strings.
 
-- Course Management is implemented using `courseService.js` and `CourseManager.vue`.
+Keep services and Planning Engine language-independent.
 
-## Student Management status
+## Validation
 
-Student Management is now a complete school-scoped CRUD feature. It uses `studentService.js`, listens to `schools/{schoolId}/students` in real time, preserves numeric IDs, and archives records through `isActive: false` rather than deletion. Class and enrollment work should build on these student records.
+Browser-native validation is not controlled by Vue I18n.
 
-### Current implementation status
-Class Management is implemented. A class references `courseId` and `roomId` and stores an academic year, semester, and active state. Enrollments and seating plans remain the next features.
+Do not add one-page workarounds. Localized validation is planned for v0.8.1.
 
-## Current Implementation Update: Enrollments
-Enrollment Management is implemented at `schools/{schoolId}/classes/{classId}/enrollments/{studentId}`. Enrollment documents reference existing school students; student data is not duplicated. Archiving sets `active: false` so historical class membership remains available.
+## Planning Engine
 
-## Current implementation update — Seating Plans
+- Independent of Vue/Firebase
+- Uses seating history
+- Prioritizes repeated partners, then desks, then exact seats
+- Returns three recommendations
+- Follows “Recommend, don't decide”
 
-The application now includes manual class-scoped Seating Plan Management. A plan uses the selected class, its active enrollments, and its assigned room's `deskCount` and `seatsPerDesk`. Assignments store `studentId`, `deskNumber`, and `seatNumber`. Legacy seating records are disposable sandbox data and will not be migrated. The next major feature is history-aware random seating generation.
+## Deployment
 
-## Current seating engine state
+GitHub Pages deployment is manual:
 
-The Seating Plan page now calls a pure JavaScript planning engine under `src/engine/seating`. The teacher can select historical constraints, generate or rerun previews, inspect a score and violation report, manually adjust the preview, and save only the accepted plan. Student voting on multiple candidate plans is deferred.
-
-## Planning Engine development rule
-
-Before implementing any Planning Engine change, review:
-
-- `docs/PLANNING_ENGINE.md`
-- `docs/PLANNING_ENGINE_ROADMAP.md`
-- `docs/DECISIONS.md`
-
-Planning Engine v1 uses priority-based comparison, not weighted scoring. It recommends the three strongest distinct arrangements and lets the teacher choose which one to save. Student voting is a separate future workflow.
+```bash
+npm run deploy
+```

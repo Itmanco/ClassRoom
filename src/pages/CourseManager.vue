@@ -2,53 +2,72 @@
   <div class="page">
     <header class="page-header">
       <div>
-        <h1>📚 Course Management</h1>
-        <p>Create and maintain the subjects taught by this school.</p>
+        <h1>📚 {{ $t("courses.title") }}</h1>
+        <p>{{ $t("courses.description") }}</p>
       </div>
     </header>
 
     <section class="panel">
-      <h2>{{ isEditing ? "Edit course" : "Add course" }}</h2>
+      <h2>
+        {{
+          isEditing
+            ? $t("courses.form.editTitle")
+            : $t("courses.form.addTitle")
+        }}
+      </h2>
 
       <form class="course-form" @submit.prevent="submitCourse">
         <label>
-          Course code
+          {{ $t("courses.fields.code") }}
+
           <input
             v-model.trim="form.code"
             type="text"
-            placeholder="JAVA101"
+            :placeholder="$t('courses.placeholders.code')"
             :disabled="isEditing"
             required
           />
         </label>
 
         <label>
-          Course name
+          {{ $t("courses.fields.name") }}
+
           <input
             v-model.trim="form.name"
             type="text"
-            placeholder="Java Programming"
+            :placeholder="$t('courses.placeholders.name')"
             required
           />
         </label>
 
         <label class="full-width">
-          Description
+          {{ $t("courses.fields.description") }}
+
           <textarea
             v-model.trim="form.description"
             rows="4"
-            placeholder="Introductory Java programming course"
+            :placeholder="$t('courses.placeholders.description')"
           ></textarea>
         </label>
 
         <label class="checkbox-label full-width">
           <input v-model="form.active" type="checkbox" />
-          Active
+          {{ $t("common.active") }}
         </label>
 
         <div class="form-actions full-width">
-          <button class="primary-button" type="submit" :disabled="saving">
-            {{ saving ? "Saving..." : isEditing ? "Update course" : "Add course" }}
+          <button
+            class="primary-button"
+            type="submit"
+            :disabled="saving"
+          >
+            {{
+              saving
+                ? $t("common.saving")
+                : isEditing
+                  ? $t("courses.actions.update")
+                  : $t("courses.actions.add")
+            }}
           </button>
 
           <button
@@ -58,24 +77,38 @@
             :disabled="saving"
             @click="resetForm"
           >
-            Cancel
+            {{ $t("common.cancel") }}
           </button>
         </div>
       </form>
 
-      <p v-if="message" class="success-message">{{ message }}</p>
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <p v-if="message" class="success-message">
+        {{ message }}
+      </p>
+
+      <p v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </p>
     </section>
 
     <section class="panel">
       <div class="section-heading">
-        <h2>Courses</h2>
-        <span>{{ courses.length }} total</span>
+        <h2>{{ $t("courses.list.title") }}</h2>
+
+        <span>
+          {{ $t("courses.list.total", { count: courses.length }) }}
+        </span>
       </div>
 
-      <p v-if="loading">Loading courses...</p>
-      <p v-else-if="courses.length === 0" class="empty-state">
-        No courses have been created yet.
+      <p v-if="loading">
+        {{ $t("courses.list.loading") }}
+      </p>
+
+      <p
+        v-else-if="courses.length === 0"
+        class="empty-state"
+      >
+        {{ $t("courses.list.empty") }}
       </p>
 
       <div v-else class="course-list">
@@ -87,24 +120,46 @@
         >
           <div>
             <div class="course-title-row">
-              <h3>{{ course.code }} — {{ course.name }}</h3>
-              <span class="status" :class="course.active ? 'active' : 'inactive'">
-                {{ course.active ? "Active" : "Archived" }}
+              <h3>
+                {{ course.code }} — {{ course.name }}
+              </h3>
+
+              <span
+                class="status"
+                :class="course.active ? 'active' : 'inactive'"
+              >
+                {{
+                  course.active
+                    ? $t("common.active")
+                    : $t("common.archived")
+                }}
               </span>
             </div>
-            <p v-if="course.description">{{ course.description }}</p>
-            <p v-else class="muted">No description</p>
+
+            <p v-if="course.description">
+              {{ course.description }}
+            </p>
+
+            <p v-else class="muted">
+              {{ $t("courses.list.noDescription") }}
+            </p>
           </div>
 
           <div class="card-actions">
-            <button type="button" @click="editCourse(course)">Edit</button>
+            <button
+              type="button"
+              @click="editCourse(course)"
+            >
+              {{ $t("common.edit") }}
+            </button>
+
             <button
               v-if="course.active"
               type="button"
               class="archive-button"
               @click="confirmArchive(course)"
             >
-              Archive
+              {{ $t("common.archive") }}
             </button>
           </div>
         </article>
@@ -187,7 +242,12 @@ export default {
         },
         (error) => {
           this.loading = false;
-          this.errorMessage = `Unable to load courses: ${error.message}`;
+          this.errorMessage = this.$t(
+            "courses.messages.loadError",
+            {
+              error: error.message,
+            },
+          );
         },
       );
     },
@@ -201,12 +261,14 @@ export default {
 
     editCourse(course) {
       this.editingCourseId = course.id;
+
       this.form = {
         code: course.code,
         name: course.name,
         description: course.description || "",
         active: course.active !== false,
       };
+
       this.message = "";
       this.errorMessage = "";
     },
@@ -224,12 +286,27 @@ export default {
       this.errorMessage = "";
 
       try {
-        const courseId = await saveCourse(this.schoolId, this.form);
-        this.message = `Course ${courseId} saved successfully.`;
+        const courseId = await saveCourse(
+          this.schoolId,
+          this.form,
+        );
+
+        this.message = this.$t(
+          "courses.messages.saved",
+          {
+            code: courseId,
+          },
+        );
+
         this.form = createEmptyForm();
         this.editingCourseId = null;
       } catch (error) {
-        this.errorMessage = error.message;
+        this.errorMessage = this.$t(
+          "courses.messages.saveError",
+          {
+            error: error.message,
+          },
+        );
       } finally {
         this.saving = false;
       }
@@ -237,7 +314,10 @@ export default {
 
     async confirmArchive(course) {
       const confirmed = window.confirm(
-        `Archive ${course.code} — ${course.name}?`,
+        this.$t("courses.messages.archiveConfirm", {
+          code: course.code,
+          name: course.name,
+        }),
       );
 
       if (!confirmed) {
@@ -248,14 +328,28 @@ export default {
       this.errorMessage = "";
 
       try {
-        await archiveCourse(this.schoolId, course.id);
-        this.message = `Course ${course.code} archived.`;
+        await archiveCourse(
+          this.schoolId,
+          course.id,
+        );
+
+        this.message = this.$t(
+          "courses.messages.archived",
+          {
+            code: course.code,
+          },
+        );
 
         if (this.editingCourseId === course.id) {
           this.resetForm();
         }
       } catch (error) {
-        this.errorMessage = error.message;
+        this.errorMessage = this.$t(
+          "courses.messages.archiveError",
+          {
+            error: error.message,
+          },
+        );
       }
     },
   },

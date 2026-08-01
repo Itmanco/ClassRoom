@@ -2,38 +2,50 @@
   <div class="page">
     <header class="page-header">
       <div>
-        <h1>🏫 Building Management</h1>
-        <p>Create and maintain the physical buildings that belong to this school.</p>
+        <h1>🏫 {{ $t("buildings.title") }}</h1>
+        <p>{{ $t("buildings.description") }}</p>
       </div>
     </header>
 
     <section class="panel">
-      <h2>{{ isEditing ? "Edit building" : "Add building" }}</h2>
+      <h2>
+        {{
+          isEditing
+            ? $t("buildings.form.editTitle")
+            : $t("buildings.form.addTitle")
+        }}
+      </h2>
 
-      <form class="building-form" @submit.prevent="submitBuilding">
+      <form
+        class="building-form"
+        @submit.prevent="submitBuilding"
+      >
         <label>
-          Building code
+          {{ $t("buildings.fields.code") }}
+
           <input
             v-model.trim="form.code"
             type="text"
-            placeholder="A1"
+            :placeholder="$t('buildings.placeholders.code')"
             :disabled="isEditing"
             required
           />
         </label>
 
         <label>
-          Building name
+          {{ $t("buildings.fields.name") }}
+
           <input
             v-model.trim="form.name"
             type="text"
-            placeholder="Building A1"
+            :placeholder="$t('buildings.placeholders.name')"
             required
           />
         </label>
 
         <label>
-          Number of floors
+          {{ $t("buildings.fields.floorCount") }}
+
           <input
             v-model.number="form.floorCount"
             type="number"
@@ -44,13 +56,27 @@
         </label>
 
         <label class="checkbox-label">
-          <input v-model="form.active" type="checkbox" />
-          Active
+          <input
+            v-model="form.active"
+            type="checkbox"
+          />
+
+          {{ $t("common.active") }}
         </label>
 
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="saving">
-            {{ saving ? "Saving..." : isEditing ? "Update building" : "Add building" }}
+          <button
+            class="primary-button"
+            type="submit"
+            :disabled="saving"
+          >
+            {{
+              saving
+                ? $t("common.saving")
+                : isEditing
+                  ? $t("buildings.actions.update")
+                  : $t("buildings.actions.add")
+            }}
           </button>
 
           <button
@@ -60,27 +86,54 @@
             :disabled="saving"
             @click="resetForm"
           >
-            Cancel
+            {{ $t("common.cancel") }}
           </button>
         </div>
       </form>
 
-      <p v-if="message" class="success-message">{{ message }}</p>
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <p
+        v-if="message"
+        class="success-message"
+      >
+        {{ message }}
+      </p>
+
+      <p
+        v-if="errorMessage"
+        class="error-message"
+      >
+        {{ errorMessage }}
+      </p>
     </section>
 
     <section class="panel">
       <div class="section-heading">
-        <h2>Buildings</h2>
-        <span>{{ buildings.length }} total</span>
+        <h2>{{ $t("buildings.list.title") }}</h2>
+
+        <span>
+          {{
+            $t("buildings.list.total", {
+              count: buildings.length,
+            })
+          }}
+        </span>
       </div>
 
-      <p v-if="loading">Loading buildings...</p>
-      <p v-else-if="buildings.length === 0" class="empty-state">
-        No buildings have been created yet.
+      <p v-if="loading">
+        {{ $t("buildings.list.loading") }}
       </p>
 
-      <div v-else class="building-list">
+      <p
+        v-else-if="buildings.length === 0"
+        class="empty-state"
+      >
+        {{ $t("buildings.list.empty") }}
+      </p>
+
+      <div
+        v-else
+        class="building-list"
+      >
         <article
           v-for="building in buildings"
           :key="building.id"
@@ -89,23 +142,50 @@
         >
           <div>
             <div class="building-title-row">
-              <h3>{{ building.code }} — {{ building.name }}</h3>
-              <span class="status" :class="building.active ? 'active' : 'inactive'">
-                {{ building.active ? "Active" : "Archived" }}
+              <h3>
+                {{ building.code }} — {{ building.name }}
+              </h3>
+
+              <span
+                class="status"
+                :class="
+                  building.active
+                    ? 'active'
+                    : 'inactive'
+                "
+              >
+                {{
+                  building.active
+                    ? $t("common.active")
+                    : $t("common.archived")
+                }}
               </span>
             </div>
-            <p>{{ building.floorCount }} floor{{ building.floorCount === 1 ? "" : "s" }}</p>
+
+            <p>
+              {{
+                floorCountLabel(
+                  building.floorCount,
+                )
+              }}
+            </p>
           </div>
 
           <div class="card-actions">
-            <button type="button" @click="editBuilding(building)">Edit</button>
+            <button
+              type="button"
+              @click="editBuilding(building)"
+            >
+              {{ $t("common.edit") }}
+            </button>
+
             <button
               v-if="building.active"
               type="button"
               class="archive-button"
               @click="confirmArchive(building)"
             >
-              Archive
+              {{ $t("common.archive") }}
             </button>
           </div>
         </article>
@@ -188,7 +268,12 @@ export default {
         },
         (error) => {
           this.loading = false;
-          this.errorMessage = `Unable to load buildings: ${error.message}`;
+          this.errorMessage = this.$t(
+            "buildings.messages.loadError",
+            {
+              error: error.message,
+            },
+          );
         },
       );
     },
@@ -202,12 +287,14 @@ export default {
 
     editBuilding(building) {
       this.editingBuildingId = building.id;
+
       this.form = {
         code: building.code,
         name: building.name,
         floorCount: building.floorCount,
         active: building.active !== false,
       };
+
       this.message = "";
       this.errorMessage = "";
     },
@@ -225,12 +312,27 @@ export default {
       this.errorMessage = "";
 
       try {
-        const buildingId = await saveBuilding(this.schoolId, this.form);
-        this.message = `Building ${buildingId} saved successfully.`;
+        const buildingId = await saveBuilding(
+          this.schoolId,
+          this.form,
+        );
+
+        this.message = this.$t(
+          "buildings.messages.saved",
+          {
+            code: buildingId,
+          },
+        );
+
         this.form = createEmptyForm();
         this.editingBuildingId = null;
       } catch (error) {
-        this.errorMessage = error.message;
+        this.errorMessage = this.$t(
+          "buildings.messages.saveError",
+          {
+            error: error.message,
+          },
+        );
       } finally {
         this.saving = false;
       }
@@ -238,7 +340,13 @@ export default {
 
     async confirmArchive(building) {
       const confirmed = window.confirm(
-        `Archive ${building.code} — ${building.name}?`,
+        this.$t(
+          "buildings.messages.archiveConfirm",
+          {
+            code: building.code,
+            name: building.name,
+          },
+        ),
       );
 
       if (!confirmed) {
@@ -249,15 +357,44 @@ export default {
       this.errorMessage = "";
 
       try {
-        await archiveBuilding(this.schoolId, building.id);
-        this.message = `Building ${building.code} archived.`;
+        await archiveBuilding(
+          this.schoolId,
+          building.id,
+        );
 
-        if (this.editingBuildingId === building.id) {
+        this.message = this.$t(
+          "buildings.messages.archived",
+          {
+            code: building.code,
+          },
+        );
+
+        if (
+          this.editingBuildingId === building.id
+        ) {
           this.resetForm();
         }
       } catch (error) {
-        this.errorMessage = error.message;
+        this.errorMessage = this.$t(
+          "buildings.messages.archiveError",
+          {
+            error: error.message,
+          },
+        );
       }
+    },
+
+    floorCountLabel(floorCount) {
+      const count = Number(floorCount) || 0;
+
+      const key =
+        count === 1
+          ? "buildings.list.floor"
+          : "buildings.list.floors";
+
+      return this.$t(key, {
+        count,
+      });
     },
   },
 };
@@ -290,7 +427,8 @@ export default {
 
 .building-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns:
+    repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   align-items: end;
 }

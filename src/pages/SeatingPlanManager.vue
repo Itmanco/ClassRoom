@@ -138,15 +138,15 @@
           <section class="generator-box">
             <div class="section-heading">
               <div>
-                <h3>Classroom Planning Engine</h3>
+                <h3>{{ $t("planningEngine.title") }}</h3>
+
                 <p>
-                  Generate the three strongest recommendations.
-                  The teacher chooses the final plan.
+                  {{ $t("planningEngine.description") }}
                 </p>
               </div>
 
               <label>
-                Attempts
+                {{ $t("planningEngine.fields.attempts") }}
 
                 <select v-model.number="generatorOptions.attempts">
                   <option :value="100">100</option>
@@ -165,7 +165,7 @@
                   type="checkbox"
                 />
 
-                Prefer new desk partners
+                {{ $t("planningEngine.preferences.avoidPartners") }}
               </label>
 
               <label>
@@ -174,7 +174,7 @@
                   type="checkbox"
                 />
 
-                Prefer desks not previously used
+                {{ $t("planningEngine.preferences.avoidDesks") }}
               </label>
 
               <label>
@@ -183,7 +183,7 @@
                   type="checkbox"
                 />
 
-                Prefer a different exact seat
+                {{ $t("planningEngine.preferences.avoidSeats") }}
               </label>
             </div>
 
@@ -199,16 +199,20 @@
               >
                 {{
                   generationResult
-                    ? "Generate three new recommendations"
-                    : "Generate three recommendations"
+                    ? $t("planningEngine.actions.regenerate")
+                    : $t("planningEngine.actions.generate")
                 }}
               </button>
 
               <span v-if="generationResult">
-                {{ generationResult.uniqueCandidatesEvaluated }}
-                unique candidates evaluated ·
-                {{ generationResult.historyPlansConsidered }}
-                historical plan(s)
+                {{
+                  $t("planningEngine.results.summary", {
+                    candidates:
+                      generationResult.uniqueCandidatesEvaluated,
+                    plans:
+                      generationResult.historyPlansConsidered,
+                  })
+                }}
               </span>
             </div>
 
@@ -227,11 +231,15 @@
                 <div class="candidate-heading">
                   <div>
                     <strong>
-                      Recommendation {{ candidate.rank }}
+                      {{
+                        $t("planningEngine.results.layout", {
+                          rank: candidate.rank,
+                        })
+                      }}
                     </strong>
 
                     <span class="quality">
-                      {{ candidate.quality }}
+                      {{ qualityLabel(candidate.quality) }}
                     </span>
                   </div>
 
@@ -241,29 +249,50 @@
                   >
                     {{
                       selectedCandidateIndex === index
-                        ? "Selected"
-                        : "Preview this plan"
+                        ? $t("planningEngine.actions.selected")
+                        : $t("planningEngine.actions.preview")
                     }}
                   </button>
                 </div>
 
                 <dl>
                   <div>
-                    <dt>Repeated partners</dt>
+                    <dt>
+                      {{
+                        $t(
+                          "planningEngine.objectives.repeatedPartners",
+                        )
+                      }}
+                    </dt>
+
                     <dd>
                       {{ candidate.objectives.repeatedPartners }}
                     </dd>
                   </div>
 
                   <div>
-                    <dt>Repeated desks</dt>
+                    <dt>
+                      {{
+                        $t(
+                          "planningEngine.objectives.repeatedDesks",
+                        )
+                      }}
+                    </dt>
+
                     <dd>
                       {{ candidate.objectives.repeatedDesks }}
                     </dd>
                   </div>
 
                   <div>
-                    <dt>Repeated exact seats</dt>
+                    <dt>
+                      {{
+                        $t(
+                          "planningEngine.objectives.repeatedSeats",
+                        )
+                      }}
+                    </dt>
+
                     <dd>
                       {{ candidate.objectives.repeatedSeats }}
                     </dd>
@@ -271,7 +300,9 @@
                 </dl>
 
                 <details v-if="candidate.violations.length">
-                  <summary>Review compromises</summary>
+                  <summary>
+                    {{ $t("planningEngine.results.tradeoffs") }}
+                  </summary>
 
                   <ul>
                     <li
@@ -290,7 +321,7 @@
                   v-else
                   class="success"
                 >
-                  No selected historical repetitions.
+                  {{ $t("planningEngine.results.noConflicts") }}
                 </p>
               </article>
             </div>
@@ -847,11 +878,18 @@ export default {
           this.generationResult.candidates[0],
         );
 
-        this.message =
-          "Three recommendations were generated. Review them and choose the final arrangement.";
+        this.message = this.$t(
+          "planningEngine.messages.generated",
+        );
       } catch (error) {
         this.generationResult = null;
-        this.errorMessage = error.message;
+
+        this.errorMessage = this.$t(
+          "planningEngine.messages.generationError",
+          {
+            error: error.message,
+          },
+        );
       }
     },
 
@@ -889,8 +927,12 @@ export default {
         this.generationResult?.candidates[index],
       );
 
-      this.message =
-        `Recommendation ${index + 1} is now selected for preview.`;
+      this.message = this.$t(
+        "planningEngine.messages.selected",
+        {
+          rank: index + 1,
+        },
+      );
     },
 
     studentName(studentId) {
@@ -901,33 +943,58 @@ export default {
 
       return student
         ? student.name
-        : `Student #${studentId}`;
+        : this.$t(
+            "planningEngine.students.unknown",
+            {
+              id: studentId,
+            },
+          );
     },
+
 
     violationText(violation) {
       if (violation.type === "previous-partner") {
-        return `${this.studentName(
-          violation.studentA,
-        )} and ${this.studentName(
-          violation.studentB,
-        )} previously shared a desk.`;
+        return this.$t(
+          "planningEngine.violations.previousPartner",
+          {
+            studentA: this.studentName(
+              violation.studentA,
+            ),
+            studentB: this.studentName(
+              violation.studentB,
+            ),
+          },
+        );
       }
 
       if (violation.type === "previous-desk") {
-        return `${this.studentName(
-          violation.studentId,
-        )} previously used desk ${
-          violation.deskNumber
-        }.`;
+        return this.$t(
+          "planningEngine.violations.previousDesk",
+          {
+            student: this.studentName(
+              violation.studentId,
+            ),
+            desk: violation.deskNumber,
+          },
+        );
       }
 
-      return `${this.studentName(
-        violation.studentId,
-      )} used desk ${
-        violation.deskNumber
-      }, seat ${
-        violation.seatNumber
-      } in the most recent plan.`;
+      if (violation.type === "previous-seat") {
+        return this.$t(
+          "planningEngine.violations.previousSeat",
+          {
+            student: this.studentName(
+              violation.studentId,
+            ),
+            desk: violation.deskNumber,
+            seat: violation.seatNumber,
+          },
+        );
+      }
+
+      return this.$t(
+        "planningEngine.violations.unknown",
+      );
     },
 
     resetForm() {
@@ -1057,6 +1124,24 @@ export default {
           },
         );
       }
+    },
+
+    qualityLabel(quality) {
+      if (!quality) {
+        return "";
+      }
+
+      const normalizedQuality = String(quality)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+
+      const key =
+        `planningEngine.quality.${normalizedQuality}`;
+
+      return this.$te(key)
+        ? this.$t(key)
+        : quality;
     },
   },
 };

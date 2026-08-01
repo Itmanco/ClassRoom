@@ -2,97 +2,50 @@
 
 ## Goal
 
-The application should not assume one UI language.
+Classroom Manager should not assume one interface language.
 
 Current languages:
 
 - `en`
 - `ja`
 
-## Structure
-
-```text
-src/i18n/
-├── index.js
-└── locales/
-    ├── en.json
-    └── ja.json
-```
-
-## Locale lifecycle
-
-1. Read saved locale from `localStorage`.
-2. Otherwise inspect browser locale.
-3. Fall back to English.
-4. Update Vue I18n.
-5. Update `<html lang>`.
-6. Persist Settings changes.
-
-## Translation rules
-
-Translate:
-
-- Titles
-- Labels
-- Buttons
-- Placeholders
-- Statuses
-- Loading states
-- Empty states
-- Success/error messages
-- Confirmation dialogs
-- Planning Engine explanations
-
-Do not add new hardcoded user-facing strings.
-
-## Business logic
-
-Services and the Planning Engine should return structured data rather than translated prose.
-
-Preferred:
-
-```js
-{
-  type: "REPEATED_DESK",
-  studentIds: ["12", "18"],
-  count: 2,
-}
-```
-
-## Current status
-
-Completed:
+## Completed areas
 
 - Settings
 - Navigation
 - Student Management
 - Course Management
+- Building Management
+- Room Management
+- Class Management
+- Enrollment Management
+- Seating Plan Management
+- Intelligent Seating Planner interface
 
-Remaining:
+## Remaining areas
 
-- Buildings
-- Rooms
-- Classes
-- Enrollments
-- Seating Plans
-- Planning Engine UI
-- Classroom
-- Login
+- Legacy Classroom page
+- Login and authentication messages
+- Shared confirmation, loading, empty, success, and error states
+- Japanese terminology review
+- Screenshots
 
-## Japanese terminology
+## Planning Engine localization
 
-| English | Japanese |
-|---|---|
-| Student | 生徒 |
-| Course | 科目 |
-| Building | 校舎 |
-| Room | 教室 |
-| Class | クラス |
-| Enrollment | クラス所属 / 受講登録 |
-| Seating Plan | 座席表 |
-| Planning Engine | 座席配置プランニング |
+The interface now localizes:
 
-Review terminology before v1.0.
+- Planner title and description
+- Optimization attempts
+- Historical avoidance preferences
+- Generation and regeneration actions
+- Candidate layout labels
+- Objective counts
+- Quality labels
+- Trade-off summaries
+- Historical conflict explanations
+- Generation and selection messages
+
+The engine itself remains language-independent and returns structured results.
 
 ## Browser validation limitation
 
@@ -105,7 +58,7 @@ Localized application validation is planned for v0.8.1.
 - No visible hardcoded English
 - Matching English/Japanese keys
 - Dynamic values use interpolation
-- Switches without reload
-- Existing behavior unchanged
-- All UI states translated
+- Switching works without reload
+- Existing behavior is unchanged
+- All UI states are translated
 - Lint and build pass

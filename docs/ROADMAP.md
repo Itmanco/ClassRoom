@@ -1,17 +1,11 @@
 # Classroom Manager Roadmap
 
-## Vision
-
-Build a classroom planning platform that helps teachers manage school data and make fair, explainable seating decisions.
-
 ## Completed milestones
 
 ### v0.5.0 — School domain foundation
 
 - School-scoped Firestore architecture
 - Buildings, rooms, courses, classes, enrollments, and seating plans
-- Building, Room, and Course management
-- Student migration
 
 ### v0.6.0 — Student management
 
@@ -40,25 +34,29 @@ Completed:
 - [x] Main navigation
 - [x] Student Management
 - [x] Course Management
+- [x] Building Management
+- [x] Room Management
+- [x] Class Management
+- [x] Enrollment Management
+- [x] Seating Plan Management
+- [x] Intelligent Seating Planner interface
+- [x] Localized objectives, quality labels, trade-offs, and conflict explanations
 
 Remaining:
 
-- [ ] Building Management
-- [ ] Room Management
-- [ ] Class Management
-- [ ] Enrollment Management
-- [ ] Seating Plan Management
-- [ ] Planning Engine UI
-- [ ] Classroom page
+- [ ] Legacy Classroom page
 - [ ] Login and authentication messages
+- [ ] Full confirmation-dialog review
+- [ ] Full loading/empty/success/error-state review
 - [ ] Japanese terminology review
+- [ ] Complete Japanese interview demo flow
 - [ ] English and Japanese screenshots
 
 ## v0.8.1 — Localized validation
 
 - [ ] Replace browser-native validation
 - [ ] Reusable validation helpers
-- [ ] Localized field-level messages
+- [ ] Localized field-level errors
 - [ ] Consistent invalid-field styling
 - [ ] Automated validation tests
 
@@ -66,19 +64,9 @@ Remaining:
 
 - [ ] Classroom zones
 - [ ] Student support-seat preferences
-- [ ] Room-distribution fairness
-- [ ] Side-by-side recommendation layouts
+- [ ] Side-by-side layouts
 - [ ] Candidate-comparison tests
 - [ ] Pinned students
-- [ ] Better explanations
-
-## Administration and authorization
-
-- [ ] School administration
-- [ ] User administration
-- [ ] Assign users to schools
-- [ ] Roles and permissions
-- [ ] Firestore rule enforcement
 
 ## Engineering improvements
 
@@ -86,16 +74,5 @@ Remaining:
 - [ ] Component tests
 - [ ] End-to-end tests
 - [ ] GitHub Actions CI
-- [ ] Automatic Pages deployment
-- [ ] Dependency modernization
+- [ ] Automatic GitHub Pages deployment
 - [ ] Evaluate Vue CLI to Vite migration
-
-## Definition of v1.0
-
-- Stable core workflows
-- Complete English/Japanese demo flow
-- Explainable Planning Engine
-- Appropriate Firestore authorization
-- Automated coverage for main workflows
-- Current documentation
-- Repeatable deployment

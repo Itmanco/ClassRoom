@@ -7,12 +7,9 @@
 - `TODO.md`
 - `CHANGELOG.md`
 
-## Architecture
+## Internationalization
 
-- `ARCHITECTURE.md`
-- `FIRESTORE_SCHEMA.md`
-- `PROJECT_CONTEXT.md`
-- `DECISIONS.md`
+- `INTERNATIONALIZATION.md`
 
 ## Planning Engine
 
@@ -20,18 +17,13 @@
 - `PLANNING_ENGINE_ROADMAP.md`
 - `SEATING_ENGINE.md`
 
-## Internationalization
-
-- `INTERNATIONALIZATION.md`
-
 ## Development
 
 - `CONTRIBUTING.md`
-- `DEVELOPER_PROFILE.md`
-- `START_NEW_CHAT.md`
 
-## Historical migration
+## Architecture
 
-- `MIGRATION_PROGRESS.md`
-
-Migration files remain historical references. The active priority is internationalization.
+- `ARCHITECTURE.md`
+- `FIRESTORE_SCHEMA.md`
+- `PROJECT_CONTEXT.md`
+- `DECISIONS.md`

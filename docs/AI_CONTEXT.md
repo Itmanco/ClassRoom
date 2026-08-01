@@ -6,69 +6,36 @@ Classroom Manager is a Vue 3 and Firebase classroom planning application.
 
 Documentation under `docs/` is the source of truth.
 
-## Rules
-
-Always:
-
-- Explain architecture changes before implementation
-- Prefer small commits
-- Preserve backward compatibility
-- Avoid unnecessary refactors
-- Update documentation
-- Explain reasoning
-- Update `TODO.md`
-
 ## Current branch
 
 `feature/internationalization-foundation`
 
-## Current task
-
-Complete English/Japanese support.
-
-Completed:
+## Completed
 
 - Vue I18n
 - Settings
 - Navigation
 - Student Management
 - Course Management
-
-Next:
-
 - Building Management
 - Room Management
 - Class Management
 - Enrollment Management
 - Seating Plan Management
-- Planning Engine UI
-- Classroom
-- Login
+- Intelligent Seating Planner interface
+- Planning Engine objectives, quality labels, trade-offs, and conflict explanations
 
-## Internationalization rule
+## Next
 
-No new hardcoded user-facing strings.
+- Legacy Classroom page
+- Login and authentication messages
+- Shared confirmation and UI-state review
+- Japanese terminology review
+- Screenshots
 
-Keep services and Planning Engine language-independent.
+## Important rules
 
-## Validation
-
-Browser-native validation is not controlled by Vue I18n.
-
-Do not add one-page workarounds. Localized validation is planned for v0.8.1.
-
-## Planning Engine
-
-- Independent of Vue/Firebase
-- Uses seating history
-- Prioritizes repeated partners, then desks, then exact seats
-- Returns three recommendations
-- Follows “Recommend, don't decide”
-
-## Deployment
-
-GitHub Pages deployment is manual:
-
-```bash
-npm run deploy
-```
+- No new hardcoded user-facing strings
+- Services and Planning Engine remain language-independent
+- Localized application validation is planned for v0.8.1
+- GitHub Pages deployment remains manual with `npm run deploy`

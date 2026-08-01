@@ -7,40 +7,50 @@
 - Vue I18n 11
 - English and Japanese locale catalogs
 - Browser-language detection
-- `localStorage` language persistence
+- Saved language preference
 - Settings language selector
 - Localized navigation
 - Localized Student Management
 - Localized Course Management
+- Localized Building Management
+- Localized Room Management
+- Localized Class Management
+- Localized Enrollment Management
+- Localized Seating Plan Management
+- Localized Intelligent Seating Planner interface
+- Localized candidate objectives and quality labels
+- Localized trade-offs and historical conflict explanations
 
 ### Changed
 
-- Student and Course messages now use translation keys
-- New user-facing text should use locale catalogs
+- Main management workflow now uses translation keys
+- Planning Engine terminology was refined for a clearer optimization workflow
+- Candidate recommendations are presented as optimized layouts
+- Planning Engine messages react to language changes after generation
 
-### Planned before release
+### Remaining before release
 
-- Translate all remaining pages
-- Review Japanese terminology
-- Add localized validation in v0.8.1
+- Legacy Classroom page
+- Login and authentication messages
+- Shared UI-state review
+- Japanese terminology review
+- English and Japanese screenshots
 
 ## v0.7.0 — Planning Engine v1
 
-- Added Planning Engine philosophy
-- Added historical seating analysis
-- Added top-three recommendations
-- Added teacher preview and selection
-- Replaced public weighted scores with priority-based comparison
+- Planning philosophy
+- Historical seating analysis
+- Top-three recommendations
+- Teacher preview and selection
 
 ## v0.6.0 — Student Management
 
-- Added Student CRUD
-- Added search and archive/reactivate
-- Preserved immutable student IDs
-- Added real-time updates
+- Student CRUD
+- Search and archive/reactivate
+- Immutable student IDs
+- Real-time updates
 
 ## v0.5.0 — School Domain Foundation
 
-- Added school-scoped domain collections
-- Added Building, Room, and Course management
-- Added class, enrollment, and seating-plan schemas
+- School-scoped domain collections
+- Building, Room, and Course management

@@ -1,129 +1,153 @@
 <template>
-  <!-- Wait until Firebase finishes checking the session -->
-  <div v-if="loading" class="loading-screen">
-    <h2>Loading...</h2>
+  <div
+    v-if="loading"
+    class="loading-screen"
+  >
+    <h2>{{ $t("common.loading") }}</h2>
   </div>
 
-  <!-- Show login if no user is authenticated -->
   <LoginModal
     v-else-if="!session.firebaseUser"
-    :isVisible="true"
+    :is-visible="true"
     @login-success="onLoginSuccess"
   />
 
-  <!-- Show the application -->
-<div v-else class="layout">
-
+  <div
+    v-else
+    class="layout"
+  >
     <NavigationMenu
-        :currentPage="currentPage"
-        @change-page="currentPage=$event"
+      :current-page="navigationPage"
+      @change-page="changePage"
     />
 
     <main>
+      <ClassroomPage
+        v-if="currentPage === 'classroom'"
+        :school-id="session.activeSchool"
+      />
 
-        
+      <StudentManager
+        v-if="currentPage === 'students'"
+        :school-id="session.activeSchool"
+      />
 
-        <ClassroomPage
-            v-if="currentPage==='classroom'" :schoolId="session.activeSchool"
-        />
+      <CourseManager
+        v-if="currentPage === 'courses'"
+        :school-id="session.activeSchool"
+      />
 
-        <StudentManager
-            v-if="currentPage==='students'"
-            :schoolId="session.activeSchool"
-        />
+      <BuildingManager
+        v-if="currentPage === 'buildings'"
+        :school-id="session.activeSchool"
+      />
 
-        <CourseManager
-            v-if="currentPage==='courses'"
-            :schoolId="session.activeSchool"
-        />
+      <RoomManager
+        v-if="currentPage === 'rooms'"
+        :school-id="session.activeSchool"
+      />
 
-        <BuildingManager
-            v-if="currentPage==='buildings'"
-            :schoolId="session.activeSchool"
-        />
+      <ClassManager
+        v-if="currentPage === 'classes'"
+        :school-id="session.activeSchool"
+        @manage-class="openClassWorkspace"
+      />
 
-        <RoomManager
-            v-if="currentPage==='rooms'"
-            :schoolId="session.activeSchool"
-        />
+      <ClassWorkspace
+        v-if="currentPage === 'class-workspace'"
+        :school-id="session.activeSchool"
+        :class-id="selectedClassId"
+        @back="closeClassWorkspace"
+      />
 
-        <ClassManager
-            v-if="currentPage==='classes'"
-            :schoolId="session.activeSchool"
-        />
+      <EnrollmentManager
+        v-if="currentPage === 'enrollments'"
+        :school-id="session.activeSchool"
+      />
 
-        <EnrollmentManager
-            v-if="currentPage==='enrollments'"
-            :schoolId="session.activeSchool"
-        />
+      <SeatingPlanManager
+        v-if="currentPage === 'seating-plans'"
+        :school-id="session.activeSchool"
+      />
 
-        <SeatingPlanManager
-            v-if="currentPage==='seating-plans'"
-            :schoolId="session.activeSchool"
-        />
-
-        <SettingsPage
-            v-if="currentPage==='settings'"
-        />
-
+      <SettingsPage
+        v-if="currentPage === 'settings'"
+      />
     </main>
-
-</div>
-
+  </div>
 </template>
 
 <script>
-import { auth } from "./firebase-init";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+  onAuthStateChanged,
+} from "firebase/auth";
 
-import { getCurrentUserProfile } from "./services/userService";
+import {
+  auth,
+} from "./firebase-init";
 
-import NavigationMenu from "./components/NavigationMenu.vue"
+import {
+  getCurrentUserProfile,
+} from "./services/userService";
+
+import NavigationMenu from "./components/NavigationMenu.vue";
 import LoginModal from "./components/LoginModal.vue";
 
-import ClassroomPage from "./pages/ClassroomPage.vue"
-import StudentManager from "./pages/StudentManager.vue"
-import CourseManager from "./pages/CourseManager.vue"
-import BuildingManager from "./pages/BuildingManager.vue"
-import RoomManager from "./pages/RoomManager.vue"
-import ClassManager from "./pages/ClassManager.vue"
-import EnrollmentManager from "./pages/EnrollmentManager.vue"
-import SeatingPlanManager from "./pages/SeatingPlanManager.vue"
-import SettingsPage from "./pages/SettingsPage.vue"
+import ClassroomPage from "./pages/ClassroomPage.vue";
+import StudentManager from "./pages/StudentManager.vue";
+import CourseManager from "./pages/CourseManager.vue";
+import BuildingManager from "./pages/BuildingManager.vue";
+import RoomManager from "./pages/RoomManager.vue";
+import ClassManager from "./pages/ClassManager.vue";
+import ClassWorkspace from "./pages/ClassWorkspace.vue";
+import EnrollmentManager from "./pages/EnrollmentManager.vue";
+import SeatingPlanManager from "./pages/SeatingPlanManager.vue";
+import SettingsPage from "./pages/SettingsPage.vue";
 
-export default{
-name: "App",
+export default {
+  name: "App",
 
-components:{
-NavigationMenu,
-LoginModal,
-ClassroomPage,
-StudentManager,
-CourseManager,
-BuildingManager,
-RoomManager,
-ClassManager,
-EnrollmentManager,
-SeatingPlanManager,
-SettingsPage
-},
+  components: {
+    NavigationMenu,
+    LoginModal,
+    ClassroomPage,
+    StudentManager,
+    CourseManager,
+    BuildingManager,
+    RoomManager,
+    ClassManager,
+    ClassWorkspace,
+    EnrollmentManager,
+    SeatingPlanManager,
+    SettingsPage,
+  },
 
-data(){
-  return {
+  data() {
+    return {
       loading: true,
-
       currentPage: "classroom",
+      selectedClassId: "",
 
       session: {
-          firebaseUser: null,
-          profile: null,
-          activeSchool: null,
-          initialized: false
-      }
+        firebaseUser: null,
+        profile: null,
+        activeSchool: null,
+        initialized: false,
+      },
     };
   },
 
-mounted() {
+  computed: {
+    navigationPage() {
+      if (this.currentPage === "class-workspace") {
+        return "classes";
+      }
+
+      return this.currentPage;
+    },
+  },
+
+  mounted() {
     onAuthStateChanged(auth, async (user) => {
       this.loading = false;
 
@@ -132,50 +156,81 @@ mounted() {
         this.session.firebaseUser = null;
         return;
       }
+
       console.log("Logged in:", user.email);
+
       await this.initializeSession(user);
     });
   },
 
   methods: {
-
     async initializeSession(firebaseUser) {
-        console.log("Initializing session...");
-        const profile = await getCurrentUserProfile(
-            firebaseUser.uid
-        );
+      console.log("Initializing session...");
 
-        this.session.firebaseUser = firebaseUser;
-        this.session.profile = profile;
+      const profile = await getCurrentUserProfile(
+        firebaseUser.uid,
+      );
 
-        if (profile) {
-            this.session.activeSchool = profile.activeSchool;
-        }
+      this.session.firebaseUser = firebaseUser;
+      this.session.profile = profile;
 
-        this.session.initialized = true;
-        console.log("Session ready:", this.session);
+      if (profile) {
+        this.session.activeSchool =
+          profile.activeSchool;
+      }
+
+      this.session.initialized = true;
+
+      console.log(
+        "Session ready:",
+        this.session,
+      );
     },
 
     async onLoginSuccess() {
       console.log("Login successful.");
+    },
+
+    changePage(page) {
+      this.currentPage = page;
+
+      if (page !== "class-workspace") {
+        this.selectedClassId = "";
+      }
+    },
+
+    openClassWorkspace(classId) {
+      this.selectedClassId = classId;
+      this.currentPage = "class-workspace";
+    },
+
+    closeClassWorkspace() {
+      this.selectedClassId = "";
+      this.currentPage = "classes";
+    },
+
+    handleSchoolChange(schoolId) {
+      this.session.activeSchool = schoolId;
+      this.selectedClassId = "";
+      this.currentPage = "classes";
     },
   },
 };
 </script>
 
 <style>
-
-body{
-margin:0;
-font-family:Arial;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
 }
 
-.layout{
-display:flex;
+.layout {
+  display: flex;
 }
 
-main{
-flex:1;
+main {
+  flex: 1;
+  min-width: 0;
 }
 
 .loading-screen {

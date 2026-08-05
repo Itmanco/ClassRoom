@@ -232,6 +232,14 @@
         </div>
 
         <div class="card-actions">
+          <button
+            v-if="item.active !== false"
+            class="primary"
+            @click="$emit('manage-class', item.id)"
+          >
+            {{ $t("classes.actions.manage") }}
+          </button>
+          
           <button @click="editClass(item)">
             {{ $t("common.edit") }}
           </button>
@@ -283,6 +291,8 @@ export default {
       required: true,
     },
   },
+
+  emits: ["manage-class"],
 
   data() {
     return {

@@ -60,16 +60,6 @@
         @back="closeClassWorkspace"
       />
 
-      <EnrollmentManager
-        v-if="currentPage === 'enrollments'"
-        :school-id="session.activeSchool"
-      />
-
-      <SeatingPlanManager
-        v-if="currentPage === 'seating-plans'"
-        :school-id="session.activeSchool"
-      />
-
       <SettingsPage
         v-if="currentPage === 'settings'"
       />
@@ -100,8 +90,6 @@ import BuildingManager from "./pages/BuildingManager.vue";
 import RoomManager from "./pages/RoomManager.vue";
 import ClassManager from "./pages/ClassManager.vue";
 import ClassWorkspace from "./pages/ClassWorkspace.vue";
-import EnrollmentManager from "./pages/EnrollmentManager.vue";
-import SeatingPlanManager from "./pages/SeatingPlanManager.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 
 export default {
@@ -117,8 +105,6 @@ export default {
     RoomManager,
     ClassManager,
     ClassWorkspace,
-    EnrollmentManager,
-    SeatingPlanManager,
     SettingsPage,
   },
 
@@ -192,11 +178,8 @@ export default {
     },
 
     changePage(page) {
+      this.selectedClassId = "";
       this.currentPage = page;
-
-      if (page !== "class-workspace") {
-        this.selectedClassId = "";
-      }
     },
 
     openClassWorkspace(classId) {

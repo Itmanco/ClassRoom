@@ -46,20 +46,6 @@
     </button>
 
     <button
-      @click="$emit('change-page', 'enrollments')"
-      :class="{ active: currentPage === 'enrollments' }"
-    >
-      👥 {{ $t('navigation.enrollments') }}
-    </button>
-
-    <button
-      @click="$emit('change-page', 'seating-plans')"
-      :class="{ active: currentPage === 'seating-plans' }"
-    >
-      🪑 {{ $t('navigation.seatingPlans') }}
-    </button>
-
-    <button
       @click="$emit('change-page', 'settings')"
       :class="{ active: currentPage === 'settings' }"
     >

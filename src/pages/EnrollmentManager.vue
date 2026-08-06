@@ -1,11 +1,20 @@
 <template>
-  <div class="page">
-    <header class="page-header">
+  <div
+    class="page"
+    :class="{ embedded: isEmbedded }"
+  >
+    <header
+      v-if="!isEmbedded"
+      class="page-header"
+    >
       <h1>👥 {{ $t("enrollments.title") }}</h1>
       <p>{{ $t("enrollments.description") }}</p>
     </header>
 
-    <section class="panel">
+    <section
+      v-if="!isEmbedded"
+      class="panel"
+    >
       <label class="class-select">
         {{ $t("enrollments.fields.class") }}
 
@@ -30,21 +39,21 @@
       >
         {{ $t("enrollments.messages.classRequired") }}
       </p>
-
-      <p
-        v-if="errorMessage"
-        class="error"
-      >
-        {{ errorMessage }}
-      </p>
-
-      <p
-        v-if="message"
-        class="success"
-      >
-        {{ message }}
-      </p>
     </section>
+
+    <p
+      v-if="errorMessage"
+      class="feedback error"
+    >
+      {{ errorMessage }}
+    </p>
+
+    <p
+      v-if="message"
+      class="feedback success"
+    >
+      {{ message }}
+    </p>
 
     <template v-if="selectedClassId">
       <section class="panel">
@@ -204,6 +213,11 @@ export default {
       type: String,
       required: true,
     },
+
+    classId: {
+      type: String,
+      default: "",
+    },
   },
 
   data() {
@@ -211,7 +225,7 @@ export default {
       classes: [],
       students: [],
       enrollments: [],
-      selectedClassId: "",
+      selectedClassId: this.classId || "",
       search: "",
       showArchived: false,
       loadingStudents: true,
@@ -226,6 +240,10 @@ export default {
   },
 
   computed: {
+    isEmbedded() {
+      return Boolean(this.classId);
+    },
+
     activeClasses() {
       return this.classes.filter(
         (item) => item.active !== false,
@@ -298,18 +316,20 @@ export default {
     },
   },
 
-  mounted() {
-    this.startBaseListeners();
-  },
-
-  beforeUnmount() {
-    this.stopAllListeners();
-  },
-
   watch: {
     schoolId() {
-      this.selectedClassId = "";
+      this.selectedClassId = this.classId || "";
+      this.search = "";
+      this.showArchived = false;
       this.startBaseListeners();
+    },
+
+    classId(newClassId) {
+      this.selectedClassId = newClassId || "";
+      this.search = "";
+      this.showArchived = false;
+      this.message = "";
+      this.errorMessage = "";
     },
 
     selectedClassId(classId) {
@@ -319,10 +339,25 @@ export default {
     },
   },
 
+  mounted() {
+    this.startBaseListeners();
+
+    if (this.selectedClassId) {
+      this.startEnrollmentListener(
+        this.selectedClassId,
+      );
+    }
+  },
+
+  beforeUnmount() {
+    this.stopAllListeners();
+  },
+
   methods: {
     startBaseListeners() {
       this.stopAllListeners();
       this.loadingStudents = true;
+      this.errorMessage = "";
 
       try {
         this.unsubscribeClasses = watchClasses(
@@ -331,6 +366,7 @@ export default {
             this.classes = items;
 
             if (
+              !this.isEmbedded &&
               this.selectedClassId &&
               !items.some(
                 (item) =>
@@ -387,6 +423,7 @@ export default {
 
       this.unsubscribeEnrollments = null;
       this.enrollments = [];
+      this.loadingEnrollments = false;
 
       if (!classId) {
         return;
@@ -561,6 +598,11 @@ export default {
   margin: 0 auto;
 }
 
+.page.embedded {
+  max-width: none;
+  padding: 0;
+}
+
 .page-header {
   margin-bottom: 24px;
 }
@@ -654,12 +696,25 @@ button {
   opacity: 0.62;
 }
 
+.feedback {
+  padding: 11px 14px;
+  border-radius: 8px;
+}
+
 .success {
   color: #18794e;
 }
 
+.feedback.success {
+  background: #e7f7ed;
+}
+
 .error {
   color: #b42318;
+}
+
+.feedback.error {
+  background: #fde8e8;
 }
 
 @media (max-width: 700px) {

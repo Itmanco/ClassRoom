@@ -170,13 +170,12 @@
 
       <section
         v-if="activeTab === 'students'"
-        class="panel empty-state"
+        class="workspace-content"
       >
-        <h2>👥 {{ $t("classWorkspace.students.title") }}</h2>
-
-        <p>
-          {{ $t("classWorkspace.students.placeholder") }}
-        </p>
+        <EnrollmentManager
+          :school-id="schoolId"
+          :class-id="classId"
+        />
       </section>
 
       <section
@@ -203,9 +202,14 @@ import {
 import {
   watchRooms,
 } from "../services/roomService";
+import EnrollmentManager from "./EnrollmentManager.vue";
 
 export default {
   name: "ClassWorkspace",
+
+  components: {
+    EnrollmentManager,
+  },
 
   props: {
     schoolId: {
@@ -601,5 +605,9 @@ button {
     width: 100%;
     text-align: left;
   }
+}
+
+.workspace-content {
+  min-width: 0;
 }
 </style>

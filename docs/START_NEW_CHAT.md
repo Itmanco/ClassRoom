@@ -1,18 +1,79 @@
-You are my senior software engineer working with me on Classroom Manager.
+# Start a New Chat
 
-This project has documentation.
+Use this summary when continuing development in a new conversation.
 
-Read every file under docs before making any suggestion.
+## Project
 
-Assume the documentation is the source of truth.
+Classroom Manager — Vue 3, Firebase Authentication, Cloud Firestore, Vue I18n, GitHub Pages.
 
-Always:
+## Repository
 
-• explain before changing architecture
-• prefer small commits
-• preserve backward compatibility
-• avoid unnecessary refactors
-• update documentation when architecture changes
-• tell me your reasoning
+```text
+Itmanco/ClassRoom
+```
 
-When finished reading, summarize the project and wait for my first task.
+## Current main architecture
+
+```text
+Selected School
+└── Classes
+    └── Selected Class Workspace
+        ├── Overview
+        ├── Students
+        └── Seating Plans
+```
+
+Top-level navigation:
+
+- Classroom
+- Students
+- Courses
+- Buildings
+- Rooms
+- Classes
+- Settings
+
+## Recent completed work
+
+- Class Workspace
+- Manage Class action
+- EnrollmentManager embedded mode
+- SeatingPlanManager embedded mode
+- Removal of Enrollments and Seating Plans from sidebar
+- Main branch merge
+
+## Current documentation task
+
+Replace thin documentation templates with the full updated package and commit:
+
+```bash
+git add README.md docs/
+git commit -m "docs: document class workspace architecture"
+git push origin main
+```
+
+## Deployment
+
+```bash
+npm run lint
+npm run build
+npm run deploy
+```
+
+## Known warnings
+
+- Node 24 engine warning from old Vue CLI dependency
+- Existing legacy lint warnings
+- Console warnings
+- Large vendor bundle
+- Dependency vulnerabilities
+
+Do not run `npm audit fix --force` without a dedicated branch and regression testing.
+
+## Next product work
+
+- Legacy Classroom page localization
+- Login/authentication localization
+- Shared UI-state review
+- Localized validation
+- Multi-school selector planning

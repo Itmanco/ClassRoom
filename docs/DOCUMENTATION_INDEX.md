@@ -1,29 +1,46 @@
 # Documentation Index
 
-## Current state
+## Project overview
 
-- `AI_CONTEXT.md`
-- `ROADMAP.md`
-- `TODO.md`
-- `CHANGELOG.md`
+- `PROJECT_CONTEXT.md`
+- `README.md` at repository root
 
-## Internationalization
+## Architecture and data
 
-- `INTERNATIONALIZATION.md`
+- `ARCHITECTURE.md`
+- `FIRESTORE_SCHEMA.md`
+- `DECISIONS.md`
 
 ## Planning Engine
 
 - `PLANNING_ENGINE.md`
 - `PLANNING_ENGINE_ROADMAP.md`
-- `SEATING_ENGINE.md`
 
-## Development
+## Internationalization
+
+- `INTERNATIONALIZATION.md`
+
+## Planning and delivery
+
+- `ROADMAP.md`
+- `TODO.md`
+- `CHANGELOG.md`
+
+## Development workflow
 
 - `CONTRIBUTING.md`
+- `AI_CONTEXT.md`
+- `START_NEW_CHAT.md`
 
-## Architecture
+## Current architectural milestone
 
-- `ARCHITECTURE.md`
-- `FIRESTORE_SCHEMA.md`
-- `PROJECT_CONTEXT.md`
-- `DECISIONS.md`
+The active application hierarchy is:
+
+```text
+Selected School
+└── Classes
+    └── Class Workspace
+        ├── Overview
+        ├── Students
+        └── Seating Plans
+```

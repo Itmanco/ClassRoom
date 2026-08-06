@@ -1,158 +1,179 @@
 # Architecture
 
-## Application Flow
+## Overview
 
-Firebase Auth
+Classroom Manager uses a Vue 3 frontend, a Firebase service layer, and an independent Planning Engine.
 
-↓
+```text
+App.vue
+├── Authentication/session state
+├── Active school context
+├── Top-level page navigation
+└── Selected class context
+        │
+        ▼
+Pages and reusable managers
+        │
+        ▼
+Service modules
+        │
+        ├── Firebase Authentication
+        ├── Cloud Firestore
+        └── Seating Planning Engine
+```
 
-User Profile
+## Application context
 
-↓
+### School context
 
-activeSchool
+`session.activeSchool` identifies the selected school.
 
-↓
+All school-owned operations receive `schoolId`.
 
-Session
+Examples:
 
-↓
+```js
+watchStudents(schoolId)
+watchCourses(schoolId)
+watchClasses(schoolId)
+```
 
-Vue Components
+A future school selector will update this value.
 
-↓
+### Class context
 
-Services
+`selectedClassId` is owned by `App.vue` while the Class Workspace is open.
 
-↓
+```text
+Classes page
+→ Manage class
+→ App stores selectedClassId
+→ ClassWorkspace receives schoolId and classId
+```
 
-Firestore
+Changing a top-level page clears the selected class. A future school change must also clear it.
 
-Components must not depend directly on authentication. They receive the current `schoolId` through the initialized session.
+## Class Workspace
 
----
+`ClassWorkspace.vue` composes class-owned workflows.
 
-## Domain Model
+```text
+ClassWorkspace
+├── Overview
+├── EnrollmentManager
+└── SeatingPlanManager
+```
 
-### School
+Both embedded managers receive:
 
-Owns students, buildings, rooms, courses, classes, and users.
+```vue
+:school-id="schoolId"
+:class-id="classId"
+```
 
-### Building
+They support an optional `classId` mode:
 
-A physical building belonging to a school, for example `A1`.
+- With `classId`: embedded mode; no class selector.
+- Without `classId`: temporary standalone mode.
 
-### Room
+The top-level standalone routes have been removed, but reusable component support remains useful for testing and future composition.
 
-A physical teaching space inside a building, for example `A1F1C1`.
+## Service layer
 
-A room stores stable physical information such as floor, capacity, desk count, and seat layout. It does not own students or seating history.
+Firestore access is kept in service files rather than duplicated across components.
 
-### Course
+Typical responsibilities:
 
-A subject or program offered by a school, such as English, Mathematics, or Java Basics.
+- Build collection/document paths
+- Subscribe to real-time data
+- Save normalized records
+- Archive records
+- Preserve stable identifiers
 
-### Class
+## Planning Engine
 
-A specific group of students taking a course. A class may be assigned to a room and owns its enrollments and seating-plan history.
+The engine is separate from Vue and Firebase.
 
-### Enrollment
+Inputs:
 
-Connects a student to a class.
+- Students
+- Seat positions
+- Historical plans
+- Generation options
 
-### Seating Plan
-
-A dated seating arrangement for one class. Historical plans are retained so future assignments can avoid repeating desks and desk partners too often.
-
----
-
-## Ownership
-
-School
-
-├── Students
-
-├── Buildings
-
-├── Rooms
-
-├── Courses
-
-├── Classes
-
-│   ├── Enrollments
-
-│   └── Seating Plans
-
-└── Users
-
----
-
-## Services
-
-### Student Service
-
-- `getStudents(schoolId)`
-- `saveStudents(schoolId)`
-- `watchStudents(schoolId)`
-
-### Future Building Service
-
-- `getBuildings(schoolId)`
-- `saveBuilding(schoolId, building)`
-- `watchBuildings(schoolId)`
-
-### Future Room Service
-
-- `getRooms(schoolId)`
-- `saveRoom(schoolId, room)`
-- `watchRooms(schoolId)`
-
-### Future Course Service
-
-- `getCourses(schoolId)`
-- `saveCourse(schoolId, course)`
-- `watchCourses(schoolId)`
-
-### Future Class Service
-
-- `getClasses(schoolId)`
-- `saveClass(schoolId, classRecord)`
-- `watchClasses(schoolId)`
-
-### Future Seating Plan Service
-
-- `getSeatingPlans(schoolId, classId)`
-- `saveSeatingPlan(schoolId, classId, seatingPlan)`
-- `watchSeatingPlans(schoolId, classId)`
-
-The current classroom service remains temporarily for backward compatibility until the seating-plan migration and UI verification are complete.
-
-## Domain Dependencies
-
-Create and validate entities in this order:
-
-1. Building
-2. Room, which references a building
-3. Course
-4. Class, which references a course and optionally a default room
-5. Enrollment, which references a school student
-6. Seating plan, which belongs to a class and records the room used
-
-Services must validate referenced IDs before writing dependent records. Physical rooms never own students or seating history.
-
----
-
-## Migration Compatibility
-
-The legacy collection named `classrooms` contains historical seating plans, not physical room records.
-
-Legacy source:
-
-`artifacts/classroom-b81c6/classrooms/{documentId}`
-
-Revised destination:
-
-`schools/school_japan/classes/legacy_class_2025/seatingPlans/{documentId}`
-
-Document IDs and existing fields must remain unchanged during the first migration step.
+Outputs:
+
+- Structured candidate assignments
+- Objective counts
+- Quality labels/codes
+- Structured violations
+- Search statistics
+
+Translation happens in the Vue interface, not in the engine.
+
+## Internationalization
+
+Vue I18n is initialized under:
+
+```text
+src/i18n/
+├── index.js
+└── locales/
+    ├── en.json
+    └── ja.json
+```
+
+Rules:
+
+- No new hardcoded user-facing strings.
+- Services return data/errors, not translated sentences.
+- Engine returns structured values, not localized prose.
+- Components translate dynamic messages with interpolation.
+
+## Navigation architecture
+
+Current top level:
+
+```text
+Classroom
+Students
+Courses
+Buildings
+Rooms
+Classes
+Settings
+```
+
+Class level:
+
+```text
+Overview
+Students
+Seating Plans
+```
+
+This structure is designed to accommodate future tabs such as:
+
+- Attendance
+- Grades
+- Statistics
+- Reports
+- Class settings
+
+## Future multi-school architecture
+
+```text
+User
+├── School A
+├── School B
+└── School C
+```
+
+The school selector should:
+
+- Display only authorized schools
+- Update `session.activeSchool`
+- Clear `selectedClassId`
+- Return to a safe top-level page
+- Trigger all school-scoped listeners to reload
+- Be backed by Firestore security rules

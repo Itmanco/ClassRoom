@@ -1,126 +1,108 @@
-# Classroom Planning Engine
+# Intelligent Seating Planner
 
-> Recommend, don't decide.
+## Philosophy
 
-## Vision
+> **Recommend, don't decide.**
 
-The Classroom Planning Engine helps teachers create fair seating experiences over time. It does not merely randomize students. It recommends strong arrangements by considering classroom history and teacher-selected objectives, while leaving the final decision to the teacher.
+The engine helps teachers compare fair seating alternatives. It does not automatically make the final decision.
 
-## Mission
+## Inputs
 
-Help teachers make better seating decisions while treating every student as fairly as possible.
+- Active enrolled students
+- Available seat positions
+- Active historical seating plans
+- Generation options
+- Number of optimization attempts
+- Number of requested results
 
-## Core principles
+## Core preferences
 
-### Encourage new relationships
+The current engine treats all historical rules as preferences rather than absolute constraints.
 
-Repeated desk partners should be avoided whenever possible. This is the first comparison objective because new partnerships promote broader classroom interaction.
+Priority order:
 
-### Support student needs
+1. Avoid repeated desk partners
+2. Avoid previously used desks
+3. Avoid repeated exact seat positions
+4. Use a random tie-breaker
 
-Students may require positions near the front, teacher, assistant, aisle, accessible desk, or another classroom resource. Support preferences are part of the philosophy but will be implemented in a later version after the room-zone and student-support models exist.
+This ensures the engine can still return a result when the history makes perfect avoidance impossible.
 
-### Promote fair classroom distribution
+## Candidate generation
 
-Students should experience different parts of the room throughout the school year. Future versions will understand front, middle, back, left, center, and right zones rather than treating desks only as numbers.
+The engine:
 
-### Encourage desk rotation
+1. Creates many candidate assignments.
+2. Evaluates each candidate.
+3. Deduplicates identical layouts.
+4. Compares candidates lexicographically by priority.
+5. Returns the strongest distinct candidates.
 
-Previously used desks should be avoided when practical. Desk rotation is a preference and must never outweigh avoiding a repeated desk partner.
+The interface currently requests three recommendations.
 
-### Always produce recommendations
+## Why no single weighted public score
 
-No historical preference is mandatory. When a perfect arrangement is impossible, the engine returns the strongest available recommendations and explains the compromises.
+A weighted total can hide important differences. For example, a candidate with fewer repeated partners should normally outrank one with a better desk score but more repeated partners.
 
-### Recommend, don't decide
+The comparison therefore uses ordered objectives rather than presenting a misleading single fairness percentage.
 
-The engine recommends the best three distinct arrangements. The teacher previews them, applies classroom knowledge the system may not possess, and selects the final arrangement.
+## Candidate output
 
-## Candidate comparison
+A candidate includes:
 
-Candidates are compared in priority order rather than with one combined score:
-
-1. Fewer repeated desk partnerships.
-2. Fewer previously used desks.
-3. Fewer repeated exact seats.
-4. Random tie-breaker when all current objectives are equal.
-
-Future support needs and room-distribution objectives will be inserted into this order after their data models are implemented.
-
-A lower-priority objective cannot cancel out a worse result in a higher-priority objective. For example, a candidate with no repeated partners and five repeated desks is preferred over a candidate with one repeated partner and no repeated desks.
-
-## Recommendation workflow
-
-1. Generate hundreds or thousands of complete candidate arrangements.
-2. Evaluate each candidate independently.
-3. Sort candidates using the documented objective order.
-4. Keep the three strongest distinct candidates.
-5. Explain the compromises in each candidate.
-6. Let the teacher preview and select one candidate.
-7. Save only the teacher's selected arrangement.
-
-## Explainability
-
-Each recommendation displays objective counts rather than an arbitrary combined score:
-
-- repeated desk partnerships;
-- previously used desks;
-- repeated exact seats;
-- historical plans considered;
-- readable descriptions of each compromise.
-
-## Teacher-first design
-
-Teachers may know about recent conflicts, friendships, temporary support needs, or classroom atmosphere that are not yet represented in data. The engine therefore supports professional judgement instead of replacing it.
-
-## Non-goals
-
-The engine does not attempt to:
-
-- replace teacher judgement;
-- guarantee a mathematically perfect arrangement;
-- eliminate every historical repetition;
-- refuse generation when preferences conflict;
-- treat student votes as an optimization objective.
-
-## Future versions
-
-- Room zones and fair spatial distribution.
-- Student support profiles and preferred zones.
-- Pinned students and temporary teacher preferences.
-- Separation or grouping preferences.
-- Student voting sessions across published candidate plans.
-- Fairness analytics across a school term.
-- Exam and laboratory layouts.
-
-## Architecture
-
-```text
-Vue UI
-  ↓
-Planning Engine
-  ↓
-Candidate generation
-  ↓
-Independent objective evaluation
-  ↓
-Priority-based candidate comparison
-  ↓
-Top three recommendations
-  ↓
-Teacher selection
-  ↓
-Existing seating-plan persistence service
+```js
+{
+  rank,
+  assignments,
+  objectives: {
+    repeatedPartners,
+    repeatedDesks,
+    repeatedSeats
+  },
+  quality,
+  violations
+}
 ```
 
-The engine receives plain data and has no dependency on Vue or Firebase.
+## Violations
 
-## Development rule
+Structured conflict types include:
 
-Before changing the Planning Engine, review this document and `DECISIONS.md`.
+- `previous-partner`
+- `previous-desk`
+- `previous-seat`
 
-Every proposed feature should answer:
+The Vue interface translates these into readable English or Japanese explanations.
 
-> Does this improve fairness for students while respecting teacher judgement?
+## Teacher workflow
 
-The goal is not to find the perfect seating arrangement. The goal is to help teachers make better decisions while treating every student as fairly as possible.
+```text
+Open class
+→ Seating Plans
+→ Choose optimization preferences
+→ Generate layouts
+→ Compare three candidates
+→ Preview one candidate
+→ Modify manually if needed
+→ Save final plan
+```
+
+## Historical data
+
+Only appropriate historical plans should be considered. Current behavior uses active plans.
+
+Future work may add:
+
+- Date windows
+- Term-based history
+- Configurable history depth
+- Archived-plan inclusion
+- Per-objective history depth
+
+## Non-goals of v1
+
+- No claim of artificial intelligence
+- No final automatic teacher decision
+- No mandatory perfect arrangement
+- No student voting inside the engine
+- No medical/support rules yet

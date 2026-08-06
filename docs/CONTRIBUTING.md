@@ -1,30 +1,66 @@
-# Contributing to Classroom Manager
+# Contributing
+
+## Source of truth
+
+Read relevant files under `docs/` before implementing changes.
+
+## Principles
+
+1. Explain architecture changes first.
+2. Prefer small, reviewable commits.
+3. Preserve backward compatibility when practical.
+4. Avoid unrelated refactors.
+5. Update documentation with behavior changes.
+6. Keep the teacher's decision final.
+7. Keep school and class context explicit.
 
 ## Workflow
 
 ```text
-Feature branch
-→ Implement
-→ Manual test
+Create feature branch
+→ Implement one focused change
+→ Test manually
 → npm run lint
 → npm run build
 → Update documentation
 → Commit and push
 → Merge to main
 → Deploy GitHub Pages
-→ Tag milestone
 ```
 
-## Internationalization rules
+## Suggested commit style
+
+```text
+feat: add class workspace navigation
+refactor: embed enrollment management in class workspace
+refactor: embed seating plan management in class workspace
+refactor: simplify navigation with class workspace
+docs: document class workspace architecture
+```
+
+## Internationalization
 
 - No new hardcoded user-facing strings
-- Group keys by domain
-- Keep business logic language-independent
-- Translate all UI states
-- Keep code and technical docs in English
-- Test language switching after dynamic results exist
+- Add matching English and Japanese keys
+- Use interpolation for dynamic text
+- Keep service and engine output language-independent
+- Test switching after dynamic results already exist
 
-## Validation rule
+## Data integrity
 
-Browser-native validation is temporarily accepted during v0.8.0.
-Localized application validation belongs to v0.8.1.
+- Do not change stable IDs casually
+- Do not delete historical records without a migration plan
+- Prefer archive flags for referenced records
+- Preserve school and class ownership in paths
+
+## Verification checklist
+
+- [ ] Existing workflow still works
+- [ ] English works
+- [ ] Japanese works
+- [ ] School context is correct
+- [ ] Class context is correct
+- [ ] No data from another class appears
+- [ ] `npm run lint` has no new errors
+- [ ] `npm run build` succeeds
+- [ ] Git status is clean after commit

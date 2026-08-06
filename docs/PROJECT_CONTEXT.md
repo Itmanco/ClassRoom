@@ -1,124 +1,79 @@
-# Classroom Manager
+# Project Context
 
-## Overview
+## Product
 
-Classroom Manager is a Vue 3 + Firebase application for schools to manage:
+Classroom Manager is a school-management and classroom-planning web application.
 
-- students
-- buildings and physical rooms
-- courses and classes
-- class enrollment
-- current and historical seating plans
-- future attendance features
-- multiple schools
+Its two main goals are:
 
-The project originally supported one school and used the ambiguous term `classrooms` for saved seating arrangements. It is being migrated to a clearer multi-school domain model.
+1. Manage school, class, and student data with clear ownership.
+2. Help teachers create fair seating arrangements without replacing teacher judgement.
 
----
+## Current product hierarchy
 
-## Tech Stack
+```text
+Authenticated User
+└── Active School
+    ├── Students
+    ├── Courses
+    ├── Buildings
+    ├── Rooms
+    └── Classes
+        └── Selected Class Workspace
+            ├── Overview
+            ├── Students / Enrollments
+            └── Seating Plans / Planning Engine
+```
 
-Frontend:
+## Current navigation
 
-- Vue 3
-- Vue Router
-- Vue CLI
+Top-level navigation:
 
-Backend:
+- Classroom
+- Students
+- Courses
+- Buildings
+- Rooms
+- Classes
+- Settings
 
-- Firebase Authentication
-- Firestore
-- Firebase Storage
+Enrollments and Seating Plans are intentionally absent from the top level. They require a selected class and therefore live inside the Class Workspace.
 
----
+## Current application state
 
-## Current Branch
+Implemented:
 
-`feature/student-management`
+- Firebase authentication and session initialization
+- Active-school context
+- School-scoped Firestore collections
+- Student Management
+- Course Management
+- Building Management
+- Room Management
+- Class Management
+- Class Workspace
+- Enrollment Management
+- Seating Plan Management
+- Intelligent Seating Planner
+- English/Japanese i18n foundation
+- GitHub Pages deployment
 
----
+Still incomplete:
 
-## Current Status
+- Legacy Classroom page modernization and localization
+- Login/authentication localization
+- Shared UI-state audit
+- Localized application validation
+- Multi-school selector
+- Roles and permissions
+- Automated testing
 
-✅ Authentication works
+## Design philosophy
 
-✅ Session initialization works
-
-✅ User profile loading works
-
-✅ `activeSchool` is stored in the session
-
-✅ Components receive `schoolId`
-
-✅ Services use `schoolId` instead of `appId`
-
-✅ 18 students migrated with unchanged IDs
-
-✅ Application works after the student migration
-
-✅ New domain model approved
-
-🚧 Building, room, course, and class foundations are next
-
----
-
-## Domain Language
-
-### Room
-
-A physical location such as `A1F1C1`.
-
-### Course
-
-A subject or program offered by the school.
-
-### Class
-
-A group of enrolled students taking a course. It may be assigned to a room.
-
-### Seating Plan
-
-A dated seating arrangement for a class. Previous plans remain available so future seat generation can consider previous desks and desk partners.
-
----
-
-## Firestore Migration
-
-Legacy root:
-
-`artifacts/classroom-b81c6`
-
-New school root:
-
-`schools/school_japan`
-
-Students have been migrated from:
-
-`artifacts/classroom-b81c6/students`
-
-into:
-
-`schools/school_japan/students`
-
-The six legacy documents under:
-
-`artifacts/classroom-b81c6/classrooms`
-
-are historical seating plans, not physical classroom records.
-
-Their revised destination is:
-
-`schools/school_japan/classes/legacy_class_2025/seatingPlans`
-
-Before that migration, the project will introduce the Building, Room, Course, and Class services so the historical class can use real relationships wherever they are known.
-
----
-
-## Compatibility Rule
-
-Do not delete the old collections or remove the existing classroom UI until:
-
-- all six seating plans are migrated;
-- their document IDs and assignments are verified;
-- historical plans load correctly;
-- saving a new plan works through the new path.
+- Prefer understandable workflows over flat CRUD navigation.
+- Preserve historical references.
+- Archive rather than delete referenced records.
+- Keep service and engine code independent from translated prose.
+- Keep school and class context explicit.
+- Let teachers make final seating decisions.
+- Implement changes in small, reviewable commits.

@@ -1,38 +1,75 @@
 # Planning Engine Roadmap
 
-## Version 1 — Teacher recommendations
+## v1 — Completed
 
-- [x] Framework-independent engine.
-- [x] Historical partner analysis.
-- [x] Historical desk analysis.
-- [x] Most-recent exact-seat analysis.
-- [x] Priority-based objective comparison.
-- [x] Generate and retain three distinct recommendations.
-- [x] Teacher preview and final selection.
-- [x] Explain compromises without exposing arbitrary weighted scores.
-- [ ] Automated unit tests.
-- [ ] Visual side-by-side classroom diagrams.
+- Framework-independent engine
+- Historical partner analysis
+- Historical desk analysis
+- Exact-seat analysis
+- Priority-based candidate comparison
+- Distinct candidate deduplication
+- Three teacher-facing recommendations
+- Candidate preview
+- Structured violation explanations
+- English/Japanese interface
 
-## Version 2 — Fair room distribution
+## v2 — Planned
 
-- [ ] Define room rows, columns, and zones.
-- [ ] Track each student's historical zone exposure.
-- [ ] Prefer underused classroom zones.
-- [ ] Add student support profiles.
-- [ ] Place support students in preferred zones when possible.
-- [ ] Explain distribution and support compromises.
+### Classroom zones
 
-## Version 3 — Teacher preferences
+- Front
+- Middle
+- Back
+- Left
+- Center
+- Right
 
-- [ ] Pin a student to a position.
-- [ ] Keep selected students apart.
-- [ ] Keep selected students together.
-- [ ] Add temporary per-plan preferences.
-- [ ] Save reusable teacher objective presets.
+### Support preferences
 
-## Future application workflows
+Examples:
 
-- [ ] Publish selected candidate options to enrolled students.
-- [ ] Allow one eligible vote per student.
-- [ ] Display vote totals separately from engine quality.
-- [ ] Keep final selection under teacher control.
+- Prefer front seats
+- Prefer accessible positions
+- Keep near teacher
+- Avoid specific environmental positions
+
+These should remain explainable and configurable.
+
+### Pinned assignments
+
+Allow teachers to lock:
+
+- A student to a seat
+- A student to a desk
+- A desk pair
+- An empty seat
+
+### Distribution fairness
+
+Consider:
+
+- Repeated front/back placement
+- Repeated edge placement
+- Long-term room distribution
+- Fair access to preferred zones
+
+### Better comparison UI
+
+- Side-by-side layouts
+- Highlight differences
+- Highlight repeated relationships
+- Explain why one candidate ranks above another
+
+### Testing
+
+- Comparator unit tests
+- Candidate uniqueness tests
+- Constraint-combination tests
+- Small-room tests
+- Over-capacity tests
+- Historical saturation tests
+- Deterministic seeded tests
+
+## Future workflow experiments
+
+Student voting on teacher-approved candidate layouts may be explored later, but it is a separate product workflow and not an optimization objective.

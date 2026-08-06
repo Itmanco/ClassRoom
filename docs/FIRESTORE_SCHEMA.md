@@ -1,6 +1,6 @@
 # Firestore Schema
 
-## Target Multi-School Schema
+## Root structure
 
 ```text
 schools/{schoolId}
@@ -8,286 +8,182 @@ schools/{schoolId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
 ├── courses/{courseId}
-├── classes/{classId}
-│   ├── enrollments/{studentId}
-│   └── seatingPlans/{seatingPlanId}
-└── users/{uid}
+└── classes/{classId}
+    ├── enrollments/{studentId}
+    └── seatingPlans/{seatingPlanId}
 ```
 
-The root `users/{uid}` profile remains responsible for authentication-related school selection through `activeSchool`.
+## Students
 
-All new domain documents use Firestore timestamps for `createdAt` and `updatedAt`. Legacy seating-plan fields remain unchanged during migration.
+Path:
 
----
+```text
+schools/{schoolId}/students/{studentId}
+```
 
-## User Profile
-
-`users/{uid}`
+Representative fields:
 
 ```js
 {
-  displayName,
-  email,
-  role,
-  activeSchool
+  id: number,
+  name: string,
+  hiragana: string,
+  country: string,
+  gender_id: number,
+  isActive: boolean
 }
 ```
 
----
+Student IDs remain stable because enrollments and historical seating plans reference them.
 
-## Student
+## Buildings
 
-`schools/{schoolId}/students/{studentId}`
+Path:
+
+```text
+schools/{schoolId}/buildings/{buildingId}
+```
+
+Representative fields:
 
 ```js
 {
-  name,
-  hiragana,
-  country,
-  gender_id,
-  isActive
+  code: string,
+  name: string,
+  floorCount: number,
+  active: boolean
 }
 ```
 
-Student document IDs are preserved because seating assignments reference them.
+## Rooms
 
----
+Path:
 
-## Building
+```text
+schools/{schoolId}/rooms/{roomId}
+```
 
-`schools/{schoolId}/buildings/{buildingId}`
-
-Recommended document ID: the stable building code, for example `A1`.
+Representative fields:
 
 ```js
 {
-  code: "A1",
-  name: "Building A1",
-  floorCount: 3,
-  active: true,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  code: string,
+  name: string,
+  buildingId: string,
+  floor: number,
+  roomNumber: number,
+  deskCount: number,
+  seatsPerDesk: number,
+  capacity: number,
+  active: boolean
 }
 ```
 
-Field rules:
+## Courses
 
-- `code`: required, unique within the school, and stable after creation.
-- `name`: required human-readable name.
-- `floorCount`: required positive integer.
-- `active`: supports archiving without deleting references.
-- `createdAt`: set once when the document is created.
-- `updatedAt`: refreshed whenever the document changes.
+Path:
 
-A building owns no rooms as nested documents. Rooms are stored at school level and reference their building through `buildingId`.
+```text
+schools/{schoolId}/courses/{courseId}
+```
 
----
-
-## Room
-
-`schools/{schoolId}/rooms/{roomId}`
-
-Recommended document ID: the stable room code, for example `A1F1C1`.
+Representative fields:
 
 ```js
 {
-  code: "A1F1C1",
-  name: "Building A1 - Floor 1 - Classroom 1",
-  buildingId: "A1",
-  floor: 1,
-  roomNumber: 1,
-  deskCount: 9,
-  seatsPerDesk: 2,
-  capacity: 18,
-  active: true,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  code: string,
+  name: string,
+  description: string,
+  active: boolean
 }
 ```
 
-Field rules:
+## Classes
 
-- `code`: required, unique within the school, and stable after creation.
-- `name`: required human-readable label.
-- `buildingId`: required reference by ID to `buildings/{buildingId}`.
-- `floor`: required positive integer that must not exceed the building's `floorCount`.
-- `roomNumber`: required positive integer within the floor.
-- `deskCount`: required non-negative integer.
-- `seatsPerDesk`: required positive integer.
-- `capacity`: required non-negative integer; initially expected to equal `deskCount × seatsPerDesk`.
-- `active`: supports retiring a physical room without deleting class history.
+Path:
 
-Rooms describe physical spaces only. They do not contain enrolled students, courses, classes, or seating-plan history.
+```text
+schools/{schoolId}/classes/{classId}
+```
 
----
-
-## Course
-
-`schools/{schoolId}/courses/{courseId}`
-
-Recommended document ID: a stable normalized code such as `java_basic`.
+Representative fields:
 
 ```js
 {
-  code: "JAVA-BASIC",
-  name: "Java Basics",
-  description: "Introductory Java programming course",
-  active: true,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  code: string,
+  name: string,
+  courseId: string,
+  roomId: string,
+  academicYear: number,
+  semester: number,
+  active: boolean
 }
 ```
 
-Field rules:
+## Enrollments
 
-- `code`: required and unique within the school.
-- `name`: required human-readable course name.
-- `description`: optional plain-text description.
-- `active`: allows a course to stop accepting new classes while preserving history.
+Path:
 
-A course defines a reusable subject or program. It does not directly own students or seating plans.
+```text
+schools/{schoolId}/classes/{classId}/enrollments/{studentId}
+```
 
----
-
-## Class
-
-`schools/{schoolId}/classes/{classId}`
-
-Recommended document ID: a stable descriptive ID such as `java_basic_2026_a`.
+Representative fields:
 
 ```js
 {
-  name: "Java Basics 2026 A",
-  courseId: "java_basic",
-  roomId: "A1F1C1",
-  schoolYear: 2026,
-  term: "1",
-  active: true,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  studentId: string | number,
+  active: boolean
 }
 ```
 
-Field rules:
+An enrollment belongs to exactly one class. The Class Workspace reflects this ownership.
 
-- `name`: required human-readable class name.
-- `courseId`: required reference by ID to `courses/{courseId}` for normal classes.
-- `roomId`: nullable reference by ID to the class's default physical room.
-- `schoolYear`: required four-digit year.
-- `term`: optional school-defined string such as `1`, `Spring`, or `Full Year`.
-- `active`: distinguishes current classes from archived classes.
+## Seating Plans
 
-A class represents one specific group of students taking a course. It owns enrollments and seating-plan history. A room may be reused by many classes.
+Path:
 
-The migration-only class `legacy_class_2025` may temporarily use `null` for `courseId` and `roomId` if the original relationships cannot be established truthfully.
-
----
-
-## Enrollment
-
-`schools/{schoolId}/classes/{classId}/enrollments/{studentId}`
-
-The enrollment document ID must equal the enrolled student's document ID.
-
-```js
-{
-  studentId: "10",
-  active: true,
-  enrolledAt: Timestamp,
-  withdrawnAt: null,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
-}
+```text
+schools/{schoolId}/classes/{classId}/seatingPlans/{seatingPlanId}
 ```
 
-Field rules:
-
-- `studentId`: required and must match the enrollment document ID.
-- `active`: identifies current membership without deleting historical enrollment.
-- `enrolledAt`: required timestamp.
-- `withdrawnAt`: nullable timestamp; set when the enrollment becomes inactive.
-
-Students remain school-level records. Enrollments connect those students to one or more classes.
-
----
-
-## Seating Plan
-
-`schools/{schoolId}/classes/{classId}/seatingPlans/{seatingPlanId}`
-
-New seating plans should use:
+Representative fields:
 
 ```js
 {
-  title: "July 2026",
-  effectiveDate: Timestamp,
-  roomId: "A1F1C1",
-  status: "active",
-  studentAssignments: [
+  title: string,
+  planDate: string,
+  roomId: string,
+  deskCount: number,
+  seatsPerDesk: number,
+  assignments: [
     {
-      studentId: "10",
-      deskNumber: 1,
-      seatPosition: "left"
+      studentId: string | number,
+      deskNumber: number,
+      seatNumber: number
     }
   ],
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  active: boolean
 }
 ```
 
-Field rules:
+## Archiving policy
 
-- `title`: required human-readable title.
-- `effectiveDate`: required timestamp representing when the arrangement takes effect.
-- `roomId`: required snapshot of the physical room used by this plan.
-- `status`: one of `draft`, `active`, or `archived`.
-- `studentAssignments`: required array of student-to-seat assignments.
-- `studentId`: stored as a string in new plans. Legacy numeric values remain unchanged during migration.
-- `deskNumber`: required positive integer.
-- `seatPosition`: optional stable position within a shared desk, such as `left` or `right`.
+Referenced records should normally be archived instead of deleted.
 
-A seating plan is immutable historical evidence after it becomes archived. Corrections should be deliberate and must not silently rewrite previous plans.
+Reasons:
 
-During migration, existing legacy fields remain unchanged for backward compatibility:
+- Historical plans need student references.
+- Classes need course and room references.
+- Reporting may need inactive records.
+- Restoration/reactivation remains possible.
 
-```js
-{
-  title,
-  creationDate,
-  studentAssignments
-}
-```
+## Future authorization model
 
----
+A future user-school membership structure should support:
 
-## Legacy Schema
+- School administrator
+- Teacher/editor
+- Viewer
 
-```text
-artifacts/classroom-b81c6
-├── students/{studentId}
-└── classrooms/{documentId}
-```
-
-Despite the collection name, legacy `classrooms` documents are saved historical seating plans.
-
----
-
-## Current Migration Targets
-
-Students:
-
-```text
-artifacts/classroom-b81c6/students/{studentId}
-↓
-schools/school_japan/students/{studentId}
-```
-
-Historical seating plans:
-
-```text
-artifacts/classroom-b81c6/classrooms/{documentId}
-↓
-schools/school_japan/classes/legacy_class_2025/seatingPlans/{documentId}
-```
-
-The migration must preserve document IDs, `title`, `creationDate`, `studentAssignments`, and the current numeric `studentId` values.
+Firestore rules must verify membership and role independently of the UI.

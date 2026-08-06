@@ -180,13 +180,12 @@
 
       <section
         v-if="activeTab === 'seating-plans'"
-        class="panel empty-state"
+        class="workspace-content"
       >
-        <h2>🪑 {{ $t("classWorkspace.seatingPlans.title") }}</h2>
-
-        <p>
-          {{ $t("classWorkspace.seatingPlans.placeholder") }}
-        </p>
+        <SeatingPlanManager
+          :school-id="schoolId"
+          :class-id="classId"
+        />
       </section>
     </template>
   </div>
@@ -203,14 +202,15 @@ import {
   watchRooms,
 } from "../services/roomService";
 import EnrollmentManager from "./EnrollmentManager.vue";
+import SeatingPlanManager from "./SeatingPlanManager.vue";
 
 export default {
   name: "ClassWorkspace",
 
   components: {
     EnrollmentManager,
+    SeatingPlanManager,
   },
-
   props: {
     schoolId: {
       type: String,

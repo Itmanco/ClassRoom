@@ -1,6 +1,12 @@
 <template>
-  <div class="page">
-    <header class="page-header">
+  <div
+    class="page"
+    :class="{ embedded: isEmbedded }"
+  >
+    <header
+      v-if="!isEmbedded"
+      class="page-header"
+    >
       <h1>🪑 {{ $t("seatingPlans.title") }}</h1>
 
       <p>
@@ -8,7 +14,10 @@
       </p>
     </header>
 
-    <section class="panel controls">
+    <section
+      v-if="!isEmbedded"
+      class="panel controls"
+    >
       <label>
         {{ $t("seatingPlans.fields.class") }}
 
@@ -26,21 +35,21 @@
           </option>
         </select>
       </label>
-
-      <p
-        v-if="errorMessage"
-        class="error"
-      >
-        {{ errorMessage }}
-      </p>
-
-      <p
-        v-if="message"
-        class="success"
-      >
-        {{ message }}
-      </p>
     </section>
+
+    <p
+      v-if="errorMessage"
+      class="feedback error"
+    >
+      {{ errorMessage }}
+    </p>
+
+    <p
+      v-if="message"
+      class="feedback success"
+    >
+      {{ message }}
+    </p>
 
     <template v-if="selectedClass">
       <section class="panel summary">
@@ -505,6 +514,10 @@ export default {
       type: String,
       required: true,
     },
+      classId: {
+      type: String,
+      default: "",
+    },
   },
 
   data() {
@@ -515,7 +528,7 @@ export default {
       enrollments: [],
       plans: [],
       seats: [],
-      selectedClassId: "",
+      selectedClassId: this.classId || "",
       editingPlanId: "",
       showArchived: false,
       loadingPlans: false,
@@ -545,6 +558,10 @@ export default {
   },
 
   computed: {
+    isEmbedded() {
+      return Boolean(this.classId);
+    },
+
     activeClasses() {
       return this.classes.filter(
         (item) => item.active !== false,
@@ -620,6 +637,10 @@ export default {
 
   mounted() {
     this.startBaseListeners();
+
+    if (this.selectedClassId) {
+      this.startClassListeners();
+    }
   },
 
   beforeUnmount() {
@@ -628,8 +649,14 @@ export default {
 
   watch: {
     schoolId() {
-      this.selectedClassId = "";
+      this.selectedClassId = this.classId || "";
+      this.resetWorkspaceState();
       this.startBaseListeners();
+    },
+
+    classId(newClassId) {
+      this.selectedClassId = newClassId || "";
+      this.resetWorkspaceState();
     },
 
     selectedClassId() {
@@ -652,6 +679,18 @@ export default {
             this.schoolId,
             (items) => {
               this.classes = items;
+
+              if (
+                !this.isEmbedded &&
+                this.selectedClassId &&
+                !items.some(
+                  (item) =>
+                    item.id === this.selectedClassId &&
+                    item.active !== false,
+                )
+              ) {
+                this.selectedClassId = "";
+              }
             },
             (error) => {
               this.errorMessage = this.$t(
@@ -1143,6 +1182,14 @@ export default {
         ? this.$t(key)
         : quality;
     },
+
+    resetWorkspaceState() {
+      this.showArchived = false;
+      this.message = "";
+      this.errorMessage = "";
+      this.generationResult = null;
+      this.selectedCandidateIndex = 0;
+    },
   },
 };
 </script>
@@ -1344,6 +1391,25 @@ button {
 
 .success {
   color: #167c3a;
+}
+
+.page.embedded {
+  max-width: none;
+  padding: 0;
+}
+
+.feedback {
+  padding: 11px 14px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+
+.feedback.success {
+  background: #e7f7ed;
+}
+
+.feedback.error {
+  background: #fde8e8;
 }
 
 @media (max-width: 700px) {

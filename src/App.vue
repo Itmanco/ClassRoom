@@ -18,7 +18,10 @@
   >
     <NavigationMenu
       :current-page="navigationPage"
+      :user="session.firebaseUser"
+      :profile="session.profile"
       @change-page="changePage"
+      @open-profile="openProfile"
     />
 
     <main>
@@ -196,6 +199,12 @@ export default {
       this.session.activeSchool = schoolId;
       this.selectedClassId = "";
       this.currentPage = "classes";
+    },
+
+    openProfile() {
+      console.log(
+        "Profile page will be implemented in the next step.",
+      );
     },
   },
 };

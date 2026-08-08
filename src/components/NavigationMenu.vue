@@ -1,71 +1,98 @@
-```vue
 <template>
   <nav class="sidebar">
-    <h2>📚 {{ $t('app.name') }}</h2>
+    <h2>📚 {{ $t("app.name") }}</h2>
 
-    <button
-      @click="$emit('change-page', 'classroom')"
-      :class="{ active: currentPage === 'classroom' }"
-    >
-      🏠 {{ $t('navigation.classroom') }}
-    </button>
+    <div class="navigation-links">
+      <button
+        @click="$emit('change-page', 'classroom')"
+        :class="{ active: currentPage === 'classroom' }"
+      >
+        🏠 {{ $t("navigation.classroom") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'students')"
-      :class="{ active: currentPage === 'students' }"
-    >
-      👨‍🎓 {{ $t('navigation.students') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'students')"
+        :class="{ active: currentPage === 'students' }"
+      >
+        👨‍🎓 {{ $t("navigation.students") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'courses')"
-      :class="{ active: currentPage === 'courses' }"
-    >
-      📚 {{ $t('navigation.courses') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'courses')"
+        :class="{ active: currentPage === 'courses' }"
+      >
+        📚 {{ $t("navigation.courses") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'buildings')"
-      :class="{ active: currentPage === 'buildings' }"
-    >
-      🏫 {{ $t('navigation.buildings') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'buildings')"
+        :class="{ active: currentPage === 'buildings' }"
+      >
+        🏫 {{ $t("navigation.buildings") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'rooms')"
-      :class="{ active: currentPage === 'rooms' }"
-    >
-      🚪 {{ $t('navigation.rooms') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'rooms')"
+        :class="{ active: currentPage === 'rooms' }"
+      >
+        🚪 {{ $t("navigation.rooms") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'classes')"
-      :class="{ active: currentPage === 'classes' }"
-    >
-      🏷️ {{ $t('navigation.classes') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'classes')"
+        :class="{ active: currentPage === 'classes' }"
+      >
+        🏷️ {{ $t("navigation.classes") }}
+      </button>
 
-    <button
-      @click="$emit('change-page', 'settings')"
-      :class="{ active: currentPage === 'settings' }"
-    >
-      ⚙️ {{ $t('navigation.settings') }}
-    </button>
+      <button
+        @click="$emit('change-page', 'settings')"
+        :class="{ active: currentPage === 'settings' }"
+      >
+        ⚙️ {{ $t("navigation.settings") }}
+      </button>
+    </div>
+
+    <UserProfileCard
+      class="profile-card"
+      :user="user"
+      :profile="profile"
+      @open-profile="$emit('open-profile')"
+    />
   </nav>
 </template>
 
 <script>
+import UserProfileCard from "./UserProfileCard.vue";
+
 export default {
-  name: 'NavigationMenu',
+  name: "NavigationMenu",
+
+  components: {
+    UserProfileCard,
+  },
 
   props: {
     currentPage: {
       type: String,
-      required: true
-    }
+      required: true,
+    },
+
+    user: {
+      type: Object,
+      default: null,
+    },
+
+    profile: {
+      type: Object,
+      default: null,
+    },
   },
 
-  emits: ['change-page']
+  emits: [
+    "change-page",
+    "open-profile",
+  ],
 };
 </script>
 
@@ -77,12 +104,17 @@ export default {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   box-sizing: border-box;
 }
 
 .sidebar h2 {
-  margin: 0 0 10px;
+  margin: 0 0 20px;
+}
+
+.navigation-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 button {
@@ -97,5 +129,9 @@ button {
 button.active {
   background: #42b883;
   color: white;
+}
+
+.profile-card {
+  margin-top: auto;
 }
 </style>

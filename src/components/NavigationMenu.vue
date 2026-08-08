@@ -57,6 +57,7 @@
       class="profile-card"
       :user="user"
       :profile="profile"
+      :active="currentPage === 'profile'"
       @open-profile="$emit('open-profile')"
     />
   </nav>

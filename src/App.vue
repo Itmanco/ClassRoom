@@ -66,6 +66,13 @@
       <SettingsPage
         v-if="currentPage === 'settings'"
       />
+
+      <ProfilePage
+        v-if="currentPage === 'profile'"
+        :user="session.firebaseUser"
+        :profile="session.profile"
+        @profile-updated="handleProfileUpdated"
+      />
     </main>
   </div>
 </template>
@@ -94,6 +101,7 @@ import RoomManager from "./pages/RoomManager.vue";
 import ClassManager from "./pages/ClassManager.vue";
 import ClassWorkspace from "./pages/ClassWorkspace.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
+import ProfilePage from "./pages/ProfilePage.vue";
 
 export default {
   name: "App",
@@ -109,6 +117,7 @@ export default {
     ClassManager,
     ClassWorkspace,
     SettingsPage,
+    ProfilePage,
   },
 
   data() {
@@ -202,9 +211,15 @@ export default {
     },
 
     openProfile() {
-      console.log(
-        "Profile page will be implemented in the next step.",
-      );
+       this.selectedClassId = "";
+      this.currentPage = "profile";
+    },
+
+    handleProfileUpdated(updatedProfile) {
+      this.session.profile = {
+        ...this.session.profile,
+        ...updatedProfile,
+      };
     },
   },
 };

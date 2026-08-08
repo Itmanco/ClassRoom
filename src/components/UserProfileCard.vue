@@ -17,6 +17,7 @@
     <button
       type="button"
       class="profile-button"
+      :class="{ active }"
       @click="$emit('open-profile')"
     >
       {{ $t("userProfile.actions.open") }}
@@ -38,6 +39,11 @@ export default {
     profile: {
       type: Object,
       default: null,
+    },
+
+    active: {
+      type: Boolean,
+      default: false,
     },
   },
 
@@ -140,5 +146,10 @@ export default {
 
 .profile-button:hover {
   background: #ddd;
+}
+
+.profile-button.active {
+  background: #42b883;
+  color: white;
 }
 </style>

@@ -23,6 +23,13 @@
       {{ $t("userProfile.actions.open") }}
       <span>›</span>
     </button>
+    <button
+      type="button"
+      class="sign-out-button"
+      @click="$emit('sign-out')"
+    >
+      🚪 {{ $t("userProfile.actions.signOut") }}
+    </button>
   </section>
 </template>
 
@@ -47,7 +54,10 @@ export default {
     },
   },
 
-  emits: ["open-profile"],
+  emits: [
+    "open-profile",
+    "sign-out",
+  ],
 
   computed: {
     displayName() {
@@ -151,5 +161,21 @@ export default {
 .profile-button.active {
   background: #42b883;
   color: white;
+}
+
+.sign-out-button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #b42318;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sign-out-button:hover {
+  background: #fde8e8;
 }
 </style>

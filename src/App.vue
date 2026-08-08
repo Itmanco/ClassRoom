@@ -22,6 +22,7 @@
       :profile="session.profile"
       @change-page="changePage"
       @open-profile="openProfile"
+      @sign-out="handleSignOut"
     />
 
     <main>
@@ -80,6 +81,7 @@
 <script>
 import {
   onAuthStateChanged,
+  signOut,
 } from "firebase/auth";
 
 import {
@@ -220,6 +222,24 @@ export default {
         ...this.session.profile,
         ...updatedProfile,
       };
+    },
+
+    async handleSignOut() {
+      try {
+        await signOut(auth);
+
+        this.selectedClassId = "";
+        this.currentPage = "classroom";
+
+        this.session = {
+          firebaseUser: null,
+          profile: null,
+          activeSchool: null,
+          initialized: false,
+        };
+      } catch (error) {
+        console.error("Unable to sign out:", error);
+      }
     },
   },
 };

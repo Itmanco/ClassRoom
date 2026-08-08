@@ -59,7 +59,9 @@
       :profile="profile"
       :active="currentPage === 'profile'"
       @open-profile="$emit('open-profile')"
+      @sign-out="$emit('sign-out')"
     />
+
   </nav>
 </template>
 
@@ -93,6 +95,7 @@ export default {
   emits: [
     "change-page",
     "open-profile",
+    "sign-out",
   ],
 };
 </script>

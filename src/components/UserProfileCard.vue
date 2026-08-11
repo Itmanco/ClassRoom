@@ -1,35 +1,66 @@
 <template>
-  <section class="user-card">
-    <div class="avatar">
-      {{ initials }}
-    </div>
+  <section
+    class="user-card"
+    :class="{ collapsed }"
+  >
+    <template v-if="!collapsed">
+      <div class="user-header">
+        <div class="avatar">
+          {{ initials }}
+        </div>
 
-    <div class="user-info">
-      <strong class="user-name">
-        {{ displayName }}
-      </strong>
+        <button
+          type="button"
+          class="sign-out-icon"
+          :title="$t('userProfile.actions.signOut')"
+          :aria-label="$t('userProfile.actions.signOut')"
+          @click="$emit('sign-out')"
+        >
+          🚪
+        </button>
+      </div>
 
-      <span class="user-email">
-        {{ email }}
-      </span>
-    </div>
+      <div class="user-info">
+        <strong class="user-name">
+          {{ displayName }}
+        </strong>
 
-    <button
-      type="button"
-      class="profile-button"
-      :class="{ active }"
-      @click="$emit('open-profile')"
-    >
-      {{ $t("userProfile.actions.open") }}
-      <span>›</span>
-    </button>
-    <button
-      type="button"
-      class="sign-out-button"
-      @click="$emit('sign-out')"
-    >
-      🚪 {{ $t("userProfile.actions.signOut") }}
-    </button>
+        <span class="user-email">
+          {{ email }}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        class="profile-button"
+        :class="{ active }"
+        @click="$emit('open-profile')"
+      >
+        {{ $t("userProfile.actions.open") }}
+        <span>›</span>
+      </button>
+    </template>
+
+    <template v-else>
+      <button
+        type="button"
+        class="avatar compact-action"
+        :title="displayName"
+        @click="$emit('open-profile')"
+      >
+        {{ initials }}
+      </button>
+
+      <button
+        type="button"
+        class="sign-out-icon compact-sign-out"
+        :title="$t('userProfile.actions.signOut')"
+        :aria-label="$t('userProfile.actions.signOut')"
+        @click="$emit('sign-out')"
+      >
+        🚪
+      </button>
+    </template>
   </section>
 </template>
 
@@ -49,6 +80,11 @@ export default {
     },
 
     active: {
+      type: Boolean,
+      default: false,
+    },
+
+    collapsed: {
       type: Boolean,
       default: false,
     },
@@ -107,10 +143,17 @@ export default {
   border-top: 1px solid #ddd;
 }
 
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .avatar {
   width: 42px;
   height: 42px;
-  margin-bottom: 10px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: #42b883;
   color: white;
@@ -120,13 +163,6 @@ export default {
   font-weight: 700;
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-bottom: 10px;
-  min-width: 0;
-}
 
 .user-name {
   overflow: hidden;
@@ -136,10 +172,25 @@ export default {
 
 .user-email {
   color: #666;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sign-out-icon {
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.sign-out-icon:hover {
+  background: #fde8e8;
 }
 
 .profile-button {
@@ -163,19 +214,67 @@ export default {
   color: white;
 }
 
-.sign-out-button {
+.user-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.user-header .avatar {
+  margin-bottom: 0;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   width: 100%;
-  margin-top: 6px;
-  padding: 9px 10px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-email {
+  color: #666;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sign-out-icon {
+  padding: 5px;
   border: none;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
-  color: #b42318;
-  text-align: left;
+  font-size: 1.5rem;
+  line-height: 1;
   cursor: pointer;
 }
 
-.sign-out-button:hover {
+.sign-out-icon:hover {
   background: #fde8e8;
+}
+
+.user-card.collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.compact-action {
+  cursor: pointer;
+  border: none;
+}
+
+.compact-sign-out {
+  font-size: 1.35rem;
 }
 </style>

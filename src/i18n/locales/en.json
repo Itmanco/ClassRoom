@@ -33,6 +33,41 @@
       "collapse": "Collapse navigation",
       "expand": "Expand navigation"
     },
+  "login": {
+    "eyebrow": "Welcome back",
+    "title": "Sign in",
+    "description": "Sign in to continue to your classroom workspace.",
+    "fields": {
+      "email": "Email address",
+      "password": "Password"
+    },
+    "placeholders": {
+      "email": "Enter your email address",
+      "password": "Enter your password"
+    },
+    "actions": {
+      "signIn": "Sign in",
+      "signingIn": "Signing in...",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "securityNote": "Your account is securely authenticated with Firebase.",
+    "messages": {
+      "invalidCredentials": "The email address or password is incorrect.",
+      "invalidEmail": "Enter a valid email address.",
+      "userDisabled": "This account has been disabled.",
+      "tooManyRequests": "Too many sign-in attempts. Please wait and try again.",
+      "networkError": "Unable to connect. Check your internet connection and try again.",
+      "loginError": "Unable to sign in. Please try again."
+    },
+    "brand": {
+      "eyebrow": "Classroom workspace",
+      "description": "Manage students, classes and classroom seating from one organized workspace.",
+      "students": "Manage your students",
+      "classes": "Organize classes and enrollments",
+      "seating": "Build and manage seating plans"
+    }
+  },
   "planningEngine": {
     "title": "Intelligent Seating Planner",
     "description": "Generate three optimized seating layouts based on historical seating data. The teacher reviews the candidates and chooses the final arrangement.",

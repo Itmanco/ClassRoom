@@ -33,6 +33,41 @@
       "collapse": "ナビゲーションを折りたたむ",
       "expand": "ナビゲーションを展開する"
     },
+  "login": {
+      "eyebrow": "おかえりなさい",
+      "title": "ログイン",
+      "description": "クラスルーム管理を続けるにはログインしてください。",
+      "fields": {
+        "email": "メールアドレス",
+        "password": "パスワード"
+      },
+      "placeholders": {
+        "email": "メールアドレスを入力",
+        "password": "パスワードを入力"
+      },
+      "actions": {
+        "signIn": "ログイン",
+        "signingIn": "ログイン中...",
+        "showPassword": "パスワードを表示",
+        "hidePassword": "パスワードを非表示"
+      },
+      "securityNote": "Firebase Authenticationを使用して安全に認証します。",
+      "messages": {
+        "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+        "invalidEmail": "有効なメールアドレスを入力してください。",
+        "userDisabled": "このアカウントは無効になっています。",
+        "tooManyRequests": "ログイン試行回数が多すぎます。しばらく待ってから再度お試しください。",
+        "networkError": "接続できませんでした。インターネット接続を確認して再度お試しください。",
+        "loginError": "ログインできませんでした。もう一度お試しください。"
+      },
+      "brand": {
+        "eyebrow": "クラスルームワークスペース",
+        "description": "生徒、クラス、座席表をひとつのワークスペースで管理できます。",
+        "students": "生徒情報を管理",
+        "classes": "クラスと登録生徒を管理",
+        "seating": "座席表を作成・管理"
+      }
+    },
   "planningEngine": {
     "title": "インテリジェント座席プランナー",
     "description": "過去の座席履歴を考慮して、最適化された座席配置を3案生成します。先生が候補を確認し、最終的な配置を選択します。",

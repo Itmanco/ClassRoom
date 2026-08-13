@@ -77,7 +77,7 @@
         :class="{ active: currentPage === 'rooms' }"
         :title="collapsed ? $t('navigation.rooms') : ''"
       >
-        <span class="nav-icon">🚪</span>
+        <span class="nav-icon">📐</span>
         <span v-if="!collapsed">
           {{ $t("navigation.rooms") }}
         </span>

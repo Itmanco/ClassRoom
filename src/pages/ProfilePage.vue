@@ -154,12 +154,122 @@
         <p class="account-note">
           {{ $t("profile.account.emailNote") }}
         </p>
+
+        <div class="security-section">
+          <div class="security-heading">
+            <div>
+              <h3>
+                {{ $t("profile.security.title") }}
+              </h3>
+
+              <p>
+                {{ $t("profile.security.description") }}
+              </p>
+            </div>
+
+            <button
+              v-if="!showPasswordForm"
+              type="button"
+              class="secondary"
+              @click="openPasswordForm"
+            >
+              {{ $t("profile.security.actions.changePassword") }}
+            </button>
+          </div>
+
+          <p
+            v-if="passwordSuccessMessage"
+            class="message success security-message"
+          >
+            {{ passwordSuccessMessage }}
+          </p>
+
+          <p
+            v-if="passwordErrorMessage"
+            class="message error security-message"
+          >
+            {{ passwordErrorMessage }}
+          </p>
+
+          <form
+            v-if="showPasswordForm"
+            class="security-form"
+            @submit.prevent="changePassword"
+          >
+            <label>
+              {{ $t("profile.security.fields.currentPassword") }}
+
+              <input
+                v-model="securityForm.currentPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+
+            <label>
+              {{ $t("profile.security.fields.newPassword") }}
+
+              <input
+                v-model="securityForm.newPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="6"
+                required
+              />
+            </label>
+
+            <label>
+              {{ $t("profile.security.fields.confirmPassword") }}
+
+              <input
+                v-model="securityForm.confirmPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="6"
+                required
+              />
+            </label>
+
+            <p class="password-help">
+              {{ $t("profile.security.passwordHelp") }}
+            </p>
+
+            <div class="actions">
+              <button
+                class="primary"
+                type="submit"
+                :disabled="changingPassword"
+              >
+                {{
+                  changingPassword
+                    ? $t("profile.security.actions.changing")
+                    : $t("profile.security.actions.savePassword")
+                }}
+              </button>
+
+              <button
+                type="button"
+                class="secondary"
+                :disabled="changingPassword"
+                @click="closePasswordForm"
+              >
+                {{ $t("common.cancel") }}
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
     </div>
   </div>
 </template>
 
 <script>
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
 import {
   updateCurrentUserProfile,
 } from "../services/userService";
@@ -189,9 +299,22 @@ export default {
         lastName: "",
       },
 
+      securityForm: {
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      },
+
       saving: false,
+      changingPassword: false,
+
       successMessage: "",
       errorMessage: "",
+
+      passwordSuccessMessage: "",
+      passwordErrorMessage: "",
+
+      showPasswordForm: false,
     };
   },
 
@@ -257,6 +380,124 @@ export default {
         );
       } finally {
         this.saving = false;
+      }
+    },
+
+    openPasswordForm() {
+      this.resetPasswordForm();
+      this.passwordSuccessMessage = "";
+      this.passwordErrorMessage = "";
+      this.showPasswordForm = true;
+    },
+
+    closePasswordForm() {
+      this.resetPasswordForm();
+      this.passwordErrorMessage = "";
+      this.showPasswordForm = false;
+    },
+
+    resetPasswordForm() {
+      this.securityForm = {
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      };
+    },
+
+    async changePassword() {
+      this.passwordSuccessMessage = "";
+      this.passwordErrorMessage = "";
+
+      if (
+        this.securityForm.newPassword !==
+        this.securityForm.confirmPassword
+      ) {
+        this.passwordErrorMessage = this.$t(
+          "profile.security.messages.passwordMismatch",
+        );
+        return;
+      }
+
+      if (this.securityForm.newPassword.length < 6) {
+        this.passwordErrorMessage = this.$t(
+          "profile.security.messages.passwordTooShort",
+        );
+        return;
+      }
+
+      if (
+        this.securityForm.currentPassword ===
+        this.securityForm.newPassword
+      ) {
+        this.passwordErrorMessage = this.$t(
+          "profile.security.messages.samePassword",
+        );
+        return;
+      }
+
+      this.changingPassword = true;
+
+      try {
+        const credential =
+          EmailAuthProvider.credential(
+            this.user.email,
+            this.securityForm.currentPassword,
+          );
+
+        await reauthenticateWithCredential(
+          this.user,
+          credential,
+        );
+
+        await updatePassword(
+          this.user,
+          this.securityForm.newPassword,
+        );
+
+        this.passwordSuccessMessage = this.$t(
+          "profile.security.messages.changed",
+        );
+
+        this.resetPasswordForm();
+        this.showPasswordForm = false;
+      } catch (error) {
+        this.passwordErrorMessage =
+          this.passwordErrorText(error);
+      } finally {
+        this.changingPassword = false;
+      }
+    },
+
+    passwordErrorText(error) {
+      switch (error.code) {
+        case "auth/invalid-credential":
+        case "auth/wrong-password":
+          return this.$t(
+            "profile.security.messages.currentPasswordInvalid",
+          );
+
+        case "auth/weak-password":
+          return this.$t(
+            "profile.security.messages.passwordTooShort",
+          );
+
+        case "auth/requires-recent-login":
+          return this.$t(
+            "profile.security.messages.reauthenticationRequired",
+          );
+
+        case "auth/too-many-requests":
+          return this.$t(
+            "profile.security.messages.tooManyRequests",
+          );
+
+        default:
+          return this.$t(
+            "profile.security.messages.changeError",
+            {
+              error: error.message,
+            },
+          );
       }
     },
   },
@@ -418,6 +659,51 @@ button:disabled {
 @media (max-width: 800px) {
   .profile-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.security-section {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid #ddd;
+}
+
+.security-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.security-heading h3 {
+  margin: 0 0 6px;
+}
+
+.security-heading p {
+  margin: 0;
+  color: #666;
+}
+
+.security-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.security-message {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
+.password-help {
+  margin: -4px 0 0;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .security-heading {
+    flex-direction: column;
   }
 }
 </style>

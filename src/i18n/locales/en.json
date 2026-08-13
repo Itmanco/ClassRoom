@@ -1,0 +1,538 @@
+{
+  "app": {
+    "name": "Classroom Manager"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading...",
+    "language": "Language",
+    "active": "Active",
+    "archive": "Archive",
+    "archived": "Archived",
+    "saveChanges": "Save changes",
+    "saving": "Saving..."
+  },
+  "languages": {
+    "english": "English",
+    "japanese": "Japanese"
+  },
+  "navigation": {
+      "classroom": "Classroom",
+      "students": "Students",
+      "courses": "Courses",
+      "buildings": "Buildings",
+      "rooms": "Rooms",
+      "classes": "Classes",
+      "enrollments": "Enrollments",
+      "seatingPlans": "Seating Plans",
+      "settings": "Settings",
+      "collapse": "Collapse navigation",
+      "expand": "Expand navigation"
+    },
+  "planningEngine": {
+    "title": "Intelligent Seating Planner",
+    "description": "Generate three optimized seating layouts based on historical seating data. The teacher reviews the candidates and chooses the final arrangement.",
+    "fields": {
+      "attempts": "Optimization attempts"
+    },
+    "preferences": {
+      "avoidPartners": "Avoid repeated desk partners",
+      "avoidDesks": "Avoid previously assigned desks",
+      "avoidSeats": "Avoid previous seat positions"
+    },
+    "actions": {
+      "generate": "Generate optimized layouts",
+      "regenerate": "Generate new layouts",
+      "preview": "Preview layout",
+      "selected": "Selected layout"
+    },
+    "objectives": {
+      "repeatedPartners": "Repeated desk partners",
+      "repeatedDesks": "Repeated desks",
+      "repeatedSeats": "Repeated seat positions"
+    },
+    "results": {
+      "summary": "{candidates} unique candidates evaluated · {plans} historical plan(s)",
+      "layout": "Layout {rank}",
+      "tradeoffs": "Review trade-offs",
+      "noConflicts": "No historical conflicts detected."
+    },
+    "messages": {
+      "generated": "Three optimized seating layouts were generated. Review them and choose the final arrangement.",
+      "selected": "Layout {rank} selected for preview.",
+      "generationError": "Unable to generate seating layouts: {error}"
+    },
+    "students": {
+      "unknown": "Student #{id}"
+    },
+    "violations": {
+      "previousPartner": "{studentA} and {studentB} previously shared a desk.",
+      "previousDesk": "{student} previously used desk {desk}.",
+      "previousSeat": "{student} used desk {desk}, seat {seat} in the most recent plan.",
+      "unknown": "An unknown historical conflict was detected."
+    },
+    "quality": {
+      "excellent": "Excellent",
+      "verygood": "Very good",
+      "good": "Good",
+      "fair": "Fair",
+      "acceptable": "Acceptable",
+      "limited": "Limited",
+      "compromised": "Compromised",
+      "perfect": "No conflicts"
+    }
+  },
+  "settings": {
+      "title": "Settings",
+      "description": "Manage your application preferences.",
+      "language": {
+        "title": "Application language",
+        "description": "Choose the language used throughout Classroom Manager."
+      }
+    },
+  "students": {
+    "title": "Student Management",
+    "description": "Create, edit, and archive students for the active school.",
+    "summary": "active / {total} total",
+    "fields": {
+      "id": "Student ID",
+      "name": "Name",
+      "hiragana": "Hiragana",
+      "country": "Country",
+      "gender": "Gender",
+      "active": "Active student"
+    },
+    "form": {
+      "addTitle": "Add Student",
+      "editTitle": "Edit Student",
+      "idHelp": "IDs cannot be changed after creation because seating history references them."
+    },
+    "placeholders": {
+      "name": "Yamada",
+      "hiragana": "やまだ",
+      "country": "Japan"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other / Not specified",
+      "notSpecified": "Not specified"
+    },
+    "actions": {
+      "add": "Add Student"
+    },
+    "list": {
+      "title": "Students",
+      "searchPlaceholder": "Search name, hiragana, country, or ID",
+      "showArchived": "Show archived",
+      "loading": "Loading students...",
+      "empty": "No matching students found."
+    },
+    "messages": {
+      "noActiveSchool": "No active school is available.",
+      "loadError": "Unable to load students: {error}",
+      "nextIdError": "Unable to prepare the next student ID: {error}",
+      "added": "Student {name} was added.",
+      "updated": "Student {name} was updated.",
+      "saveError": "Unable to save student: {error}",
+      "archiveConfirm": "Archive {name}? Historical seating plans will keep the student reference.",
+      "archived": "{name} was archived.",
+      "archiveError": "Unable to archive student: {error}"
+    }
+  },
+  "courses": {
+    "title": "Course Management",
+    "description": "Create and maintain the subjects taught by this school.",
+    "fields": {
+      "code": "Course code",
+      "name": "Course name",
+      "description": "Description"
+    },
+    "form": {
+      "addTitle": "Add course",
+      "editTitle": "Edit course"
+    },
+    "placeholders": {
+      "code": "JAVA101",
+      "name": "Java Programming",
+      "description": "Introductory Java programming course"
+    },
+    "actions": {
+      "add": "Add course",
+      "update": "Update course"
+    },
+    "list": {
+      "title": "Courses",
+      "total": "{count} total",
+      "loading": "Loading courses...",
+      "empty": "No courses have been created yet.",
+      "noDescription": "No description"
+    },
+    "messages": {
+      "loadError": "Unable to load courses: {error}",
+      "saved": "Course {code} was saved successfully.",
+      "saveError": "Unable to save course: {error}",
+      "archiveConfirm": "Archive {code} — {name}?",
+      "archived": "Course {code} was archived.",
+      "archiveError": "Unable to archive course: {error}"
+    }
+  },
+  "buildings": {
+    "title": "Building Management",
+    "description": "Create and maintain the physical buildings that belong to this school.",
+    "fields": {
+      "code": "Building code",
+      "name": "Building name",
+      "floorCount": "Number of floors"
+    },
+    "form": {
+      "addTitle": "Add building",
+      "editTitle": "Edit building"
+    },
+    "placeholders": {
+      "code": "A1",
+      "name": "Building A1"
+    },
+    "actions": {
+      "add": "Add building",
+      "update": "Update building"
+    },
+    "list": {
+      "title": "Buildings",
+      "total": "{count} total",
+      "loading": "Loading buildings...",
+      "empty": "No buildings have been created yet.",
+      "floor": "{count} floor",
+      "floors": "{count} floors"
+    },
+    "messages": {
+      "loadError": "Unable to load buildings: {error}",
+      "saved": "Building {code} was saved successfully.",
+      "saveError": "Unable to save building: {error}",
+      "archiveConfirm": "Archive {code} — {name}?",
+      "archived": "Building {code} was archived.",
+      "archiveError": "Unable to archive building: {error}"
+    }
+  },
+  "rooms": {
+    "title": "Room Management",
+    "description": "Create physical rooms and connect each one to a school building.",
+    "fields": {
+      "building": "Building",
+      "floor": "Floor",
+      "roomNumber": "Room number",
+      "code": "Room code",
+      "name": "Room name",
+      "deskCount": "Number of desks",
+      "seatsPerDesk": "Seats per desk",
+      "capacity": "Capacity"
+    },
+    "form": {
+      "addTitle": "Add room",
+      "editTitle": "Edit room",
+      "noActiveBuilding": "Create an active building before adding rooms.",
+      "suggestedCode": "Suggested: {code}",
+      "capacityHelp": "Calculated from desks × seats per desk."
+    },
+    "placeholders": {
+      "building": "Select a building",
+      "code": "A1F1C1",
+      "name": "Building A1 - Floor 1 - Classroom 1"
+    },
+    "actions": {
+      "add": "Add room",
+      "update": "Update room"
+    },
+    "list": {
+      "title": "Rooms",
+      "total": "{count} total",
+      "filterByBuilding": "Filter by building",
+      "allBuildings": "All buildings",
+      "loading": "Loading rooms...",
+      "empty": "No rooms match the current selection.",
+      "location": "{building} · Floor {floor} · Room {room}",
+      "capacitySummary": "{desks} desks · {seatsPerDesk} seats per desk · Capacity {capacity}"
+    },
+    "messages": {
+      "buildingsLoadError": "Unable to load buildings: {error}",
+      "loadError": "Unable to load rooms: {error}",
+      "saved": "Room {code} was saved successfully.",
+      "saveError": "Unable to save room: {error}",
+      "archiveConfirm": "Archive {code} — {name}?",
+      "archived": "Room {code} was archived.",
+      "archiveError": "Unable to archive room: {error}"
+    }
+  },
+  "classes": {
+    "title": "Class Management",
+    "description": "Connect a course, a physical room, and an academic period.",
+    "fields": {
+      "code": "Class code",
+      "name": "Class name",
+      "course": "Course",
+      "room": "Room",
+      "academicYear": "Academic year",
+      "semester": "Semester"
+    },
+    "form": {
+      "addTitle": "Add class",
+      "editTitle": "Edit class",
+      "dependenciesRequired": "Create at least one active course and one active room before adding a class."
+    },
+    "placeholders": {
+      "code": "ENG2026-AM",
+      "name": "English - Morning",
+      "course": "Select a course",
+      "room": "Select a room"
+    },
+    "actions": {
+      "add": "Add class",
+      "update": "Update class",
+      "manage": "Manage class"
+    },
+    "list": {
+      "title": "Classes",
+      "total": "{count} total",
+      "loading": "Loading classes...",
+      "empty": "No classes have been created yet.",
+      "unnamedRoom": "Unnamed room",
+      "courseLabel": "Course:",
+      "roomLabel": "Room:",
+      "periodLabel": "Period:",
+      "period": "{year}, semester {semester}"
+    },
+    "messages": {
+      "loadError": "Unable to load classes: {error}",
+      "coursesLoadError": "Unable to load courses: {error}",
+      "roomsLoadError": "Unable to load rooms: {error}",
+      "saved": "Class {code} was saved successfully.",
+      "saveError": "Unable to save class: {error}",
+      "archiveConfirm": "Archive {code} — {name}?",
+      "archived": "Class {code} was archived.",
+      "archiveError": "Unable to archive class: {error}"
+    }
+  },
+  "enrollments": {
+    "title": "Enrollment Management",
+    "description": "Assign school students to a class without duplicating student records.",
+    "fields": {
+      "class": "Class"
+    },
+    "placeholders": {
+      "class": "Select a class",
+      "search": "Search students"
+    },
+    "available": {
+      "title": "Available students",
+      "count": "{count} students can be added.",
+      "loading": "Loading students...",
+      "empty": "No matching available students."
+    },
+    "enrolled": {
+      "title": "Enrolled students",
+      "summary": "{active} active · {archived} archived",
+      "showArchived": "Show archived",
+      "empty": "No students are enrolled in this class yet.",
+      "unknownStudent": "Student #{id}"
+    },
+    "status": {
+      "active": "Active enrollment",
+      "archived": "Archived enrollment"
+    },
+    "actions": {
+      "add": "Add",
+      "adding": "Adding...",
+      "reactivate": "Reactivate"
+    },
+    "messages": {
+      "classRequired": "Create an active class before managing enrollments.",
+      "classesLoadError": "Unable to load classes: {error}",
+      "studentsLoadError": "Unable to load students: {error}",
+      "enrollmentsLoadError": "Unable to load enrollments: {error}",
+      "loadError": "Unable to load enrollment data: {error}",
+      "added": "{name} was added to the class.",
+      "addError": "Unable to add the student: {error}",
+      "reactivated": "{student} was reactivated.",
+      "reactivateError": "Unable to reactivate the enrollment: {error}",
+      "archiveConfirm": "Archive the enrollment for {student}?",
+      "archived": "{student} was archived.",
+      "archiveError": "Unable to archive the enrollment: {error}"
+    }
+  },
+  "seatingPlans": {
+    "title": "Seating Plan Management",
+    "description": "Create new seating plans from a class's enrolled students and assigned room.",
+
+    "fields": {
+      "class": "Class",
+      "title": "Title",
+      "date": "Date",
+      "room": "Room",
+      "capacity": "Capacity",
+      "activeEnrollments": "Active enrollments"
+    },
+
+    "placeholders": {
+      "class": "Select a class",
+      "title": "August seating plan",
+      "emptySeat": "Empty"
+    },
+
+    "seats": {
+      "position": "Desk {desk} · Seat {seat}"
+    },
+
+    "form": {
+      "new": "New seating plan",
+      "edit": "Edit seating plan",
+      "cancelEdit": "Cancel edit",
+      "capacityWarning": "This class has more active students than the room can seat.",
+      "assignmentHelp": "Assign each enrolled student to no more than one seat."
+    },
+
+    "actions": {
+      "fill": "Fill automatically",
+      "clear": "Clear",
+      "save": "Save plan",
+      "update": "Update plan"
+    },
+
+    "list": {
+      "title": "Saved plans",
+      "loading": "Loading seating plans...",
+      "empty": "No seating plans have been saved for this class.",
+      "showArchived": "Show archived",
+      "summary": "{active} active · {archived} archived",
+      "planSummary": "{date} · {assigned} assigned · {room}"
+    },
+
+    "messages": {
+      "saved": "Seating plan saved.",
+      "updated": "Seating plan updated.",
+      "archiveConfirm": "Archive {title}?",
+      "archived": "{title} was archived.",
+      "invalidRoom": "The selected class does not have a valid room.",
+      "classesLoadError": "Unable to load classes: {error}",
+      "roomsLoadError": "Unable to load rooms: {error}",
+      "studentsLoadError": "Unable to load students: {error}",
+      "enrollmentsLoadError": "Unable to load enrollments: {error}",
+      "plansLoadError": "Unable to load seating plans: {error}",
+      "loadError": "Unable to load seating-plan data: {error}",
+      "saveError": "Unable to save the seating plan: {error}",
+      "archiveError": "Unable to archive the seating plan: {error}"
+    }
+  },
+
+  "classWorkspace": {
+    "eyebrow": "Class workspace",
+    "description": "Manage the students, seating plans, and academic information that belong to this class.",
+    "loading": "Loading class workspace...",
+    "tabs": {
+      "overview": "Overview",
+      "students": "Students",
+      "seatingPlans": "Seating plans"
+    },
+    "actions": {
+      "back": "Back to classes",
+      "returnToClasses": "Return to classes"
+    },
+    "overview": {
+      "title": "Class overview",
+      "description": "Review the academic and physical settings for this class.",
+      "course": "Course",
+      "room": "Room",
+      "academicYear": "Academic year",
+      "semester": "Semester",
+      "roomCapacity": "Room capacity",
+      "status": "Status",
+      "unnamedRoom": "Unnamed room",
+      "notAvailable": "Not available"
+    },
+    "students": {
+      "title": "Class students",
+      "placeholder": "Enrollment Management will be moved into this tab in the next step."
+    },
+    "seatingPlans": {
+      "title": "Seating plans",
+      "placeholder": "Seating Plan Management will be moved into this tab after the enrollment workflow is verified."
+    },
+    "notFound": {
+      "title": "Class not found",
+      "description": "The selected class is unavailable or no longer belongs to the active school."
+    },
+    "messages": {
+      "classesLoadError": "Unable to load classes: {error}",
+      "coursesLoadError": "Unable to load courses: {error}",
+      "roomsLoadError": "Unable to load rooms: {error}",
+      "loadError": "Unable to load the class workspace: {error}"
+    }
+  },
+
+  "userProfile": {
+    "fallbackName": "User",
+    "actions": {
+      "open": "My Profile",
+      "signOut": "Sign out"
+    }
+  },
+
+  "profile": {
+    "eyebrow": "Account",
+    "title": "My Profile",
+    "description": "Review and update your personal account information.",
+    "personal": {
+      "title": "Personal information",
+      "description": "Update the information used to identify you inside the application."
+    },
+    "account": {
+      "title": "Account information",
+      "description": "Review information connected to your authenticated account.",
+      "emailNote": "Email changes and password management will be added separately because they require additional authentication checks.",
+      "notAvailable": "Not available"
+    },
+    "fields": {
+      "displayName": "Display name",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "userId": "User ID",
+      "activeSchool": "Active school"
+    },
+    "actions": {
+      "save": "Save profile"
+    },
+    "messages": {
+      "saved": "Your profile was updated successfully.",
+      "saveError": "Unable to update your profile: {error}"
+    },
+    "security": {
+      "title": "Security",
+      "description": "Manage the password used to access your account.",
+      "fields": {
+        "currentPassword": "Current password",
+        "newPassword": "New password",
+        "confirmPassword": "Confirm new password"
+      },
+      "passwordHelp": "Use at least 6 characters. A longer, unique password is recommended.",
+      "actions": {
+        "changePassword": "Change password",
+        "savePassword": "Update password",
+        "changing": "Updating..."
+      },
+      "messages": {
+        "changed": "Your password was updated successfully.",
+        "passwordMismatch": "The new passwords do not match.",
+        "passwordTooShort": "The new password must contain at least 6 characters.",
+        "samePassword": "The new password must be different from your current password.",
+        "currentPasswordInvalid": "The current password is incorrect.",
+        "reauthenticationRequired": "Please sign in again before changing your password.",
+        "tooManyRequests": "Too many attempts. Please wait and try again.",
+        "changeError": "Unable to update your password: {error}"
+      }
+    }
+  }
+}

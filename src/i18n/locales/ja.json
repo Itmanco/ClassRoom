@@ -1,0 +1,539 @@
+{
+  "app": {
+    "name": "教室管理"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "loading": "読み込み中...",
+    "language": "言語",
+    "active": "在籍中",
+    "archive": "アーカイブ",
+    "archived": "アーカイブ済み",
+    "saveChanges": "変更を保存",
+    "saving": "保存中..."
+  },
+  "languages": {
+    "english": "英語",
+    "japanese": "日本語"
+  },
+  "navigation": {
+      "classroom": "教室管理",
+      "students": "生徒",
+      "courses": "科目",
+      "buildings": "校舎",
+      "rooms": "教室",
+      "classes": "クラス",
+      "enrollments": "受講登録",
+      "seatingPlans": "座席表",
+      "settings": "設定",
+      "collapse": "ナビゲーションを折りたたむ",
+      "expand": "ナビゲーションを展開する"
+    },
+  "planningEngine": {
+    "title": "インテリジェント座席プランナー",
+    "description": "過去の座席履歴を考慮して、最適化された座席配置を3案生成します。先生が候補を確認し、最終的な配置を選択します。",
+    "fields": {
+      "attempts": "探索回数"
+    },
+    "preferences": {
+      "avoidPartners": "同じ机の組み合わせを避ける",
+      "avoidDesks": "以前に使用した机を避ける",
+      "avoidSeats": "以前の座席位置を避ける"
+    },
+    "actions": {
+      "generate": "最適な配置を生成",
+      "regenerate": "配置を再生成",
+      "preview": "配置をプレビュー",
+      "selected": "選択中"
+    },
+    "objectives": {
+      "repeatedPartners": "同席の重複",
+      "repeatedDesks": "机の重複",
+      "repeatedSeats": "座席位置の重複"
+    },
+    "results": {
+      "summary": "{candidates}件の候補を評価 · 過去の座席表{plans}件を参照",
+      "layout": "候補{rank}",
+      "tradeoffs": "最適化の妥協点を確認",
+      "noConflicts": "履歴上の競合はありません。"
+    },
+    "messages": {
+      "generated": "最適化された座席配置を3案生成しました。候補を確認し、最終的な配置を選択してください。",
+      "selected": "候補{rank}をプレビューしています。",
+      "generationError": "座席配置を生成できませんでした：{error}"
+    },
+    "students": {
+      "unknown": "生徒 #{id}"
+    },
+    "violations": {
+      "previousPartner": "{studentA}さんと{studentB}さんは以前に同じ机を使用しています。",
+      "previousDesk": "{student}さんは以前に机{desk}を使用しています。",
+      "previousSeat": "{student}さんは直前の座席表で机{desk}・座席{seat}を使用しています。",
+      "unknown": "不明な履歴上の競合が検出されました。"
+    },
+    "quality": {
+      "excellent": "非常に良い",
+      "verygood": "良い",
+      "good": "良好",
+      "fair": "標準",
+      "acceptable": "許容範囲",
+      "limited": "制約あり",
+      "compromised": "妥協あり",
+      "perfect": "競合なし"
+    }
+  },
+  "settings": {
+      "title": "設定",
+      "description": "アプリケーションの設定を管理します。",
+      "language": {
+        "title": "アプリケーションの言語",
+        "description": "教室管理アプリ全体で使用する言語を選択します。"
+      }
+    },
+    "students": {
+    "title": "生徒管理",
+    "description": "現在の学校に所属する生徒の登録、編集、アーカイブを行います。",
+    "summary": "人在籍中 / 全{total}人",
+    "fields": {
+      "id": "生徒ID",
+      "name": "氏名",
+      "hiragana": "ひらがな",
+      "country": "国籍・出身国",
+      "gender": "性別",
+      "active": "在籍中の生徒"
+    },
+    "form": {
+      "addTitle": "生徒を追加",
+      "editTitle": "生徒を編集",
+      "idHelp": "座席履歴から参照されるため、作成後にIDを変更することはできません。"
+    },
+    "placeholders": {
+      "name": "山田",
+      "hiragana": "やまだ",
+      "country": "日本"
+    },
+    "gender": {
+      "male": "男性",
+      "female": "女性",
+      "other": "その他・未指定",
+      "notSpecified": "未指定"
+    },
+    "actions": {
+      "add": "生徒を追加"
+    },
+    "list": {
+      "title": "生徒一覧",
+      "searchPlaceholder": "氏名、ひらがな、国、またはIDで検索",
+      "showArchived": "アーカイブ済みを表示",
+      "loading": "生徒を読み込んでいます...",
+      "empty": "条件に一致する生徒が見つかりません。"
+    },
+    "messages": {
+      "noActiveSchool": "現在選択されている学校がありません。",
+      "loadError": "生徒を読み込めませんでした：{error}",
+      "nextIdError": "次の生徒IDを準備できませんでした：{error}",
+      "added": "{name}さんを追加しました。",
+      "updated": "{name}さんの情報を更新しました。",
+      "saveError": "生徒を保存できませんでした：{error}",
+      "archiveConfirm": "{name}さんをアーカイブしますか？過去の座席表には生徒の参照が残ります。",
+      "archived": "{name}さんをアーカイブしました。",
+      "archiveError": "生徒をアーカイブできませんでした：{error}"
+    }
+  },
+  "courses": {
+    "title": "科目管理",
+    "description": "この学校で教える科目の登録と管理を行います。",
+    "fields": {
+      "code": "科目コード",
+      "name": "科目名",
+      "description": "説明"
+    },
+    "form": {
+      "addTitle": "科目を追加",
+      "editTitle": "科目を編集"
+    },
+    "placeholders": {
+      "code": "JAVA101",
+      "name": "Javaプログラミング",
+      "description": "Javaプログラミングの入門科目です"
+    },
+    "actions": {
+      "add": "科目を追加",
+      "update": "科目を更新"
+    },
+    "list": {
+      "title": "科目一覧",
+      "total": "全{count}件",
+      "loading": "科目を読み込んでいます...",
+      "empty": "まだ科目が登録されていません。",
+      "noDescription": "説明はありません"
+    },
+    "messages": {
+      "loadError": "科目を読み込めませんでした：{error}",
+      "saved": "科目「{code}」を保存しました。",
+      "saveError": "科目を保存できませんでした：{error}",
+      "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
+      "archived": "科目「{code}」をアーカイブしました。",
+      "archiveError": "科目をアーカイブできませんでした：{error}"
+    }
+  },
+  "buildings": {
+    "title": "校舎管理",
+    "description": "この学校に所属する校舎の登録と管理を行います。",
+    "fields": {
+      "code": "校舎コード",
+      "name": "校舎名",
+      "floorCount": "階数"
+    },
+    "form": {
+      "addTitle": "校舎を追加",
+      "editTitle": "校舎を編集"
+    },
+    "placeholders": {
+      "code": "A1",
+      "name": "A1校舎"
+    },
+    "actions": {
+      "add": "校舎を追加",
+      "update": "校舎を更新"
+    },
+    "list": {
+      "title": "校舎一覧",
+      "total": "全{count}件",
+      "loading": "校舎を読み込んでいます...",
+      "empty": "まだ校舎が登録されていません。",
+      "floor": "{count}階建て",
+      "floors": "{count}階建て"
+    },
+    "messages": {
+      "loadError": "校舎を読み込めませんでした：{error}",
+      "saved": "校舎「{code}」を保存しました。",
+      "saveError": "校舎を保存できませんでした：{error}",
+      "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
+      "archived": "校舎「{code}」をアーカイブしました。",
+      "archiveError": "校舎をアーカイブできませんでした：{error}"
+    }
+  },
+  "rooms": {
+    "title": "教室管理",
+    "description": "校舎に所属する教室の登録と管理を行います。",
+    "fields": {
+      "building": "校舎",
+      "floor": "階",
+      "roomNumber": "教室番号",
+      "code": "教室コード",
+      "name": "教室名",
+      "deskCount": "机の数",
+      "seatsPerDesk": "机ごとの座席数",
+      "capacity": "定員"
+    },
+    "form": {
+      "addTitle": "教室を追加",
+      "editTitle": "教室を編集",
+      "noActiveBuilding": "教室を追加する前に、使用中の校舎を登録してください。",
+      "suggestedCode": "推奨コード：{code}",
+      "capacityHelp": "机の数 × 机ごとの座席数で自動計算されます。"
+    },
+    "placeholders": {
+      "building": "校舎を選択",
+      "code": "A1F1C1",
+      "name": "A1校舎・1階・第1教室"
+    },
+    "actions": {
+      "add": "教室を追加",
+      "update": "教室を更新"
+    },
+    "list": {
+      "title": "教室一覧",
+      "total": "全{count}件",
+      "filterByBuilding": "校舎で絞り込む",
+      "allBuildings": "すべての校舎",
+      "loading": "教室を読み込んでいます...",
+      "empty": "現在の条件に一致する教室がありません。",
+      "location": "{building} · {floor}階 · 教室番号 {room}",
+      "capacitySummary": "机 {desks}台 · 1台あたり{seatsPerDesk}席 · 定員 {capacity}人"
+    },
+    "messages": {
+      "buildingsLoadError": "校舎を読み込めませんでした：{error}",
+      "loadError": "教室を読み込めませんでした：{error}",
+      "saved": "教室「{code}」を保存しました。",
+      "saveError": "教室を保存できませんでした：{error}",
+      "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
+      "archived": "教室「{code}」をアーカイブしました。",
+      "archiveError": "教室をアーカイブできませんでした：{error}"
+    }
+  },
+  "classes": {
+    "title": "クラス管理",
+    "description": "科目、使用する教室、学期情報を関連付けてクラスを管理します。",
+    "fields": {
+      "code": "クラスコード",
+      "name": "クラス名",
+      "course": "科目",
+      "room": "教室",
+      "academicYear": "年度",
+      "semester": "学期"
+    },
+    "form": {
+      "addTitle": "クラスを追加",
+      "editTitle": "クラスを編集",
+      "dependenciesRequired": "クラスを追加する前に、使用中の科目と教室をそれぞれ1件以上登録してください。"
+    },
+    "placeholders": {
+      "code": "ENG2026-AM",
+      "name": "英語・午前クラス",
+      "course": "科目を選択",
+      "room": "教室を選択"
+    },
+    "actions": {
+      "add": "クラスを追加",
+      "update": "クラスを更新",
+      "manage": "クラスを管理"
+    },
+    "list": {
+      "title": "クラス一覧",
+      "total": "全{count}件",
+      "loading": "クラスを読み込んでいます...",
+      "empty": "まだクラスが登録されていません。",
+      "unnamedRoom": "名称未設定の教室",
+      "courseLabel": "科目：",
+      "roomLabel": "教室：",
+      "periodLabel": "期間：",
+      "period": "{year}年度・第{semester}学期"
+    },
+    "messages": {
+      "loadError": "クラスを読み込めませんでした：{error}",
+      "coursesLoadError": "科目を読み込めませんでした：{error}",
+      "roomsLoadError": "教室を読み込めませんでした：{error}",
+      "saved": "クラス「{code}」を保存しました。",
+      "saveError": "クラスを保存できませんでした：{error}",
+      "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
+      "archived": "クラス「{code}」をアーカイブしました。",
+      "archiveError": "クラスをアーカイブできませんでした：{error}"
+    }
+  },
+  "enrollments": {
+    "title": "クラス所属管理",
+    "description": "生徒情報を重複して作成せず、学校の生徒をクラスに所属させます。",
+    "fields": {
+      "class": "クラス"
+    },
+    "placeholders": {
+      "class": "クラスを選択",
+      "search": "生徒を検索"
+    },
+    "available": {
+      "title": "追加可能な生徒",
+      "count": "{count}人の生徒を追加できます。",
+      "loading": "生徒を読み込んでいます...",
+      "empty": "条件に一致する追加可能な生徒はいません。"
+    },
+    "enrolled": {
+      "title": "所属中の生徒",
+      "summary": "所属中 {active}人 · アーカイブ済み {archived}人",
+      "showArchived": "アーカイブ済みを表示",
+      "empty": "このクラスにはまだ生徒が所属していません。",
+      "unknownStudent": "生徒 #{id}"
+    },
+    "status": {
+      "active": "所属中",
+      "archived": "アーカイブ済み"
+    },
+    "actions": {
+      "add": "追加",
+      "adding": "追加中...",
+      "reactivate": "再登録"
+    },
+    "messages": {
+      "classRequired": "所属管理を行う前に、使用中のクラスを作成してください。",
+      "classesLoadError": "クラスを読み込めませんでした：{error}",
+      "studentsLoadError": "生徒を読み込めませんでした：{error}",
+      "enrollmentsLoadError": "クラス所属情報を読み込めませんでした：{error}",
+      "loadError": "クラス所属データを読み込めませんでした：{error}",
+      "added": "{name}さんをクラスに追加しました。",
+      "addError": "生徒をクラスに追加できませんでした：{error}",
+      "reactivated": "{student}を再登録しました。",
+      "reactivateError": "クラス所属を再登録できませんでした：{error}",
+      "archiveConfirm": "{student}のクラス所属をアーカイブしますか？",
+      "archived": "{student}をアーカイブしました。",
+      "archiveError": "クラス所属をアーカイブできませんでした：{error}"
+    }
+  },
+  "seatingPlans": {
+    "title": "座席表管理",
+    "description": "クラスに所属する生徒と教室から新しい座席表を作成します。",
+
+    "fields": {
+      "class": "クラス",
+      "title": "タイトル",
+      "date": "日付",
+      "room": "教室",
+      "capacity": "定員",
+      "activeEnrollments": "所属中の生徒"
+    },
+
+    "placeholders": {
+      "class": "クラスを選択",
+      "title": "8月座席表",
+      "emptySeat": "空席"
+    },
+
+    "seats": {
+      "position": "机 {desk} · 座席 {seat}"
+    },
+
+    "form": {
+      "new": "新しい座席表",
+      "edit": "座席表を編集",
+      "cancelEdit": "編集をキャンセル",
+      "capacityWarning": "このクラスの生徒数が教室の定員を超えています。",
+      "assignmentHelp": "各生徒を1つ以下の座席に割り当てます。"
+
+    },
+
+    "actions": {
+      "fill": "自動配置",
+      "clear": "クリア",
+      "save": "座席表を保存",
+      "update": "座席表を更新"
+    },
+
+    "list": {
+      "title": "保存済み座席表",
+      "loading": "座席表を読み込んでいます...",
+      "empty": "このクラスにはまだ座席表がありません。",
+      "showArchived": "アーカイブ済みを表示",
+      "summary": "使用中 {active}件 · アーカイブ済み {archived}件",
+      "planSummary": "{date} · {assigned}人を配置 · {room}"
+    },
+
+    "messages": {
+      "saved": "座席表を保存しました。",
+      "updated": "座席表を更新しました。",
+      "archiveConfirm": "「{title}」をアーカイブしますか？",
+      "archived": "「{title}」をアーカイブしました。",
+      "invalidRoom": "選択したクラスには有効な教室が設定されていません。",
+      "classesLoadError": "クラスを読み込めませんでした：{error}",
+      "roomsLoadError": "教室を読み込めませんでした：{error}",
+      "studentsLoadError": "生徒を読み込めませんでした：{error}",
+      "enrollmentsLoadError": "クラス所属情報を読み込めませんでした：{error}",
+      "plansLoadError": "座席表を読み込めませんでした：{error}",
+      "loadError": "座席表データを読み込めませんでした：{error}",
+      "saveError": "座席表を保存できませんでした：{error}",
+      "archiveError": "座席表をアーカイブできませんでした：{error}"
+    }
+  },
+
+  "classWorkspace": {
+    "eyebrow": "クラスワークスペース",
+    "description": "このクラスに所属する生徒、座席表、学期情報をまとめて管理します。",
+    "loading": "クラス情報を読み込んでいます...",
+    "tabs": {
+      "overview": "概要",
+      "students": "所属生徒",
+      "seatingPlans": "座席表"
+    },
+    "actions": {
+      "back": "クラス一覧に戻る",
+      "returnToClasses": "クラス一覧へ戻る"
+    },
+    "overview": {
+      "title": "クラス概要",
+      "description": "このクラスの科目、教室、年度などの設定を確認します。",
+      "course": "科目",
+      "room": "教室",
+      "academicYear": "年度",
+      "semester": "学期",
+      "roomCapacity": "教室の定員",
+      "status": "状態",
+      "unnamedRoom": "名称未設定の教室",
+      "notAvailable": "利用不可"
+    },
+    "students": {
+      "title": "クラス所属生徒",
+      "placeholder": "次のステップでクラス所属管理をこのタブに移動します。"
+    },
+    "seatingPlans": {
+      "title": "座席表",
+      "placeholder": "クラス所属管理を確認した後、このタブに座席表管理を移動します。"
+    },
+    "notFound": {
+      "title": "クラスが見つかりません",
+      "description": "選択したクラスは利用できないか、現在の学校に所属していません。"
+    },
+    "messages": {
+      "classesLoadError": "クラスを読み込めませんでした：{error}",
+      "coursesLoadError": "科目を読み込めませんでした：{error}",
+      "roomsLoadError": "教室を読み込めませんでした：{error}",
+      "loadError": "クラスワークスペースを読み込めませんでした：{error}"
+    }
+  },
+
+  "userProfile": {
+    "fallbackName": "ユーザー",
+    "actions": {
+      "open": "マイプロフィール",
+      "signOut": "ログアウト"
+    }
+  },
+
+  "profile": {
+    "eyebrow": "アカウント",
+    "title": "マイプロフィール",
+    "description": "個人情報とアカウント情報を確認・更新します。",
+    "personal": {
+      "title": "個人情報",
+      "description": "アプリ内で使用するプロフィール情報を更新します。"
+    },
+    "account": {
+      "title": "アカウント情報",
+      "description": "認証済みアカウントに関連する情報を確認します。",
+      "emailNote": "メールアドレスの変更とパスワード管理には追加の本人確認が必要なため、別機能として追加予定です。",
+      "notAvailable": "利用できません"
+    },
+    "fields": {
+      "displayName": "表示名",
+      "firstName": "名",
+      "lastName": "姓",
+      "email": "メールアドレス",
+      "userId": "ユーザーID",
+      "activeSchool": "現在の学校"
+    },
+    "actions": {
+      "save": "プロフィールを保存"
+    },
+    "messages": {
+      "saved": "プロフィールを更新しました。",
+      "saveError": "プロフィールを更新できませんでした：{error}"
+    },
+    "security": {
+      "title": "セキュリティ",
+      "description": "アカウントへのログインに使用するパスワードを管理します。",
+      "fields": {
+        "currentPassword": "現在のパスワード",
+        "newPassword": "新しいパスワード",
+        "confirmPassword": "新しいパスワード（確認）"
+      },
+      "passwordHelp": "6文字以上で設定してください。長く、他で使用していないパスワードを推奨します。",
+      "actions": {
+        "changePassword": "パスワードを変更",
+        "savePassword": "パスワードを更新",
+        "changing": "更新中..."
+      },
+      "messages": {
+        "changed": "パスワードを更新しました。",
+        "passwordMismatch": "新しいパスワードが一致しません。",
+        "passwordTooShort": "新しいパスワードは6文字以上で入力してください。",
+        "samePassword": "現在のパスワードとは異なるパスワードを設定してください。",
+        "currentPasswordInvalid": "現在のパスワードが正しくありません。",
+        "reauthenticationRequired": "パスワードを変更するには、もう一度ログインしてください。",
+        "tooManyRequests": "試行回数が多すぎます。しばらく待ってから再度お試しください。",
+        "changeError": "パスワードを更新できませんでした：{error}"
+      }
+    }
+  }
+}

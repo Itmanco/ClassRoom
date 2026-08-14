@@ -16,6 +16,9 @@
     "saveChanges": "変更を保存",
     "saving": "保存中..."
   },
+  "schoolSelector": {
+    "label": "学校"
+  },
   "languages": {
     "english": "英語",
     "japanese": "日本語"
@@ -33,6 +36,14 @@
       "collapse": "ナビゲーションを折りたたむ",
       "expand": "ナビゲーションを展開する"
     },
+  "noSchool": {
+    "title": "学校がまだ割り当てられていません",
+    "description": "アカウントは有効ですが、現在所属する学校が割り当てられていません。",
+    "help": "学校へのアクセスについては、管理者にお問い合わせください。",
+    "actions": {
+      "signOut": "ログアウト"
+    }
+  },
   "login": {
       "eyebrow": "おかえりなさい",
       "title": "ログイン",
@@ -264,7 +275,14 @@
       "name": "教室名",
       "deskCount": "机の数",
       "seatsPerDesk": "机ごとの座席数",
-      "capacity": "定員"
+      "capacity": "定員",
+      "teacherPosition": "講師席の位置"
+    },
+    "teacherPositions": {
+      "frontLeft": "ホワイトボードの左",
+      "frontRight": "ホワイトボードの右",
+      "backLeft": "教室後方の左",
+      "backRight": "教室後方の右"
     },
     "form": {
       "addTitle": "教室を追加",
@@ -280,7 +298,14 @@
     },
     "actions": {
       "add": "教室を追加",
-      "update": "教室を更新"
+      "update": "教室を更新",
+      "preview": "プレビュー"
+    },
+    "preview": {
+      "summary": "机 {desks}台・1台あたり {seats}席・定員 {capacity}名",
+      "whiteboard": "ホワイトボード",
+      "teacher": "講師席",
+      "desk": "机 {number}"
     },
     "list": {
       "title": "教室一覧",
@@ -444,6 +469,14 @@
       "showArchived": "アーカイブ済みを表示",
       "summary": "使用中 {active}件 · アーカイブ済み {archived}件",
       "planSummary": "{date} · {assigned}人を配置 · {room}"
+    },
+
+    "classroom": {
+      "front": "教室前方",
+      "whiteboard": "ホワイトボード",
+      "desk": "机 {number}",
+      "seat": "席 {number}",
+      "teacherDesk": "講師席"
     },
 
     "messages": {

@@ -35,3 +35,19 @@ export async function updateCurrentUserProfile(
     updatedAt: serverTimestamp(),
   });
 }
+
+export async function updateActiveSchool(
+  uid,
+  schoolId,
+) {
+  const docRef = doc(
+    db,
+    "users",
+    uid,
+  );
+
+  await updateDoc(docRef, {
+    activeSchool: schoolId,
+    updatedAt: serverTimestamp(),
+  });
+}

@@ -16,6 +16,9 @@
     "saveChanges": "Save changes",
     "saving": "Saving..."
   },
+  "schoolSelector": {
+    "label": "School"
+  },
   "languages": {
     "english": "English",
     "japanese": "Japanese"
@@ -33,6 +36,14 @@
       "collapse": "Collapse navigation",
       "expand": "Expand navigation"
     },
+  "noSchool": {
+    "title": "No school assigned yet",
+    "description": "Your account is active, but it has not been assigned to a school.",
+    "help": "Please contact your administrator to request access to a school.",
+    "actions": {
+      "signOut": "Sign out"
+    }
+  },
   "login": {
     "eyebrow": "Welcome back",
     "title": "Sign in",
@@ -264,7 +275,14 @@
       "name": "Room name",
       "deskCount": "Number of desks",
       "seatsPerDesk": "Seats per desk",
-      "capacity": "Capacity"
+      "capacity": "Capacity",
+      "teacherPosition": "Teacher position"
+    },
+    "teacherPositions": {
+      "frontLeft": "Left of whiteboard",
+      "frontRight": "Right of whiteboard",
+      "backLeft": "Back left of classroom",
+      "backRight": "Back right of classroom"
     },
     "form": {
       "addTitle": "Add room",
@@ -280,7 +298,14 @@
     },
     "actions": {
       "add": "Add room",
-      "update": "Update room"
+      "update": "Update room",
+      "preview": "Preview"
+    },
+    "preview": {
+      "summary": "{desks} desks · {seats} seats per desk · capacity {capacity}",
+      "whiteboard": "Whiteboard",
+      "teacher": "Teacher",
+      "desk": "Desk {number}"
     },
     "list": {
       "title": "Rooms",
@@ -443,6 +468,14 @@
       "showArchived": "Show archived",
       "summary": "{active} active · {archived} archived",
       "planSummary": "{date} · {assigned} assigned · {room}"
+    },
+
+    "classroom": {
+      "front": "Front of classroom",
+      "whiteboard": "Whiteboard",
+      "desk": "Desk {number}",
+      "seat": "Seat {number}",
+      "teacherDesk": "Teacher"
     },
 
     "messages": {

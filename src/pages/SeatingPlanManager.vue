@@ -336,39 +336,120 @@
             </div>
           </section>
 
-          <div class="seat-grid">
-            <article
-              v-for="seat in seats"
-              :key="seat.key"
-              class="seat-card"
-            >
-              <strong>
-                {{
-                  $t("seatingPlans.seats.position", {
-                    desk: seat.deskNumber,
-                    seat: seat.seatNumber,
-                  })
-                }}
-              </strong>
-
-              <select
-                v-model="seat.studentId"
-                @change="generationResult = null"
+          <section class="classroom-layout">
+            <div class="front-zone">
+              <div
+                v-if="teacherPosition === 'front-left'"
+                class="teacher-desk"
               >
-                <option value="">
-                  {{ $t("seatingPlans.placeholders.emptySeat") }}
-                </option>
+                {{ $t("seatingPlans.classroom.teacherDesk") }}
+              </div>
 
-                <option
-                  v-for="student in availableForSeat(seat)"
-                  :key="student.id"
-                  :value="String(student.id)"
+              <div class="classroom-front">
+                <span class="front-label">
+                  {{ $t("seatingPlans.classroom.front") }}
+                </span>
+
+                <div class="whiteboard">
+                  {{ $t("seatingPlans.classroom.whiteboard") }}
+                </div>
+              </div>
+
+              <div
+                v-if="teacherPosition === 'front-right'"
+                class="teacher-desk"
+              >
+                {{ $t("seatingPlans.classroom.teacherDesk") }}
+              </div>
+            </div>
+
+            <div class="student-zone">
+              <div class="desk-grid">
+                <article
+                  v-for="desk in groupedDesks"
+                  :key="desk.deskNumber"
+                  class="desk"
                 >
-                  #{{ student.id }} — {{ student.name }}
-                </option>
-              </select>
-            </article>
-          </div>
+                  <div class="desk-number">
+                    {{
+                      $t("seatingPlans.classroom.desk", {
+                        number: desk.deskNumber,
+                      })
+                    }}
+                  </div>
+
+                  <div
+                    class="desk-seats"
+                    :style="{
+                      gridTemplateColumns:
+                        `repeat(${desk.seats.length}, minmax(0, 1fr))`,
+                    }"
+                  >
+                    <div
+                      v-for="seat in desk.seats"
+                      :key="seat.key"
+                      class="desk-seat"
+                    >
+                      <span class="seat-number">
+                        {{
+                          $t("seatingPlans.classroom.seat", {
+                            number: seat.seatNumber,
+                          })
+                        }}
+                      </span>
+
+                      <strong
+                        v-if="seat.studentId"
+                        class="student-preview"
+                      >
+                        {{ studentName(seat.studentId) }}
+                      </strong>
+
+                      <span
+                        v-else
+                        class="student-preview empty"
+                      >
+                        {{ $t("seatingPlans.placeholders.emptySeat") }}
+                      </span>
+
+                      <select
+                        v-model="seat.studentId"
+                        @change="generationResult = null"
+                      >
+                        <option value="">
+                          {{ $t("seatingPlans.placeholders.emptySeat") }}
+                        </option>
+
+                        <option
+                          v-for="student in availableForSeat(seat)"
+                          :key="student.id"
+                          :value="String(student.id)"
+                        >
+                          #{{ student.id }} — {{ student.name }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div
+              v-if="
+                teacherPosition === 'back-left' ||
+                teacherPosition === 'back-right'
+              "
+              class="back-teacher-zone"
+              :class="{
+                left: teacherPosition === 'back-left',
+                right: teacherPosition === 'back-right',
+              }"
+            >
+              <div class="teacher-desk">
+                {{ $t("seatingPlans.classroom.teacherDesk") }}
+              </div>
+            </div>
+          </section>
 
           <div class="actions">
             <button
@@ -600,6 +681,30 @@ export default {
       );
     },
 
+    groupedDesks() {
+      const desks = new Map();
+
+      this.seats.forEach((seat) => {
+        if (!desks.has(seat.deskNumber)) {
+          desks.set(seat.deskNumber, []);
+        }
+
+        desks
+          .get(seat.deskNumber)
+          .push(seat);
+      });
+
+      return Array.from(
+        desks.entries(),
+      ).map(([deskNumber, seats]) => ({
+        deskNumber,
+        seats: seats.sort(
+          (a, b) =>
+            a.seatNumber - b.seatNumber,
+        ),
+      }));
+    },
+
     enrolledStudents() {
       const ids = new Set(
         this.enrollments
@@ -633,6 +738,14 @@ export default {
           plan.active !== false,
       );
     },
+
+    teacherPosition() {
+      return (
+        this.selectedRoom?.teacherPosition ||
+        "front-right"
+      );
+    },
+
   },
 
   mounted() {
@@ -1190,6 +1303,7 @@ export default {
       this.generationResult = null;
       this.selectedCandidateIndex = 0;
     },
+    
   },
 };
 </script>
@@ -1250,14 +1364,6 @@ label {
   gap: 12px;
 }
 
-.seat-grid {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-}
-
-.seat-card,
 .plan-card {
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -1354,12 +1460,6 @@ label {
   padding-left: 20px;
 }
 
-.seat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .plan-card {
   margin-top: 10px;
 }
@@ -1410,6 +1510,219 @@ button {
 
 .feedback.error {
   background: #fde8e8;
+}
+
+.classroom-layout {
+  margin: 24px 0;
+  padding: 28px;
+  border: 1px solid #d9dee3;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.classroom-front {
+  max-width: 620px;
+  margin: 0 auto 34px;
+  text-align: center;
+}
+
+.front-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #667085;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.whiteboard {
+  padding: 11px 20px;
+  border: 2px solid #555;
+  border-radius: 4px;
+  background: white;
+  color: #333;
+  font-weight: 700;
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.08);
+}
+
+.desk-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(300px, 1fr));
+  gap: 26px 46px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.desk {
+  position: relative;
+}
+
+.desk-number {
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.desk-seats {
+  display: grid;
+  border: 2px solid #777;
+  border-radius: 9px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.desk-seat {
+  min-width: 0;
+  padding: 12px;
+  text-align: center;
+}
+
+.desk-seat + .desk-seat {
+  border-left: 1px solid #bbb;
+}
+
+.seat-number {
+  display: block;
+  margin-bottom: 6px;
+  color: #8a929d;
+  font-size: 0.72rem;
+}
+
+.student-preview {
+  display: block;
+  min-height: 22px;
+  margin-bottom: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-preview.empty {
+  color: #999;
+  font-weight: 400;
+}
+
+.desk-seat select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+.teacher-area {
+  display: flex;
+  justify-content: center;
+  margin-top: 38px;
+}
+
+.teacher-desk {
+  min-width: 130px;
+  padding: 11px 20px;
+  border: 2px solid #777;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.front-zone {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto 34px;
+}
+
+.classroom-front {
+  flex: 1;
+  max-width: 620px;
+  margin: 0;
+  text-align: center;
+}
+
+.teacher-desk {
+  flex: 0 0 auto;
+  width: 120px;
+  min-width: 120px;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 2px solid #777;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.student-zone {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.student-zone .desk-grid {
+  flex: 1;
+}
+
+.teacher-desk {
+  min-width: 110px;
+  padding: 11px 16px;
+  border: 2px solid #777;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+
+.back-teacher-zone {
+  display: flex;
+  margin-top: 34px;
+}
+
+.back-teacher-zone.left {
+  justify-content: flex-start;
+}
+
+.back-teacher-zone.right {
+  justify-content: flex-end;
+}
+
+@media (max-width: 800px) {
+  .front-zone {
+    grid-template-columns: 1fr;
+  }
+
+  .student-zone {
+    flex-direction: column;
+  }
+
+  .teacher-desk.side {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 800px) {
+  .classroom-layout {
+    padding: 20px 14px;
+  }
+
+  .desk-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .desk-seats {
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 700px) {

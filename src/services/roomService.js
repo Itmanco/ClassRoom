@@ -66,6 +66,20 @@ function validateRoom(room) {
     throw new Error("A room name is required.");
   }
 
+  const allowedTeacherPositions = [
+    "front-left",
+    "front-right",
+    "back-left",
+    "back-right",
+  ];
+
+  const teacherPosition =
+    allowedTeacherPositions.includes(
+      room.teacherPosition,
+    )
+      ? room.teacherPosition
+      : "front-left";
+
   return {
     code,
     name,
@@ -75,6 +89,7 @@ function validateRoom(room) {
     deskCount,
     seatsPerDesk,
     capacity: deskCount * seatsPerDesk,
+    teacherPosition,
     active: room.active !== false,
   };
 }

@@ -151,6 +151,28 @@
           </small>
         </label>
 
+        <label>
+          {{ $t("rooms.fields.teacherPosition") }}
+
+          <select v-model="form.teacherPosition">
+            <option value="front-left">
+              {{ $t("rooms.teacherPositions.frontLeft") }}
+            </option>
+
+            <option value="front-right">
+              {{ $t("rooms.teacherPositions.frontRight") }}
+            </option>
+
+            <option value="back-left">
+              {{ $t("rooms.teacherPositions.backLeft") }}
+            </option>
+
+            <option value="back-right">
+              {{ $t("rooms.teacherPositions.backRight") }}
+            </option>
+          </select>
+        </label>
+
         <label class="checkbox-label">
           <input
             v-model="form.active"
@@ -300,6 +322,13 @@
           <div class="card-actions">
             <button
               type="button"
+              @click="previewRoom(room)"
+            >
+              {{ $t("rooms.actions.preview") }}
+            </button>
+
+            <button
+              type="button"
               @click="editRoom(room)"
             >
               {{ $t("common.edit") }}
@@ -317,6 +346,121 @@
         </article>
       </div>
     </section>
+
+    <div
+      v-if="previewingRoom"
+      class="preview-overlay"
+      @click.self="closeRoomPreview"
+    >
+      <section class="preview-modal">
+        <div class="preview-heading">
+          <div>
+            <h2>
+              {{ previewingRoom.code }} — {{ previewingRoom.name }}
+            </h2>
+
+            <p>
+              {{
+                $t("rooms.preview.summary", {
+                  desks: previewingRoom.deskCount,
+                  seats: previewingRoom.seatsPerDesk,
+                  capacity: previewingRoom.capacity,
+                })
+              }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="close-button"
+            @click="closeRoomPreview"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="room-preview">
+          <div class="preview-front">
+            <div
+              v-if="
+                (previewingRoom.teacherPosition || 'front-left') ===
+                'front-left'
+              "
+              class="preview-teacher"
+            >
+              {{ $t("rooms.preview.teacher") }}
+            </div>
+
+            <div class="preview-whiteboard">
+              {{ $t("rooms.preview.whiteboard") }}
+            </div>
+
+            <div
+              v-if="
+                (previewingRoom.teacherPosition || 'front-left') ===
+                'front-right'
+              "
+              class="preview-teacher"
+            >
+              {{ $t("rooms.preview.teacher") }}
+            </div>
+          </div>
+
+          <div class="preview-desk-grid">
+            <article
+              v-for="deskNumber in Number(previewingRoom.deskCount)"
+              :key="deskNumber"
+              class="preview-desk"
+            >
+              <span class="preview-desk-label">
+                {{
+                  $t("rooms.preview.desk", {
+                    number: deskNumber,
+                  })
+                }}
+              </span>
+
+              <div
+                class="preview-seats"
+                :style="{
+                  gridTemplateColumns:
+                    `repeat(${Number(previewingRoom.seatsPerDesk)}, 1fr)`,
+                }"
+              >
+                <span
+                  v-for="seatNumber in Number(previewingRoom.seatsPerDesk)"
+                  :key="seatNumber"
+                  class="preview-seat"
+                >
+                  {{ seatNumber }}
+                </span>
+              </div>
+            </article>
+          </div>
+
+          <div
+            v-if="
+              ['back-left', 'back-right'].includes(
+                previewingRoom.teacherPosition,
+              )
+            "
+            class="preview-back-teacher"
+            :class="{
+              left:
+                previewingRoom.teacherPosition ===
+                'back-left',
+              right:
+                previewingRoom.teacherPosition ===
+                'back-right',
+            }"
+          >
+            <div class="preview-teacher">
+              {{ $t("rooms.preview.teacher") }}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -340,6 +484,7 @@ function createEmptyForm() {
     deskCount: 9,
     seatsPerDesk: 2,
     active: true,
+    teacherPosition: "front-left",
   };
 }
 
@@ -366,6 +511,7 @@ export default {
       errorMessage: "",
       unsubscribeBuildings: null,
       unsubscribeRooms: null,
+      previewingRoom: null,
     };
   },
 
@@ -514,6 +660,8 @@ export default {
         deskCount: room.deskCount,
         seatsPerDesk: room.seatsPerDesk,
         active: room.active !== false,
+        teacherPosition:
+          room.teacherPosition || "front-left",
       };
 
       this.message = "";
@@ -601,6 +749,14 @@ export default {
           },
         );
       }
+    },
+
+    previewRoom(room) {
+      this.previewingRoom = room;
+    },
+
+    closeRoomPreview() {
+      this.previewingRoom = null;
     },
   },
 };
@@ -774,6 +930,149 @@ button:disabled {
 
 .empty-state {
   color: #666;
+}
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.preview-modal {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.preview-heading h2 {
+  margin: 0 0 6px;
+}
+
+.preview-heading p {
+  margin: 0;
+  color: #666;
+}
+
+.close-button {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.room-preview {
+  padding: 28px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.preview-front {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 34px;
+}
+
+.preview-whiteboard {
+  flex: 1;
+  max-width: 520px;
+  padding: 12px 20px;
+  border: 2px solid #555;
+  border-radius: 4px;
+  background: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.preview-teacher {
+  width: 110px;
+  box-sizing: border-box;
+  padding: 11px;
+  border: 2px solid #777;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.preview-desk-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px 34px;
+}
+
+.preview-desk-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.preview-seats {
+  display: grid;
+  border: 2px solid #777;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.preview-seat {
+  padding: 14px 8px;
+  text-align: center;
+}
+
+.preview-seat + .preview-seat {
+  border-left: 1px solid #bbb;
+}
+
+.preview-back-teacher {
+  display: flex;
+  margin-top: 32px;
+}
+
+.preview-back-teacher.left {
+  justify-content: flex-start;
+}
+
+.preview-back-teacher.right {
+  justify-content: flex-end;
+}
+
+@media (max-width: 700px) {
+  .preview-front {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .preview-whiteboard,
+  .preview-teacher {
+    width: 100%;
+    max-width: none;
+  }
+
+  .preview-desk-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {

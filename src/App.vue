@@ -12,6 +12,16 @@
     @login-success="onLoginSuccess"
   />
 
+  <NoSchoolPage
+    v-else-if="
+      session.initialized &&
+      session.schools.length === 0
+    "
+    :user="session.firebaseUser"
+    :profile="session.profile"
+    @sign-out="handleSignOut"
+  />
+
   <div
     v-else
     class="layout"
@@ -20,7 +30,10 @@
       :current-page="navigationPage"
       :user="session.firebaseUser"
       :profile="session.profile"
+      :schools="session.schools"
+      :active-school="session.activeSchool"
       @change-page="changePage"
+      @change-school="handleSchoolChange"
       @open-profile="openProfile"
       @sign-out="handleSignOut"
     />
@@ -90,11 +103,16 @@ import {
 
 import {
   getCurrentUserProfile,
+  updateActiveSchool,
 } from "./services/userService";
+import {
+  getUserSchools,
+} from "./services/schoolService";
 
 import NavigationMenu from "./components/NavigationMenu.vue";
 import LoginModal from "./components/LoginModal.vue";
 
+import NoSchoolPage from "./pages/NoSchoolPage.vue";
 import ClassroomPage from "./pages/ClassroomPage.vue";
 import StudentManager from "./pages/StudentManager.vue";
 import CourseManager from "./pages/CourseManager.vue";
@@ -111,6 +129,7 @@ export default {
   components: {
     NavigationMenu,
     LoginModal,
+    NoSchoolPage,
     ClassroomPage,
     StudentManager,
     CourseManager,
@@ -131,6 +150,7 @@ export default {
       session: {
         firebaseUser: null,
         profile: null,
+        schools: [],
         activeSchool: null,
         initialized: false,
       },
@@ -152,12 +172,9 @@ export default {
       this.loading = false;
 
       if (!user) {
-        console.log("No authenticated user.");
         this.session.firebaseUser = null;
         return;
       }
-
-      console.log("Logged in:", user.email);
 
       await this.initializeSession(user);
     });
@@ -165,30 +182,68 @@ export default {
 
   methods: {
     async initializeSession(firebaseUser) {
-      console.log("Initializing session...");
 
-      const profile = await getCurrentUserProfile(
-        firebaseUser.uid,
-      );
+      try {
+        const profile =
+          await getCurrentUserProfile(
+            firebaseUser.uid,
+          );
 
-      this.session.firebaseUser = firebaseUser;
-      this.session.profile = profile;
+        const schoolIds =
+          profile?.schools || [];
 
-      if (profile) {
+        const schools =
+          await getUserSchools(
+            schoolIds,
+          );
+
+        let activeSchool =
+          profile?.activeSchool || null;
+
+        const activeSchoolExists =
+          schools.some(
+            (school) =>
+              school.id === activeSchool,
+          );
+
+        if (!activeSchoolExists) {
+          activeSchool =
+            schools.length > 0
+              ? schools[0].id
+              : null;
+        }
+
+        this.session.firebaseUser =
+          firebaseUser;
+
+        this.session.profile =
+          profile;
+
+        this.session.schools =
+          schools;
+
         this.session.activeSchool =
-          profile.activeSchool;
+          activeSchool;
+
+        this.session.initialized = true;
+
+      } catch (error) {
+        console.error(
+          "Unable to initialize session:",
+          error,
+        );
+
+        this.session.firebaseUser =
+          firebaseUser;
+
+        this.session.profile = null;
+        this.session.schools = [];
+        this.session.activeSchool = null;
+        this.session.initialized = true;
       }
-
-      this.session.initialized = true;
-
-      console.log(
-        "Session ready:",
-        this.session,
-      );
     },
 
     async onLoginSuccess() {
-      console.log("Login successful.");
     },
 
     changePage(page) {
@@ -206,10 +261,51 @@ export default {
       this.currentPage = "classes";
     },
 
-    handleSchoolChange(schoolId) {
-      this.session.activeSchool = schoolId;
-      this.selectedClassId = "";
-      this.currentPage = "classes";
+    async handleSchoolChange(schoolId) {
+      if (
+        !schoolId ||
+        schoolId === this.session.activeSchool
+      ) {
+        return;
+      }
+
+      const schoolExists =
+        this.session.schools.some(
+          (school) => school.id === schoolId,
+        );
+
+      if (!schoolExists) {
+        return;
+      }
+
+      const previousSchool =
+        this.session.activeSchool;
+
+      try {
+        await updateActiveSchool(
+          this.session.firebaseUser.uid,
+          schoolId,
+        );
+
+        this.session.activeSchool =
+          schoolId;
+
+        this.session.profile = {
+          ...this.session.profile,
+          activeSchool: schoolId,
+        };
+
+        this.selectedClassId = "";
+        this.currentPage = "classes";
+      } catch (error) {
+        console.error(
+          "Unable to change school:",
+          error,
+        );
+
+        this.session.activeSchool =
+          previousSchool;
+      }
     },
 
     openProfile() {
@@ -234,6 +330,7 @@ export default {
         this.session = {
           firebaseUser: null,
           profile: null,
+          schools: [],
           activeSchool: null,
           initialized: false,
         };

@@ -27,6 +27,16 @@
       </button>
     </div>
 
+    <SchoolSelector
+      v-if="!collapsed"
+      class="school-selector"
+      :schools="schools"
+      :active-school="activeSchool"
+      @change-school="
+        $emit('change-school', $event)
+      "
+    />    
+
     <div class="navigation-links">
       <button
         @click="$emit('change-page', 'classroom')"
@@ -119,6 +129,7 @@
 </template>
 
 <script>
+import SchoolSelector from "./SchoolSelector.vue";
 import UserProfileCard from "./UserProfileCard.vue";
 
 export default {
@@ -126,12 +137,23 @@ export default {
 
   components: {
     UserProfileCard,
+    SchoolSelector,
   },
 
   props: {
     currentPage: {
       type: String,
       required: true,
+    },
+
+    schools: {
+      type: Array,
+      default: () => [],
+    },
+
+    activeSchool: {
+      type: String,
+      default: "",
     },
 
     user: {
@@ -147,6 +169,7 @@ export default {
 
   emits: [
     "change-page",
+    "change-school",
     "open-profile",
     "sign-out",
   ],
@@ -154,7 +177,47 @@ export default {
   data() {
     return {
       collapsed: false,
+      autoCollapsed: false,
     };
+  },
+
+  mounted() {
+    this.updateResponsiveState();
+
+    window.addEventListener(
+      "resize",
+      this.updateResponsiveState,
+    );
+  },
+
+  beforeUnmount() {
+    window.removeEventListener(
+      "resize",
+      this.updateResponsiveState,
+    );
+  },
+
+  methods: {
+    updateResponsiveState() {
+      const shouldCollapse =
+        window.innerWidth <= 900;
+
+      if (
+        shouldCollapse &&
+        !this.autoCollapsed
+      ) {
+        this.collapsed = true;
+        this.autoCollapsed = true;
+      }
+
+      if (
+        !shouldCollapse &&
+        this.autoCollapsed
+      ) {
+        this.collapsed = false;
+        this.autoCollapsed = false;
+      }
+    },
   },
 };
 </script>
@@ -181,12 +244,16 @@ export default {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .sidebar-header h2 {
   margin: 0;
   min-width: 0;
+}
+
+.school-selector {
+  margin-bottom: 18px;
 }
 
 .toggle-button {
@@ -235,5 +302,9 @@ button.active {
 
 .profile-card {
   margin-top: auto;
+}
+
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
 }
 </style>

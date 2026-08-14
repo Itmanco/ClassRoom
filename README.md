@@ -1,5 +1,7 @@
 # 📚 Classroom Manager
 
+**English** | [日本語](README.ja.md)
+
 Classroom Manager is a Vue 3 and Firebase web application for managing
 school data and creating explainable classroom seating plans. The
 project is designed around explicit school and class context, real-time

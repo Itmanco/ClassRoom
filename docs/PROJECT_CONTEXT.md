@@ -2,78 +2,109 @@
 
 ## Product
 
-Classroom Manager is a school-management and classroom-planning web application.
+Classroom Manager is a school-management and classroom-planning
+application built with Vue 3 and Firebase.
 
-Its two main goals are:
+The current product combines two concerns:
 
-1. Manage school, class, and student data with clear ownership.
-2. Help teachers create fair seating arrangements without replacing teacher judgement.
+1.  Structured school/class data management.
+2.  Explainable seating-plan creation that keeps the teacher in control.
 
-## Current product hierarchy
+## Current hierarchy
 
-```text
+``` text
 Authenticated User
-└── Active School
-    ├── Students
-    ├── Courses
-    ├── Buildings
-    ├── Rooms
-    └── Classes
-        └── Selected Class Workspace
-            ├── Overview
-            ├── Students / Enrollments
-            └── Seating Plans / Planning Engine
+└── Available Schools
+    └── Active School
+        ├── Students
+        ├── Courses
+        ├── Buildings
+        ├── Rooms
+        └── Classes
+            └── Selected Class Workspace
+                ├── Overview
+                ├── Students / Enrollments
+                └── Seating Plans
 ```
-
-## Current navigation
-
-Top-level navigation:
-
-- Classroom
-- Students
-- Courses
-- Buildings
-- Rooms
-- Classes
-- Settings
-
-Enrollments and Seating Plans are intentionally absent from the top level. They require a selected class and therefore live inside the Class Workspace.
 
 ## Current application state
 
 Implemented:
 
-- Firebase authentication and session initialization
-- Active-school context
-- School-scoped Firestore collections
-- Student Management
-- Course Management
-- Building Management
-- Room Management
-- Class Management
-- Class Workspace
-- Enrollment Management
-- Seating Plan Management
-- Intelligent Seating Planner
-- English/Japanese i18n foundation
-- GitHub Pages deployment
+-   Firebase Authentication
+-   User profiles
+-   Browser-restored authentication session
+-   Multi-school profile data
+-   Available-school loading
+-   Active-school selector
+-   No-school state
+-   Student Management
+-   Course Management
+-   Building Management
+-   Room Management
+-   Configurable teacher position
+-   Room preview
+-   Class Management
+-   Class Workspace
+-   Enrollment Management
+-   Seating Plan Management
+-   Intelligent Seating Planner
+-   Classroom-style seating visualization
+-   Excel seating-plan export
+-   English/Japanese i18n
+-   Browser-language initialization
+-   Responsive/collapsible navigation
+-   GitHub Pages deployment tooling
 
-Still incomplete:
+Transitional:
 
-- Legacy Classroom page modernization and localization
-- Login/authentication localization
-- Shared UI-state audit
-- Localized application validation
-- Multi-school selector
-- Roles and permissions
-- Automated testing
+-   `ClassroomPage.vue` remains in the source tree.
+-   Legacy `MyClassroom.vue`, `StudentDesk.vue`, and
+    `classroomService.js` remain.
+-   The legacy Classroom page is planned for removal rather than further
+    feature development.
+
+Planned:
+
+-   Dashboard/Home replacement
+-   Activity summaries
+-   Messages/announcements
+-   Stronger roles and school-membership authorization
+-   Localized validation
+-   Automated testing
+-   CI
+-   Further performance/toolchain modernization
+
+## Navigation
+
+The current application still exposes the legacy Classroom destination
+while the replacement Dashboard is pending.
+
+Long-term top-level direction:
+
+``` text
+Dashboard
+Students
+Courses
+Buildings
+Rooms
+Classes
+Settings
+Profile
+```
+
+Enrollments and Seating Plans are class-owned workflows and are
+intentionally accessed from the Class Workspace.
 
 ## Design philosophy
 
-- Prefer understandable workflows over flat CRUD navigation.
-- Preserve historical references.
-- Archive rather than delete referenced records.
-- Keep service and engine code independent from translated prose.
-- Keep school and class context explicit.
-- Let teachers make final seating decisions.
-- Implement changes in small, reviewable commits.
+-   Prefer domain-oriented workflows over a flat CRUD menu.
+-   Keep `schoolId` and `classId` explicit.
+-   Clear class state when school context changes.
+-   Preserve stable IDs and historical references.
+-   Archive referenced records instead of deleting them.
+-   Keep Firestore logic in services.
+-   Keep the seating engine framework-independent.
+-   Keep translation concerns out of the engine.
+-   Let teachers make final seating decisions.
+-   Make changes in small, reviewable commits.

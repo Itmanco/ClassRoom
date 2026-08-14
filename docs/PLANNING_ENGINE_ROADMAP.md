@@ -1,75 +1,57 @@
 # Planning Engine Roadmap
 
-## v1 — Completed
+## Current v1
 
-- Framework-independent engine
-- Historical partner analysis
-- Historical desk analysis
-- Exact-seat analysis
-- Priority-based candidate comparison
-- Distinct candidate deduplication
-- Three teacher-facing recommendations
-- Candidate preview
-- Structured violation explanations
-- English/Japanese interface
+Implemented:
 
-## v2 — Planned
+-   [x] Multiple candidate generation
+-   [x] Historical partner avoidance
+-   [x] Historical desk avoidance
+-   [x] Historical exact-seat avoidance
+-   [x] Priority-based comparison
+-   [x] Structured violations
+-   [x] Teacher candidate selection
+-   [x] Manual override after generation
+-   [x] Saved-plan history integration
 
-### Classroom zones
+## v1 hardening
 
-- Front
-- Middle
-- Back
-- Left
-- Center
-- Right
+-   [ ] Unit tests for each constraint
+-   [ ] Comparator tests
+-   [ ] Candidate uniqueness tests
+-   [ ] Deterministic seeded generation for tests
+-   [ ] Capacity edge-case tests
+-   [ ] Empty/incomplete history tests
+-   [ ] Performance tests
 
-### Support preferences
+## v2 candidate features
 
-Examples:
+Potential objectives:
 
-- Prefer front seats
-- Prefer accessible positions
-- Keep near teacher
-- Avoid specific environmental positions
+-   [ ] Classroom zones (front/middle/back)
+-   [ ] Support-seat preferences
+-   [ ] Pinned/fixed students
+-   [ ] Accessibility constraints
+-   [ ] Distribution fairness
+-   [ ] Better side-by-side candidate comparison
 
-These should remain explainable and configurable.
+Any new objective must define its priority relative to existing
+objectives.
 
-### Pinned assignments
+## Separate product workflows
 
-Allow teachers to lock:
+The following should not be silently mixed into the engine:
 
-- A student to a seat
-- A student to a desk
-- A desk pair
-- An empty seat
+-   Attendance
+-   Grades
+-   Student voting
+-   Messaging
+-   Discipline records
 
-### Distribution fairness
+If such data influences seating in the future, the product and privacy
+implications should be designed explicitly.
 
-Consider:
+## Teacher control remains mandatory
 
-- Repeated front/back placement
-- Repeated edge placement
-- Long-term room distribution
-- Fair access to preferred zones
-
-### Better comparison UI
-
-- Side-by-side layouts
-- Highlight differences
-- Highlight repeated relationships
-- Explain why one candidate ranks above another
-
-### Testing
-
-- Comparator unit tests
-- Candidate uniqueness tests
-- Constraint-combination tests
-- Small-room tests
-- Over-capacity tests
-- Historical saturation tests
-- Deterministic seeded tests
-
-## Future workflow experiments
-
-Student voting on teacher-approved candidate layouts may be explored later, but it is a separate product workflow and not an optimization objective.
+Future optimization should continue to produce recommendations rather
+than automatically committing a final seating plan.

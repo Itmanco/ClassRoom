@@ -1,15 +1,10 @@
 # Internationalization
 
-## Goal
+## Overview
 
-The application supports English and Japanese without coupling business logic to one language.
+Classroom Manager uses Vue I18n with English and Japanese catalogs.
 
-## Technology
-
-- Vue I18n 11
-- JSON locale catalogs
-
-```text
+``` text
 src/i18n/
 ├── index.js
 └── locales/
@@ -17,120 +12,148 @@ src/i18n/
     └── ja.json
 ```
 
-## Locale lifecycle
+## Supported locales
 
-1. Read saved locale from `localStorage`.
-2. Otherwise inspect browser locale.
-3. Choose a supported language.
-4. Fall back to English.
-5. Update Vue I18n.
-6. Update the document language.
-7. Persist later changes from Settings.
+``` text
+en
+ja
+```
 
-## Completed areas
+English is the fallback locale.
 
-- Settings
-- Navigation
-- Student Management
-- Course Management
-- Building Management
-- Room Management
-- Class Management
-- Class Workspace
-- Enrollment Management
-- Seating Plan Management
-- Intelligent Seating Planner
+## Initial locale selection
 
-## Remaining areas
+The application uses this priority:
 
-- Legacy Classroom page
-- Login and authentication messages
-- Shared loading/empty/success/error review
-- Confirmation-dialog review
-- Japanese terminology review
-- Screenshots
-- Application-controlled validation
+1.  Previously saved application locale
+2.  Browser default language
+3.  English fallback
 
-## Class Workspace localization
+Browser locale is normalized to its base language. Examples:
 
-Localized workspace text includes:
+``` text
+ja-JP → ja
+en-US → en
+es-CO → en
+```
 
-- Workspace title and description
-- Back action
-- Tab names
-- Overview labels
-- Class-not-found state
-- Loading and service errors
+Only supported locales are selected.
 
-Embedded Enrollment and Seating Plan managers reuse their existing domain translation keys.
+## Persistence
 
-## Planning Engine localization
+The selected locale is stored in local storage using the application
+language key.
 
-Localized text includes:
+Changing the language:
 
-- Planner title and description
-- Optimization attempts
-- Preference labels
-- Generate/regenerate actions
-- Candidate labels
-- Objective labels
-- Quality labels
-- Trade-offs
-- Conflict explanations
-- Generation and selection feedback
+-   Updates `i18n.global.locale`
+-   Persists the locale
+-   Updates `document.documentElement.lang`
 
-The engine itself remains language-independent.
+This means a user choice takes precedence over browser language on later
+visits.
 
-## Translation rules
+## UI coverage
 
-Translate:
+The current localization system covers the modern management
+application, including:
 
-- Titles
-- Labels
-- Buttons
-- Placeholders
-- Statuses
-- Loading text
-- Empty states
-- Success messages
-- Error messages
-- Confirmation dialogs
-- Dynamic explanations
+-   Navigation
+-   Settings
+-   Student Management
+-   Course Management
+-   Building Management
+-   Room Management
+-   Class Management
+-   Class Workspace
+-   Enrollment Management
+-   Seating Plan Management
+-   Planning Engine UI
+-   Profile
+-   School/no-school flows
 
-Do not hardcode new user-facing text.
+The legacy Classroom page is transitional and should be removed rather
+than used as the standard for new localization work.
 
-## Browser validation limitation
+## Login/authentication
 
-Native HTML validation text follows browser behavior and may not match the selected application locale.
+Login UI and authentication error presentation should be reviewed as
+part of the final localization/UX pass. Raw Firebase error messages
+should not be the long-term user-facing experience.
 
-A reusable application validation layer is planned for v0.8.1.
+## Translation architecture
 
-## Japanese terminology
+### Components
 
-| English | Japanese |
-|---|---|
-| Student | 生徒 |
-| Course | 科目 |
-| Building | 校舎 |
-| Room | 教室 |
-| Class | クラス |
-| Enrollment | クラス所属 |
-| Seating Plan | 座席表 |
-| Class Workspace | クラスワークスペース |
-| Intelligent Seating Planner | インテリジェント座席プランナー |
-| Optimization attempts | 探索回数 |
-| Trade-offs | 妥協点 |
+Components translate display text:
 
-Terminology should be reviewed with native educational-software expectations before v1.0.
+``` vue
+{{ $t("navigation.students") }}
+```
 
-## Definition of done
+Dynamic messages use interpolation:
 
-A translated page should:
+``` js
+this.$t("example.key", {
+  value
+})
+```
 
-- Have no visible hardcoded English
-- Have matching English/Japanese keys
-- Use interpolation for dynamic values
-- Switch language without reload
-- Preserve behavior
-- Cover all UI states
-- Pass lint and build checks
+### Services
+
+Services should:
+
+-   Validate data
+-   Throw meaningful technical/domain errors
+-   Avoid importing Vue I18n
+-   Avoid deciding display language
+
+### Seating Engine
+
+The engine returns structured data:
+
+``` js
+{
+  type: "previous-partner",
+  studentA,
+  studentB
+}
+```
+
+The UI converts that into English or Japanese.
+
+## Adding a translation
+
+1.  Add the key to `en.json`.
+2.  Add the equivalent key to `ja.json`.
+3.  Replace hardcoded UI text with `$t(...)`.
+4.  Run lint/build.
+5.  Test both languages.
+6.  Test interpolation and narrow/mobile layouts.
+
+## Rules
+
+-   Do not add new hardcoded user-facing English/Japanese text when a
+    translation key is appropriate.
+-   Keep locale key structures aligned between `en.json` and `ja.json`.
+-   Do not translate IDs or stored domain identifiers.
+-   Do not store translated engine violations.
+-   Prefer neutral domain terminology that works consistently across
+    languages.
+
+## Remaining work
+
+-   Review raw Firebase authentication errors
+-   Review browser-native validation
+-   Review service/domain error presentation
+-   Final Japanese terminology pass
+-   Check Excel export labels for localization
+-   Add representative English/Japanese screenshots
+-   Test long translations on small screens
+
+## Excel export
+
+The current Excel export contains print-oriented labels such as
+teacher/whiteboard/desk. These should eventually use localized export
+labels based on the selected application language rather than remain
+hardcoded in the export service.

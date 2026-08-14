@@ -1,66 +1,115 @@
-# Contributing
+# Contributing / Development Workflow
 
-## Source of truth
+Classroom Manager is currently developed as a focused portfolio/learning
+project. These rules keep changes understandable and reversible.
 
-Read relevant files under `docs/` before implementing changes.
+## Before changing code
 
-## Principles
+1.  Understand which context owns the feature: application, school,
+    class, room, or seating engine.
+2.  Check whether the target file is modern or legacy.
+3.  Avoid adding new functionality to `ClassroomPage.vue` unless
+    required for migration.
+4.  Preserve stable Firestore IDs and historical references.
 
-1. Explain architecture changes first.
-2. Prefer small, reviewable commits.
-3. Preserve backward compatibility when practical.
-4. Avoid unrelated refactors.
-5. Update documentation with behavior changes.
-6. Keep the teacher's decision final.
-7. Keep school and class context explicit.
+## Development cycle
 
-## Workflow
-
-```text
-Create feature branch
-→ Implement one focused change
-→ Test manually
-→ npm run lint
-→ npm run build
-→ Update documentation
-→ Commit and push
-→ Merge to main
-→ Deploy GitHub Pages
+``` bash
+git status
+npm run lint
+npm run build
 ```
 
-## Suggested commit style
+During development:
 
-```text
-feat: add class workspace navigation
-refactor: embed enrollment management in class workspace
-refactor: embed seating plan management in class workspace
-refactor: simplify navigation with class workspace
-docs: document class workspace architecture
+``` bash
+npm run serve
 ```
 
-## Internationalization
+Before committing:
 
-- No new hardcoded user-facing strings
-- Add matching English and Japanese keys
-- Use interpolation for dynamic text
-- Keep service and engine output language-independent
-- Test switching after dynamic results already exist
+``` bash
+git diff
+git status
+```
 
-## Data integrity
+## Staging
 
-- Do not change stable IDs casually
-- Do not delete historical records without a migration plan
-- Prefer archive flags for referenced records
-- Preserve school and class ownership in paths
+`git add .` stages tracked modifications and new untracked files except
+ignored files.
 
-## Verification checklist
+Always review:
 
-- [ ] Existing workflow still works
-- [ ] English works
-- [ ] Japanese works
-- [ ] School context is correct
-- [ ] Class context is correct
-- [ ] No data from another class appears
-- [ ] `npm run lint` has no new errors
-- [ ] `npm run build` succeeds
-- [ ] Git status is clean after commit
+``` bash
+git status
+```
+
+after staging.
+
+To unstage a file:
+
+``` bash
+git restore --staged path/to/file
+```
+
+## Secrets
+
+Never commit:
+
+``` text
+serviceAccountKey.json
+school-structure.json
+```
+
+Administrative scripts may reference the ignored service-account file
+but must not embed credentials.
+
+## Commit style
+
+Prefer small, descriptive commits:
+
+``` text
+feat: add room teacher position
+feat: export seating plans to excel
+fix: reset class state on school change
+docs: refresh project documentation
+refactor: remove legacy classroom page
+```
+
+Avoid combining unrelated cleanup with a feature unless necessary.
+
+## Architecture rules
+
+-   Firestore access belongs in services.
+-   School-owned operations require `schoolId`.
+-   Class-owned operations require `classId`.
+-   The seating engine must remain independent from Vue/Firebase.
+-   UI translation belongs in Vue I18n.
+-   Archive referenced records rather than deleting them.
+-   Clear selected class when school context changes.
+
+## Dependencies
+
+Do not use forced upgrades casually:
+
+``` bash
+npm audit fix --force
+```
+
+Toolchain modernization should use a dedicated branch and regression
+testing.
+
+## Documentation
+
+Update documentation when changing:
+
+-   Firestore schema
+-   Navigation
+-   School/class ownership
+-   Planning objectives
+-   Export behavior
+-   Deployment
+-   Major roadmap status
+
+`README.md` is the public entry point; specialized detail belongs under
+`docs/`.

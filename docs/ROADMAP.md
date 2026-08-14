@@ -2,128 +2,147 @@
 
 ## Vision
 
-Build an explainable school and classroom planning platform that organizes data by school and class while keeping teachers in control.
+Build a bilingual, explainable school/classroom management platform that
+keeps organization context explicit and teachers in control of classroom
+decisions.
 
-## Completed milestones
+## Completed foundation
 
-### v0.5.0 — School domain foundation
+### Authentication and domain structure
 
-- School-scoped Firestore architecture
-- Buildings, rooms, courses, classes, enrollments, and seating plans
-- Initial domain services and migrations
+-   [x] Firebase Authentication
+-   [x] Firestore user profiles
+-   [x] School-scoped collections
+-   [x] Student Management
+-   [x] Course Management
+-   [x] Building Management
+-   [x] Room Management
+-   [x] Class Management
+-   [x] Enrollment Management
+-   [x] Seating Plan Management
 
-### v0.6.0 — Student Management
+### Class Workspace
 
-- Student CRUD
-- Search
-- Archive workflow
-- Immutable student IDs
-- Real-time updates
+-   [x] Manage Class action
+-   [x] Selected class context
+-   [x] Overview
+-   [x] Embedded EnrollmentManager
+-   [x] Embedded SeatingPlanManager
+-   [x] Remove enrollments/seating plans from primary navigation
+-   [x] Preserve school/class context boundaries
 
-### v0.7.0 — Planning Engine v1
+### Planning Engine v1
 
-- Framework-independent engine
-- Historical seating analysis
-- Priority-based comparison
-- Three recommendations
-- Teacher preview and selection
-- Planning philosophy documentation
+-   [x] Framework-independent engine
+-   [x] Previous-partner avoidance
+-   [x] Previous-desk avoidance
+-   [x] Previous-seat avoidance
+-   [x] Multiple recommendations
+-   [x] Structured violations
+-   [x] Teacher selection/manual override
 
-### v0.8.0 — Internationalization foundation
+### Internationalization foundation
 
-Completed:
+-   [x] Vue I18n
+-   [x] English/Japanese catalogs
+-   [x] Browser-language initialization
+-   [x] Persisted language selection
+-   [x] Modern management pages localized
+-   [x] Responsive navigation
 
-- [x] Vue I18n
-- [x] English and Japanese catalogs
-- [x] Browser locale detection
-- [x] Locale persistence
-- [x] Settings language selector
-- [x] Main navigation
-- [x] Student Management
-- [x] Course Management
-- [x] Building Management
-- [x] Room Management
-- [x] Class Management
-- [x] Enrollment Management
-- [x] Seating Plan Management
-- [x] Planning Engine interface
-- [x] Class Workspace
+### Multi-school UI
 
-Remaining:
+-   [x] Profile school IDs
+-   [x] Available-school loading
+-   [x] Active-school selector
+-   [x] School-change reset behavior
+-   [x] No-school state
 
-- [ ] Legacy Classroom page
-- [ ] Login and authentication messages
-- [ ] Shared UI-state review
-- [ ] Japanese terminology review
-- [ ] English and Japanese screenshots
+### Physical classroom model
 
-### Class Workspace milestone — Completed
+-   [x] Desk count
+-   [x] Seats per desk
+-   [x] Capacity
+-   [x] Teacher position
+-   [x] Room preview
+-   [x] Classroom-style seating-plan view
 
-- [x] Add Manage Class action
-- [x] Add selected class context
-- [x] Add Overview tab
-- [x] Embed Enrollment Management
-- [x] Embed Seating Plan Management
-- [x] Preserve the Planning Engine
-- [x] Remove Enrollments from top-level navigation
-- [x] Remove Seating Plans from top-level navigation
-- [x] Keep Classes highlighted in the workspace
-- [x] Preserve separate school and class context
+### Excel export
 
-## v0.8.1 — Localized validation
+-   [x] Saved seating-plan `.xlsx` export
+-   [x] Classroom-oriented layout
+-   [x] Teacher/whiteboard representation
+-   [x] Compact desk spacing
+-   [x] Print-oriented page setup
+-   [x] Class/date-time filename
 
-- [ ] Replace browser-native validation
-- [ ] Reusable validation helpers
-- [ ] Field-level translated errors
-- [ ] Consistent invalid styling
-- [ ] Validation tests
+## Immediate milestone
 
-## Multi-school interface
+### Documentation and public deployment
 
-- [ ] Load schools available to the user
-- [ ] Add school selector above navigation
-- [ ] Clear selected class when school changes
-- [ ] Add roles and permissions
-- [ ] Enforce membership in Firestore rules
+-   [x] Refresh documentation pack
+-   [ ] Run final lint/build
+-   [ ] Review repository diff
+-   [ ] Commit documentation/export milestone
+-   [ ] Deploy current build to GitHub Pages
+-   [ ] Verify live demo
 
-## Class Workspace expansion
+## Next product milestone --- Dashboard
 
-- [ ] Attendance
-- [ ] Grades
-- [ ] Statistics
-- [ ] Reports
-- [ ] Class settings
+-   [ ] Remove `ClassroomPage.vue`
+-   [ ] Remove obsolete legacy classroom components/services when safe
+-   [ ] Add Dashboard/Home page
+-   [ ] School summary cards
+-   [ ] Recent class/seating activity
+-   [ ] Empty-state design
+-   [ ] Future messages/announcements area
+
+## Authorization
+
+-   [ ] Define school membership model
+-   [ ] Define role capabilities
+-   [ ] Enforce membership in Firestore rules
+-   [ ] Restrict administrative actions
+-   [ ] Test cross-school access
+
+## Internationalization hardening
+
+-   [ ] Localize friendly Firebase auth errors
+-   [ ] Replace/review browser-native validation
+-   [ ] Localize export labels
+-   [ ] Final Japanese terminology review
+-   [ ] English/Japanese screenshots
 
 ## Planning Engine v2
 
-- [ ] Classroom zones
-- [ ] Support-seat preferences
-- [ ] Pinned students
-- [ ] Side-by-side comparison
-- [ ] Distribution fairness
-- [ ] Automated tests
+-   [ ] Automated tests
+-   [ ] Classroom zones
+-   [ ] Support-seat preferences
+-   [ ] Pinned students
+-   [ ] Accessibility constraints
+-   [ ] Candidate comparison improvements
 
 ## Engineering improvements
 
-- [ ] Unit tests
-- [ ] Component tests
-- [ ] End-to-end tests
-- [ ] GitHub Actions CI
-- [ ] Automatic Pages deployment
-- [ ] Remove legacy unused code
-- [ ] Reduce console logging
-- [ ] Lazy load major pages
-- [ ] Review bundle size
-- [ ] Evaluate Vite migration
-- [ ] Review dependency vulnerabilities safely
+-   [ ] Unit tests
+-   [ ] Component tests
+-   [ ] End-to-end tests
+-   [ ] GitHub Actions CI
+-   [ ] Lazy-load major pages
+-   [ ] Reduce vendor bundle size
+-   [ ] Remove unnecessary console logging
+-   [ ] Review dependency vulnerabilities safely
+-   [ ] Evaluate Vue CLI → Vite migration
 
-## Definition of v1.0
+## v1.0 definition
 
-- Stable school and class workflows
-- Complete English/Japanese demo flow
-- Explainable and tested Planning Engine
-- Multi-school authorization model
-- Appropriate Firestore security rules
-- Automated coverage for critical workflows
-- Current documentation
-- Repeatable deployment
+A reasonable v1.0 should include:
+
+-   Stable multi-school/class workflows
+-   Strong authorization rules
+-   Complete English/Japanese primary flow
+-   Tested Planning Engine
+-   Dashboard replacing legacy Classroom page
+-   Repeatable deployment
+-   Automated coverage for critical workflows
+-   Current public documentation

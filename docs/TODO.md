@@ -1,77 +1,69 @@
 # TODO
 
-## Class Workspace — Completed
+This file contains actionable work. Completed milestone history belongs
+in `CHANGELOG.md`; long-term direction belongs in `ROADMAP.md`.
 
-- [x] Add dedicated workspace
-- [x] Add Manage Class action
-- [x] Add Overview tab
-- [x] Move enrollments into the selected class
-- [x] Move seating plans into the selected class
-- [x] Keep Planning Engine in the class workflow
-- [x] Remove duplicate sidebar entries
-- [x] Keep Classes highlighted
-- [x] Clear selected class when leaving the workspace
-- [x] Preserve schoolId and classId as separate contexts
+## Current release checkpoint
 
-## Internationalization v0.8.0
+-   [ ] Export a final seating-plan workbook and inspect print preview
+-   [ ] Run `npm run lint`
+-   [ ] Run `npm run build`
+-   [ ] Confirm only accepted legacy warnings remain
+-   [ ] Review `git diff`
+-   [ ] Commit Excel/documentation milestone
+-   [ ] Push `main`
+-   [ ] Run GitHub Pages deployment
+-   [ ] Verify live application
 
-Completed:
+## Dashboard migration
 
-- [x] Foundation and locale persistence
-- [x] Settings
-- [x] Navigation
-- [x] Student Management
-- [x] Course Management
-- [x] Building Management
-- [x] Room Management
-- [x] Class Management
-- [x] Class Workspace
-- [x] Enrollment Management
-- [x] Seating Plan Management
-- [x] Planning Engine
+-   [ ] Create Dashboard/Home page
+-   [ ] Change default page from legacy Classroom to Dashboard
+-   [ ] Update navigation label/icon
+-   [ ] Add useful school-level summary
+-   [ ] Add recent class/seating-plan activity
+-   [ ] Add messages/announcements placeholder only when useful
+-   [ ] Remove `ClassroomPage.vue`
+-   [ ] Remove `MyClassroom.vue` if no longer referenced
+-   [ ] Remove `StudentDesk.vue` if no longer referenced
+-   [ ] Remove `classroomService.js` if no longer referenced
+-   [ ] Remove resulting legacy lint warnings
 
-Remaining:
+## Multi-school/security
 
-- [ ] Legacy Classroom page
-- [ ] Login/authentication
-- [ ] Confirmation review
-- [ ] Loading/empty/success/error review
-- [ ] Japanese terminology review
-- [ ] Demo screenshots
+-   [ ] Formalize membership documents or equivalent authorization model
+-   [ ] Define role permissions
+-   [ ] Update Firestore security rules
+-   [ ] Test user with one school
+-   [ ] Test user with multiple schools
+-   [ ] Test user with no schools
+-   [ ] Test invalid/removed active school
+-   [ ] Test cross-school access rejection
 
-## Localized validation v0.8.1
+## Internationalization
 
-- [ ] Reusable validation framework
-- [ ] Required-field messages
-- [ ] Field-level errors
-- [ ] Invalid-field styles
-- [ ] Service-error separation
-- [ ] Tests
-
-## Multi-school interface
-
-- [ ] User-school membership data
-- [ ] Active-school selector
-- [ ] School-change reset behavior
-- [ ] Role-based interface
-- [ ] Firestore security enforcement
+-   [ ] Friendly localized Firebase auth errors
+-   [ ] Review validation behavior
+-   [ ] Localize Excel export labels
+-   [ ] Final Japanese terminology pass
+-   [ ] Add bilingual screenshots
 
 ## Planning Engine
 
-- [ ] Comparator tests
-- [ ] Candidate uniqueness tests
-- [ ] Seeded generation tests
-- [ ] Classroom zones
-- [ ] Support preferences
-- [ ] Pinned students
-- [ ] Side-by-side layouts
+-   [ ] Unit tests for constraints
+-   [ ] Comparator tests
+-   [ ] Candidate uniqueness tests
+-   [ ] Seeded generation for deterministic tests
+-   [ ] Capacity/empty-history edge cases
+-   [ ] Plan v2 constraints only after tests
 
-## Maintenance
+## Engineering
 
-- [ ] Remove unused imports in `ClassroomPage.vue`
-- [ ] Remove or replace production console logs
-- [ ] Review Node 22 LTS compatibility
-- [ ] Audit dependencies without forced breaking upgrades
-- [ ] Add lazy loading
-- [ ] Reduce vendor bundle size
-- [ ] Add CI
+-   [ ] Reduce production console noise
+-   [ ] Add test framework
+-   [ ] Add CI
+-   [ ] Lazy-load major pages
+-   [ ] Review bundle size
+-   [ ] Review Node LTS/toolchain compatibility
+-   [ ] Audit dependencies without forced upgrades
+-   [ ] Evaluate Vite migration separately

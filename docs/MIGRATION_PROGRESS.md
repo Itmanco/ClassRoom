@@ -1,166 +1,107 @@
 # Migration Progress
 
-## Completed
+## Purpose
 
-✔ Login no longer depends on `appId`
+This document tracks the transition from the original Classroom
+implementation to the current school/class architecture.
 
-✔ Session stores `activeSchool`
+## Legacy architecture
 
-✔ `App.vue` passes `schoolId`
+The original project centered on:
 
-✔ `ClassroomPage` accepts `schoolId`
-
-✔ Student and classroom services renamed from `appId` to `schoolId`
-
-✔ Firestore rules updated
-
-✔ 18 legacy student documents copied to `schools/school_japan/students`
-
-✔ Student document IDs preserved
-
-✔ No legacy student IDs missing at the destination
-
-✔ Application loads and runs correctly after student migration
-
-✔ New domain model approved: buildings, rooms, courses, classes, enrollments, and seating plans
-
-✔ Legacy `classrooms` documents identified as historical seating plans
-
----
-
-## Current Architecture Work
-
-The old plan to copy:
-
-```text
-artifacts/classroom-b81c6/classrooms
-↓
-schools/school_japan/classrooms
+``` text
+ClassroomPage.vue
+MyClassroom.vue
+StudentDesk.vue
+classroomService.js
 ```
 
-has been replaced.
+That implementation was useful for early classroom/seating functionality
+but mixed concerns that are now represented by dedicated domain managers
+and services.
 
-Revised target:
+## Current architecture
 
-```text
-artifacts/classroom-b81c6/classrooms/{documentId}
-↓
-schools/school_japan/classes/legacy_class_2025/seatingPlans/{documentId}
+``` text
+App
+└── Active School
+    ├── Students
+    ├── Courses
+    ├── Buildings
+    ├── Rooms
+    └── Classes
+        └── Class Workspace
+            ├── Overview
+            ├── Enrollments
+            └── Seating Plans
 ```
 
-The six legacy documents must keep their current IDs and fields.
+## Completed migration work
 
----
+### Data/domain
 
-## Next
+-   [x] School-scoped students
+-   [x] Buildings
+-   [x] Rooms
+-   [x] Courses
+-   [x] Classes
+-   [x] Enrollments
+-   [x] Seating plans
+-   [x] Service-layer separation
+-   [x] Student migration script
 
-### Domain foundation
+### Application context
 
-☐ implement Building service and validation
+-   [x] Firebase user profile
+-   [x] Active school
+-   [x] Multiple available schools
+-   [x] School selector
+-   [x] No-school state
+-   [x] Selected class workspace
 
-☐ create Building A1
+### Seating functionality preserved/improved
 
-☐ implement Room service and validation
+-   [x] Manual assignments
+-   [x] Sequential assignment
+-   [x] Historical plans
+-   [x] Recommendation engine
+-   [x] Classroom-style layout
+-   [x] Desk grouping
+-   [x] Teacher position
+-   [x] Whiteboard
+-   [x] Excel export
 
-☐ create the initial A1 rooms
+### Internationalization
 
-☐ implement Course service and validation
+-   [x] English/Japanese catalogs
+-   [x] Browser locale
+-   [x] Saved locale
+-   [x] Modern page coverage
 
-☐ identify or create the course associated with the historical class
+## Remaining legacy removal
 
-☐ implement Class service and validation
+-   [ ] Replace default Classroom page with Dashboard
+-   [ ] Remove `ClassroomPage.vue`
+-   [ ] Verify whether `MyClassroom.vue` is still referenced
+-   [ ] Verify whether `StudentDesk.vue` is still referenced
+-   [ ] Verify whether `classroomService.js` is still referenced
+-   [ ] Remove dead imports/code
+-   [ ] Re-run lint/build
+-   [ ] Update documentation after removal
 
-### Historical class and seating plans
+## Migration rule
 
-☐ create `schools/school_japan/classes/legacy_class_2025`
+Do not delete legacy code merely because a newer component exists.
+Remove it only after:
 
-☐ use real `courseId` and `roomId` references when known
+1.  Confirming no route/component imports it.
+2.  Confirming all useful behavior has a replacement.
+3.  Running lint/build.
+4.  Testing the primary seating workflow.
+5.  Committing the removal separately.
 
-☐ use `null` only for relationships that cannot be established truthfully
+## End state
 
-☐ create `scripts/migrateLegacySeatingPlans.js`
-
-☐ add `migrate:seating-plans` npm command
-
-☐ migrate six documents
-
-☐ verify source IDs exist at destination
-
-☐ verify layout loading in the application
-
-☐ verify saving a new seating plan
-
-### Compatibility
-
-☐ introduce seating-plan service using `schoolId` and `classId`
-
-☐ keep the existing classroom UI working during transition
-
-### Future domain work
-
-☐ building, room, course, and class management UI
-
-☐ enrollments
-
-☐ seating-history assignment rules
-
-### Cleanup
-
-☐ remove remaining `artifacts` references
-
-☐ delete old collections only after full verification
-
-☐ simplify migration-only compatibility code
-
-## Domain foundation implementation
-
-✔ Building service implemented
-✔ Building UI implemented
-☐ First building document created
-☐ Room, course, and class services implemented
-
-## Room foundation implementation
-
-✔ `roomService.js` added
-
-✔ Room Management page added
-
-✔ Rooms reference active buildings through `buildingId`
-
-✔ Room capacity is calculated as `deskCount × seatsPerDesk`
-
-☐ Create the initial physical rooms for Building A1
-
-- Course service and Course Management UI implemented under `schools/{schoolId}/courses`.
-
-## Student CRUD implementation — completed 2026-07-30
-
-The migrated `schools/{schoolId}/students` collection now has a complete management UI. Administrators can create, edit, search, reactivate, and archive students without deleting historical references. Student IDs remain immutable after creation because legacy and future seating plans use them as references.
-
-### Class foundation implemented
-Class CRUD now exists at `schools/{schoolId}/classes`. The next migration step is to create enrollments and move legacy seating layouts beneath the class that owns them.
-
-### Enrollment foundation completed
-- Class-scoped enrollment service and UI implemented.
-- Students can be added, archived, and reactivated within a selected class.
-- Ready for historical seating-plan migration and seating-plan management.
-
-## Seating-plan direction update — 2026-07-30
-
-- Legacy classroom documents were confirmed to be disposable sandbox data.
-- Historical seating migration is cancelled.
-- New seating plans are created directly under each class.
-- Manual Seating Plan Management is implemented as the new source of truth.
-
-## Intelligent seating generation
-
-- Added fresh-history planning directly against new class-scoped seating plans.
-- No legacy sandbox migration is required.
-- The engine evaluates only active saved plans for the selected class.
-
-## Planning Engine v1 — completed 2026-07-31
-
-- Weighted scoring was replaced by priority-based objective comparison.
-- The engine now returns the best three distinct teacher recommendations.
-- The teacher previews and selects the final arrangement before saving.
-- Planning philosophy and roadmap documents were added for future version reviews.
+The migration is complete when the application opens to a modern
+Dashboard and no production workflow depends on the legacy Classroom
+implementation.

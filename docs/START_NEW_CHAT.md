@@ -1,79 +1,114 @@
 # Start a New Chat
 
-Use this summary when continuing development in a new conversation.
+Use this as a compact handoff for continuing Classroom Manager
+development.
 
 ## Project
 
-Classroom Manager — Vue 3, Firebase Authentication, Cloud Firestore, Vue I18n, GitHub Pages.
+Classroom Manager --- Vue 3, Firebase Authentication, Cloud Firestore,
+Vue I18n, `xlsx-js-style`, GitHub Pages.
 
-## Repository
+Repository:
 
-```text
+``` text
 Itmanco/ClassRoom
 ```
 
-## Current main architecture
+## Current hierarchy
 
-```text
-Selected School
-└── Classes
-    └── Selected Class Workspace
-        ├── Overview
-        ├── Students
-        └── Seating Plans
+``` text
+User
+└── Active School
+    ├── Students
+    ├── Courses
+    ├── Buildings
+    ├── Rooms
+    └── Classes
+        └── Class Workspace
+            ├── Overview
+            ├── Students
+            └── Seating Plans
 ```
-
-Top-level navigation:
-
-- Classroom
-- Students
-- Courses
-- Buildings
-- Rooms
-- Classes
-- Settings
 
 ## Recent completed work
 
-- Class Workspace
-- Manage Class action
-- EnrollmentManager embedded mode
-- SeatingPlanManager embedded mode
-- Removal of Enrollments and Seating Plans from sidebar
-- Main branch merge
+-   Multi-school profile/context
+-   School selector
+-   No-school state
+-   Responsive sidebar
+-   Browser-language initialization
+-   Room teacher position
+-   Room preview
+-   Classroom-style seating-plan layout
+-   Excel seating-plan export
+-   Full documentation refresh
 
-## Current documentation task
+## Room teacher positions
 
-Replace thin documentation templates with the full updated package and commit:
-
-```bash
-git add README.md docs/
-git commit -m "docs: document class workspace architecture"
-git push origin main
+``` text
+front-left
+front-right
+back-left
+back-right
 ```
 
-## Deployment
+Older rooms fall back to `front-left`.
 
-```bash
+## Seating engine
+
+Current historical priority:
+
+1.  Avoid previous partners
+2.  Avoid previous desks
+3.  Avoid previous exact seats
+
+The engine recommends; the teacher decides.
+
+## Legacy status
+
+`ClassroomPage.vue` is still present but is scheduled for removal. Do
+not build new long-term functionality into it.
+
+Also verify/remove when safe:
+
+``` text
+MyClassroom.vue
+StudentDesk.vue
+classroomService.js
+```
+
+## Next work
+
+1.  Run final lint/build.
+2.  Commit documentation/export milestone.
+3.  Deploy to GitHub Pages.
+4.  Verify public demo.
+5.  Build Dashboard/Home page.
+6.  Remove legacy Classroom code.
+
+Future Dashboard ideas:
+
+-   School summary
+-   Recent class activity
+-   Recent seating plans
+-   Messages/announcements
+
+## Commands
+
+``` bash
 npm run lint
 npm run build
 npm run deploy
 ```
 
-## Known warnings
+## Security
 
-- Node 24 engine warning from old Vue CLI dependency
-- Existing legacy lint warnings
-- Console warnings
-- Large vendor bundle
-- Dependency vulnerabilities
+Never commit:
 
-Do not run `npm audit fix --force` without a dedicated branch and regression testing.
+``` text
+serviceAccountKey.json
+school-structure.json
+```
 
-## Next product work
-
-- Legacy Classroom page localization
-- Login/authentication localization
-- Shared UI-state review
-- Localized validation
-- Multi-school selector planning
+Avoid forced dependency upgrades without a dedicated modernization
+branch and regression testing.

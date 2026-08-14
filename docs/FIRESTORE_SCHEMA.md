@@ -1,8 +1,13 @@
 # Firestore Schema
 
-## Root structure
+## Overview
 
-```text
+School-owned data is stored below `schools/{schoolId}`. User
+identity/profile data is stored under `users/{uid}`.
+
+``` text
+users/{uid}
+
 schools/{schoolId}
 ├── students/{studentId}
 ├── buildings/{buildingId}
@@ -13,177 +18,275 @@ schools/{schoolId}
     └── seatingPlans/{seatingPlanId}
 ```
 
+The current schema favors stable IDs and archive flags so historical
+seating/enrollment references remain valid.
+
+## Users
+
+Path:
+
+``` text
+users/{uid}
+```
+
+Observed/current profile shape includes fields such as:
+
+``` js
+{
+  displayName: "Motta Jaime",
+  email: "user@example.com",
+  role: "admin",
+  activeSchool: "school_japan",
+  schools: ["school_japan"],
+  language: "en",
+  photoURL: "",
+  firstName: "Jaime",
+  lastName: "Motta",
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+Notes:
+
+-   `uid` comes from Firebase Authentication.
+-   `schools` contains school IDs available to the user.
+-   `activeSchool` identifies the current working school.
+-   `role` exists in the profile, but the complete authorization model
+    is not yet finished.
+-   `language` may coexist with locally persisted UI language;
+    application behavior is defined by current source code.
+
+## Schools
+
+Path:
+
+``` text
+schools/{schoolId}
+```
+
+Example fields:
+
+``` js
+{
+  name: "Japanese Language School",
+  country: "Japan",
+  city: "Sapporo",
+  ownerUid: "",
+  createdAt: Timestamp
+}
+```
+
 ## Students
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/students/{studentId}
 ```
 
-Representative fields:
+Student IDs are intended to remain stable. Students are archived rather
+than destructively deleted when historical references may exist.
 
-```js
-{
-  id: number,
-  name: string,
-  hiragana: string,
-  country: string,
-  gender_id: number,
-  isActive: boolean
-}
-```
-
-Student IDs remain stable because enrollments and historical seating plans reference them.
+Student fields are defined by `studentService.js` and the current
+Student Management form.
 
 ## Buildings
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/buildings/{buildingId}
 ```
 
-Representative fields:
-
-```js
-{
-  code: string,
-  name: string,
-  floorCount: number,
-  active: boolean
-}
-```
+Buildings describe school facilities and floor count. Archived buildings
+remain available for historical references.
 
 ## Rooms
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/rooms/{roomId}
 ```
 
-Representative fields:
+Current room model includes:
 
-```js
+``` js
 {
-  code: string,
-  name: string,
-  buildingId: string,
-  floor: number,
-  roomNumber: number,
-  deskCount: number,
-  seatsPerDesk: number,
-  capacity: number,
-  active: boolean
+  code: "A1F1C1",
+  name: "Building A1 - Floor 1 - Classroom 1",
+  buildingId: "A1",
+  floor: 1,
+  roomNumber: 1,
+  deskCount: 9,
+  seatsPerDesk: 2,
+  capacity: 18,
+  teacherPosition: "front-left",
+  active: true,
+  createdAt: Timestamp,
+  updatedAt: Timestamp
 }
 ```
+
+Supported teacher positions:
+
+``` text
+front-left
+front-right
+back-left
+back-right
+```
+
+Older room documents may not contain `teacherPosition`. UI/service
+fallback behavior should default them safely to `front-left` until
+saved.
 
 ## Courses
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/courses/{courseId}
 ```
 
-Representative fields:
-
-```js
-{
-  code: string,
-  name: string,
-  description: string,
-  active: boolean
-}
-```
+Courses use stable identifiers/codes and archive state.
 
 ## Classes
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/classes/{classId}
 ```
 
-Representative fields:
+A class connects course, room, and academic context.
 
-```js
-{
-  code: string,
-  name: string,
-  courseId: string,
-  roomId: string,
-  academicYear: number,
-  semester: number,
-  active: boolean
-}
+Typical relationships:
+
+``` text
+Class
+├── courseId
+├── roomId
+├── academic year
+├── semester
+└── active
 ```
+
+Refer to `classService.js` for the exact current field names.
 
 ## Enrollments
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/classes/{classId}/enrollments/{studentId}
 ```
 
-Representative fields:
+Enrollments connect a school student to a class.
 
-```js
-{
-  studentId: string | number,
-  active: boolean
-}
-```
+Behavior:
 
-An enrollment belongs to exactly one class. The Class Workspace reflects this ownership.
+-   Prevent duplicate active enrollment
+-   Archive instead of delete
+-   Allow reactivation
+-   Preserve the student ID relationship
 
-## Seating Plans
+## Seating plans
 
 Path:
 
-```text
+``` text
 schools/{schoolId}/classes/{classId}/seatingPlans/{seatingPlanId}
 ```
 
-Representative fields:
+Normalized plan shape:
 
-```js
+``` js
 {
-  title: string,
-  planDate: string,
-  roomId: string,
-  deskCount: number,
-  seatsPerDesk: number,
+  title: "Plan title",
+  planDate: "YYYY-MM-DD",
+  roomId: "A1F1C1",
+  deskCount: 9,
+  seatsPerDesk: 2,
+  capacity: 18,
   assignments: [
     {
-      studentId: string | number,
-      deskNumber: number,
-      seatNumber: number
+      studentId: "student-id",
+      deskNumber: 1,
+      seatNumber: 1
     }
   ],
-  active: boolean
+  active: true,
+  createdAt: Timestamp,
+  updatedAt: Timestamp
 }
 ```
 
-## Archiving policy
+Validation ensures:
 
-Referenced records should normally be archived instead of deleted.
+-   Desk numbers are in range
+-   Seat numbers are in range
+-   A student is not assigned twice
+-   A physical seat is not assigned twice
 
-Reasons:
+## School ownership
 
-- Historical plans need student references.
-- Classes need course and room references.
-- Reporting may need inactive records.
-- Restoration/reactivation remains possible.
+Every school-domain service requires `schoolId`. Class-owned collections
+additionally require `classId`.
 
-## Future authorization model
+This is a key boundary:
 
-A future user-school membership structure should support:
+``` text
+schoolId = organization context
+classId  = selected class context
+```
 
-- School administrator
-- Teacher/editor
-- Viewer
+They should never be conflated.
 
-Firestore rules must verify membership and role independently of the UI.
+## Archive policy
+
+Where historical references matter, use:
+
+``` js
+active: false
+```
+
+instead of deleting the document.
+
+This is particularly important for:
+
+-   Students
+-   Courses
+-   Buildings
+-   Rooms
+-   Classes
+-   Enrollments
+-   Seating plans
+
+## Security status
+
+Authentication is implemented, but profile membership and roles should
+not be treated as complete authorization by themselves.
+
+Future security work should enforce:
+
+-   User belongs to requested school
+-   Role permits requested operation
+-   Cross-school access is rejected
+-   Administrative operations are restricted
+
+Firestore rules must be reviewed alongside the final membership model.
+
+## Local schema inspection
+
+Development utilities:
+
+``` text
+scripts/exportSchoolStructure.js
+scripts/createTestSchool.js
+scripts/migrateStudents.js
+```
+
+Local exports such as `school-structure.json` and Firebase Admin
+credentials are ignored and must not be committed.

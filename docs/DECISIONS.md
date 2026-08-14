@@ -1,94 +1,142 @@
-# Architecture Decisions
+# Architecture and Product Decisions
 
-## 001 — Use the active school from the session
+## D001 --- School-scoped domain data
 
-The application uses `session.activeSchool` instead of a hardcoded school ID.
+**Decision:** Store school-owned data under `schools/{schoolId}`.
 
-## 002 — Store data below `schools/{schoolId}`
+**Reason:** Prevent ambiguous ownership and prepare the application for
+users who can access more than one school.
 
-This supports data isolation and future multi-school access.
+## D002 --- Keep school and class context separate
 
-## 003 — Preserve referenced identifiers
+**Decision:** `schoolId` identifies organization context; `classId`
+identifies the selected class workflow.
 
-Student and domain IDs remain stable because historical and related documents reference them.
+**Reason:** A class selection must never replace or imply school
+authorization.
 
-## 004 — Separate physical rooms from academic classes
+## D003 --- Profile-based available schools
 
-A room is a physical resource. A class is an academic group that references a room and course.
+**Decision:** User profiles contain available school IDs and an active
+school.
 
-## 005 — Archive instead of deleting history
+**Status:** Implemented for UI/application context.
 
-Historical relationships and seating plans must remain valid.
+**Caveat:** This is not the final server-side authorization model.
 
-## 006 — Isolate the Planning Engine
+## D004 --- Dedicated no-school state
 
-The engine is independent of Vue and Firebase.
+**Decision:** An authenticated user with no assigned school sees
+`NoSchoolPage.vue`.
 
-## 007 — Treat historical seating rules as soft preferences
+**Reason:** Rendering school managers with a null/invalid school ID
+creates confusing failures and accidental assumptions.
 
-Perfect avoidance eventually becomes impossible. Generation must continue and explain compromises.
+## D005 --- Class-owned enrollments and seating plans
 
-## 008 — Compare objectives by priority
+**Decision:** Enrollments and seating plans live inside Class Workspace
+rather than as primary top-level workflows.
 
-1. Repeated partners
-2. Repeated desks
-3. Repeated exact seats
-4. Random tie-breaker
+**Reason:** Both require a selected class to be meaningful.
 
-## 009 — Return three recommendations
+## D006 --- Archive instead of destructive deletion
 
-The teacher compares alternatives and makes the final decision.
+**Decision:** Preserve referenced records using active/archive state.
 
-## 010 — Keep student voting separate
+**Reason:** Historical enrollment and seating-plan data must remain
+understandable.
 
-Voting may become a future workflow, but it is not an optimization objective.
+## D007 --- Framework-independent seating engine
 
-## 011 — Introduce i18n before further expansion
+**Decision:** Keep the recommendation algorithm under
+`src/engine/seating/` independent from Vue/Firebase.
 
-This limits additional hardcoded text and supports Japanese demonstrations.
+**Reason:** Improves testability, reuse, and separation of concerns.
 
-## 012 — Put language selection in Settings
+## D008 --- Lexicographic seating objectives
 
-Language is global but does not require permanent navigation space.
+**Decision:** Prioritize repeated partners, then repeated desks, then
+repeated exact seats.
 
-## 013 — Keep English as the development language
+**Reason:** Higher-priority fairness goals should not be traded away by
+a weighted aggregate score.
 
-Code, commits, and technical documentation remain English.
+## D009 --- Recommend, don't decide
 
-## 014 — Defer localized validation
+**Decision:** Generated seating arrangements remain teacher
+recommendations.
 
-Application-controlled localized validation belongs to a separate milestone.
+**Reason:** Classroom context contains human factors that the current
+data model cannot fully represent.
 
-## 015 — Add a Class Workspace
+## D010 --- Internationalization at the presentation layer
 
-Class-owned workflows are grouped under a selected class.
+**Decision:** Engine/services return structured/domain information;
+components translate it.
 
-```text
-Class
-├── Overview
-├── Students
-└── Seating Plans
+**Reason:** Prevent language concerns from contaminating domain logic.
+
+## D011 --- Browser language with persisted override
+
+**Decision:** Use saved language first, otherwise browser language,
+otherwise English.
+
+**Reason:** Gives sensible first-load behavior while respecting explicit
+user choice.
+
+## D012 --- Room owns teacher position
+
+**Decision:** Store teacher position on the room.
+
+Supported values:
+
+``` text
+front-left
+front-right
+back-left
+back-right
 ```
 
-## 016 — Remove class-owned workflows from top-level navigation
+**Reason:** Teacher-desk placement is a physical room property and
+should be reused by room preview, seating-plan display, and export.
 
-Enrollments and Seating Plans are not independent application contexts. Both require a class.
+## D013 --- Classroom-style seating visualization
 
-Benefits:
+**Decision:** Display seats grouped by physical desks, with a
+whiteboard/front-of-room reference.
 
-- Reduces duplicate class selectors
-- Matches Firestore ownership
-- Improves teacher workflow
-- Creates room for future class tabs
+**Reason:** A seating plan is spatial information; a generic card/list
+layout is less useful to teachers.
 
-## 017 — Keep school and class context separate
+## D014 --- Excel export as a separate service
 
-`schoolId` and `classId` are always passed independently.
+**Decision:** Generate `.xlsx` seating plans in
+`seatingPlanExportService.js`.
 
-This prepares the application for a future school selector and prevents class context from leaking between schools.
+**Reason:** Keeps print/export concerns out of Firestore persistence and
+the recommendation engine.
 
-## 018 — Clear class context during top-level navigation
+## D015 --- Responsive sidebar
 
-Leaving the workspace clears the selected class.
+**Decision:** Navigation can collapse and should adapt automatically on
+smaller screens.
 
-A future school change must do the same.
+**Reason:** Preserve usable classroom/seating workspace width.
+
+## D016 --- Retire legacy Classroom page
+
+**Decision:** Do not continue expanding `ClassroomPage.vue`.
+
+**Target:** Replace it with a Dashboard/Home page containing useful
+summaries and, later, messages/activity.
+
+**Reason:** Modern domain workflows have superseded the original page
+architecture.
+
+## D017 --- Controlled modernization
+
+**Decision:** Avoid forced dependency upgrades during feature work.
+
+**Reason:** Vue CLI and older dependency chains can produce breaking
+changes. Modernization should occur on a dedicated branch with
+regression testing.

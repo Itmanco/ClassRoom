@@ -2,120 +2,228 @@
 
 ## Overview
 
-Classroom Manager uses a Vue 3 frontend, a Firebase service layer, and an independent Planning Engine.
+Classroom Manager uses a Vue 3 frontend, Firebase Authentication, Cloud
+Firestore, a service layer, a framework-independent seating engine, and
+a client-side Excel export service.
 
-```text
+``` text
 App.vue
-├── Authentication/session state
-├── Active school context
-├── Top-level page navigation
-└── Selected class context
+├── Authentication state
+├── User profile
+├── Available schools
+├── Active school
+├── Top-level navigation
+└── Selected class
         │
         ▼
-Pages and reusable managers
+Pages / components
+        │
+        ├── Class Workspace
+        ├── Room preview
+        └── Seating Plan Manager
         │
         ▼
-Service modules
-        │
-        ├── Firebase Authentication
-        ├── Cloud Firestore
-        └── Seating Planning Engine
+Services                    Seating Engine
+        │                         │
+        ├── Firestore             └── Pure JS recommendation logic
+        └── XLSX export
 ```
 
-## Application context
+## Application session
 
-### School context
+`App.vue` owns application-level state.
 
-`session.activeSchool` identifies the selected school.
+Conceptually:
 
-All school-owned operations receive `schoolId`.
-
-Examples:
-
-```js
-watchStudents(schoolId)
-watchCourses(schoolId)
-watchClasses(schoolId)
+``` js
+session = {
+  firebaseUser: null,
+  profile: null,
+  schools: [],
+  activeSchool: null,
+  initialized: false
+}
 ```
 
-A future school selector will update this value.
+The exact implementation should be treated as source-of-truth, but these
+concepts define the architecture.
 
-### Class context
+## Authentication
 
-`selectedClassId` is owned by `App.vue` while the Class Workspace is open.
+Firebase Authentication determines whether a user can enter the
+authenticated application.
 
-```text
-Classes page
-→ Manage class
-→ App stores selectedClassId
-→ ClassWorkspace receives schoolId and classId
+On auth-state change:
+
+1.  Firebase user state is restored.
+2.  The Firestore user profile is loaded.
+3.  Available schools are resolved.
+4.  The active school is validated.
+5.  The application renders normal school content or the no-school
+    state.
+
+Authentication and school authorization are separate concerns.
+
+## Multi-school context
+
+A user profile can reference multiple school IDs and one active school.
+
+``` text
+User
+├── schools[]
+└── activeSchool
 ```
 
-Changing a top-level page clears the selected class. A future school change must also clear it.
+`SchoolSelector.vue` changes the active school. Class-specific state
+must be cleared on school change.
+
+If an authenticated user has no assigned school, `NoSchoolPage.vue` is
+shown rather than rendering managers with a null school ID.
+
+Current membership is profile-driven. Strong Firestore membership/role
+enforcement is future work.
+
+## Class context
+
+`selectedClassId` is application/workspace state.
+
+``` text
+Classes
+→ Manage Class
+→ selectedClassId
+→ ClassWorkspace
+```
+
+Leaving the class workspace or changing schools clears the selected
+class.
 
 ## Class Workspace
 
-`ClassWorkspace.vue` composes class-owned workflows.
+`ClassWorkspace.vue` composes class-owned functionality:
 
-```text
+``` text
 ClassWorkspace
 ├── Overview
 ├── EnrollmentManager
 └── SeatingPlanManager
 ```
 
-Both embedded managers receive:
+`EnrollmentManager` and `SeatingPlanManager` accept:
 
-```vue
-:school-id="schoolId"
-:class-id="classId"
-```
+-   `schoolId`
+-   optional `classId`
 
-They support an optional `classId` mode:
-
-- With `classId`: embedded mode; no class selector.
-- Without `classId`: temporary standalone mode.
-
-The top-level standalone routes have been removed, but reusable component support remains useful for testing and future composition.
+With `classId`, the manager operates in embedded mode.
 
 ## Service layer
 
-Firestore access is kept in service files rather than duplicated across components.
+Firestore access is separated into domain services:
 
-Typical responsibilities:
+``` text
+buildingService.js
+classService.js
+courseService.js
+enrollmentService.js
+roomService.js
+schoolService.js
+seatingPlanService.js
+studentService.js
+userService.js
+```
 
-- Build collection/document paths
-- Subscribe to real-time data
-- Save normalized records
-- Archive records
-- Preserve stable identifiers
+Typical service responsibilities:
 
-## Planning Engine
+-   Validate required context
+-   Build Firestore paths
+-   Normalize input
+-   Subscribe to real-time snapshots
+-   Save documents
+-   Archive documents
+-   Preserve stable IDs
 
-The engine is separate from Vue and Firebase.
+## Room model and physical layout
 
-Inputs:
+Rooms describe the physical classroom:
 
-- Students
-- Seat positions
-- Historical plans
-- Generation options
+``` text
+building
+floor
+room number
+desk count
+seats per desk
+capacity
+teacher position
+```
 
-Outputs:
+Teacher position values:
 
-- Structured candidate assignments
-- Objective counts
-- Quality labels/codes
-- Structured violations
-- Search statistics
+``` text
+front-left
+front-right
+back-left
+back-right
+```
 
-Translation happens in the Vue interface, not in the engine.
+The room preview and seating-plan visualization use this configuration
+to present a classroom-like layout.
+
+## Seating-plan model
+
+A seating plan stores physical assignments:
+
+``` js
+{
+  studentId,
+  deskNumber,
+  seatNumber
+}
+```
+
+This keeps historical positions stable even when the UI layout changes.
+
+## Planning Engine boundary
+
+`src/engine/seating/` contains framework-independent JavaScript.
+
+The engine does not:
+
+-   Read Firestore
+-   Know Vue components
+-   Translate text
+-   Download files
+
+It receives plain data and returns structured results.
+
+Current constraints:
+
+-   Avoid previous partners
+-   Avoid previous desks
+-   Avoid previous exact seats
+
+## Excel export boundary
+
+`seatingPlanExportService.js` is separate from Firestore persistence and
+the planning algorithm.
+
+Input:
+
+-   Saved seating plan
+-   Selected class
+-   Room
+-   Student records
+
+Output:
+
+-   Printable `.xlsx` workbook
+
+The export reflects classroom geometry: whiteboard, teacher position,
+desk groups, and student assignments.
 
 ## Internationalization
 
 Vue I18n is initialized under:
 
-```text
+``` text
 src/i18n/
 ├── index.js
 └── locales/
@@ -123,57 +231,54 @@ src/i18n/
     └── ja.json
 ```
 
+Locale selection uses persisted preference first, then browser language,
+then English fallback.
+
 Rules:
 
-- No new hardcoded user-facing strings.
-- Services return data/errors, not translated sentences.
-- Engine returns structured values, not localized prose.
-- Components translate dynamic messages with interpolation.
+-   New UI text belongs in locale catalogs.
+-   Engine output should remain structured.
+-   Services should avoid translated prose.
+-   Dynamic UI messages use interpolation.
 
-## Navigation architecture
+## Responsive navigation
 
-Current top level:
+`NavigationMenu.vue` supports collapsed state and automatically adapts
+on smaller screens. The sidebar must not obscure primary application
+content.
 
-```text
-Classroom
-Students
-Courses
-Buildings
-Rooms
-Classes
-Settings
+## Legacy boundary
+
+The following are transitional:
+
+``` text
+ClassroomPage.vue
+MyClassroom.vue
+StudentDesk.vue
+classroomService.js
 ```
 
-Class level:
+New functionality should not be added there unless required for safe
+migration. The target is a new Dashboard/Home page.
 
-```text
-Overview
-Students
-Seating Plans
+## Future architecture
+
+Likely future additions:
+
+``` text
+Dashboard
+├── Activity summary
+├── Recent class activity
+├── Messages
+└── Announcements
+
+Authorization
+├── School membership
+└── Roles / permissions
+
+Engineering
+├── Tests
+├── CI
+├── Lazy loading
+└── Possible Vue CLI → Vite migration
 ```
-
-This structure is designed to accommodate future tabs such as:
-
-- Attendance
-- Grades
-- Statistics
-- Reports
-- Class settings
-
-## Future multi-school architecture
-
-```text
-User
-├── School A
-├── School B
-└── School C
-```
-
-The school selector should:
-
-- Display only authorized schools
-- Update `session.activeSchool`
-- Clear `selectedClassId`
-- Return to a safe top-level page
-- Trigger all school-scoped listeners to reload
-- Be backed by Firestore security rules

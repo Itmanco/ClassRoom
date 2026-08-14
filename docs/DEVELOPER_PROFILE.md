@@ -1,43 +1,48 @@
 # Developer Profile
 
-Current level
+## Project role
 
-Junior Full Stack Developer
+Classroom Manager is developed as a portfolio and learning project
+demonstrating practical full-stack application design with Vue and
+Firebase.
 
-Goals
+## Skills demonstrated by the project
 
-- Become employable as a Web Application Developer in Japan.
-- Learn professional development practices.
-- Understand architectural decisions.
-- Improve JavaScript, Vue, Firebase and Java skills.
-- Learn how experienced developers think.
+-   Vue 3 component architecture
+-   JavaScript application design
+-   Firebase Authentication
+-   Cloud Firestore data modeling
+-   Real-time listeners
+-   Service-layer separation
+-   Multi-tenant/multi-school context
+-   Internationalization
+-   Responsive UI behavior
+-   Algorithmic search/optimization
+-   Explainable recommendation design
+-   Excel generation
+-   Git/GitHub workflow
+-   GitHub Pages deployment
+-   Technical documentation
 
-Preferred mentoring style
+## Engineering themes
 
-Don't immediately provide the solution.
+The project intentionally emphasizes:
 
-Instead:
+-   Clear ownership of data
+-   Incremental migration from legacy code
+-   Stable historical references
+-   Separation of UI, persistence, and algorithm logic
+-   Bilingual user experience
+-   Reviewable commits
+-   Documentation as part of development
 
-1. Explain the problem.
+## Portfolio narrative
 
-2. Explain how an experienced developer would approach it.
+The application began as a simpler classroom/seating project and has
+evolved into a structured school-management system. That evolution
+demonstrates refactoring and architectural growth rather than only
+greenfield implementation.
 
-3. Discuss trade-offs.
-
-4. Ask if I understand before making major changes.
-
-5. Implement the solution.
-
-6. Explain how to test it.
-
-Assume I want to become independent over time.
-
-When appropriate, challenge me with small tasks instead of solving everything yourself.
-
-Coding philosophy
-
-- Small commits
-- Clean code
-- Readability over cleverness
-- Incremental improvements
-- Production mindset
+Current modernization work includes multi-school context, class
+workspaces, explainable seating recommendations, physical room modeling,
+and printable Excel seating plans.

@@ -543,6 +543,14 @@
           </div>
 
           <div class="actions">
+
+            <button
+              type="button"
+              @click="exportPlan(plan)"
+            >
+              📊 {{ $t("seatingPlans.actions.exportExcel") }}
+            </button>
+            
             <button @click="editPlan(plan)">
               {{ $t("common.edit") }}
             </button>
@@ -562,6 +570,9 @@
 </template>
 
 <script>
+import {
+  exportSeatingPlan,
+} from "../services/seatingPlanExportService";
 import {
   watchClasses,
 } from "../services/classService";
@@ -1302,6 +1313,34 @@ export default {
       this.errorMessage = "";
       this.generationResult = null;
       this.selectedCandidateIndex = 0;
+    },
+
+    exportPlan(plan) {
+      const room =
+        this.rooms.find(
+          (item) =>
+            item.id === plan.roomId,
+        ) || this.selectedRoom;
+
+      try {
+        exportSeatingPlan({
+          plan,
+          classroom: this.selectedClass,
+          room,
+          students: this.students,
+        });
+
+        this.message = this.$t(
+          "seatingPlans.messages.exported",
+        );
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "seatingPlans.messages.exportError",
+          {
+            error: error.message,
+          },
+        );
+      }
     },
     
   },

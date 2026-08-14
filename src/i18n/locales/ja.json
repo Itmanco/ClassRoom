@@ -459,7 +459,8 @@
       "fill": "自動配置",
       "clear": "クリア",
       "save": "座席表を保存",
-      "update": "座席表を更新"
+      "update": "座席表を更新",
+      "exportExcel": "Excelに出力"
     },
 
     "list": {
@@ -492,7 +493,9 @@
       "plansLoadError": "座席表を読み込めませんでした：{error}",
       "loadError": "座席表データを読み込めませんでした：{error}",
       "saveError": "座席表を保存できませんでした：{error}",
-      "archiveError": "座席表をアーカイブできませんでした：{error}"
+      "archiveError": "座席表をアーカイブできませんでした：{error}",
+      "exported": "座席表をExcelファイルに出力しました。",
+      "exportError": "座席表を出力できませんでした：{error}"
     }
   },
 

@@ -458,7 +458,8 @@
       "fill": "Fill automatically",
       "clear": "Clear",
       "save": "Save plan",
-      "update": "Update plan"
+      "update": "Update plan",
+      "exportExcel": "Export Excel"
     },
 
     "list": {
@@ -491,7 +492,9 @@
       "plansLoadError": "Unable to load seating plans: {error}",
       "loadError": "Unable to load seating-plan data: {error}",
       "saveError": "Unable to save the seating plan: {error}",
-      "archiveError": "Unable to archive the seating plan: {error}"
+      "archiveError": "Unable to archive the seating plan: {error}",
+      "exported": "The seating plan was exported successfully.",
+      "exportError": "Unable to export the seating plan: {error}"
     }
   },
 

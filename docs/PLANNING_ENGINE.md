@@ -1,108 +1,122 @@
-# Intelligent Seating Planner
+# Planning Engine
 
-## Philosophy
+## Purpose
+
+The Planning Engine helps teachers create fairer seating arrangements by
+comparing candidate plans against seating history.
+
+Its product principle is:
 
 > **Recommend, don't decide.**
 
-The engine helps teachers compare fair seating alternatives. It does not automatically make the final decision.
+The engine should explain why one candidate is stronger without taking
+the final decision away from the teacher.
 
-## Inputs
+## Current inputs
 
-- Active enrolled students
-- Available seat positions
-- Active historical seating plans
-- Generation options
-- Number of optimization attempts
-- Number of requested results
-
-## Core preferences
-
-The current engine treats all historical rules as preferences rather than absolute constraints.
-
-Priority order:
-
-1. Avoid repeated desk partners
-2. Avoid previously used desks
-3. Avoid repeated exact seat positions
-4. Use a random tie-breaker
-
-This ensures the engine can still return a result when the history makes perfect avoidance impossible.
-
-## Candidate generation
-
-The engine:
-
-1. Creates many candidate assignments.
-2. Evaluates each candidate.
-3. Deduplicates identical layouts.
-4. Compares candidates lexicographically by priority.
-5. Returns the strongest distinct candidates.
-
-The interface currently requests three recommendations.
-
-## Why no single weighted public score
-
-A weighted total can hide important differences. For example, a candidate with fewer repeated partners should normally outrank one with a better desk score but more repeated partners.
-
-The comparison therefore uses ordered objectives rather than presenting a misleading single fairness percentage.
-
-## Candidate output
-
-A candidate includes:
-
-```js
+``` js
 {
-  rank,
-  assignments,
-  objectives: {
-    repeatedPartners,
-    repeatedDesks,
-    repeatedSeats
-  },
-  quality,
-  violations
+  students,
+  positions,
+  historyPlans,
+  options
 }
 ```
 
-## Violations
+`positions` represent physical room seats using:
 
-Structured conflict types include:
-
-- `previous-partner`
-- `previous-desk`
-- `previous-seat`
-
-The Vue interface translates these into readable English or Japanese explanations.
-
-## Teacher workflow
-
-```text
-Open class
-→ Seating Plans
-→ Choose optimization preferences
-→ Generate layouts
-→ Compare three candidates
-→ Preview one candidate
-→ Modify manually if needed
-→ Save final plan
+``` js
+{
+  deskNumber,
+  seatNumber
+}
 ```
 
-## Historical data
+## Current historical objectives
 
-Only appropriate historical plans should be considered. Current behavior uses active plans.
+Priority order:
 
-Future work may add:
+1.  Repeated desk partners
+2.  Repeated desks
+3.  Repeated exact seats
 
-- Date windows
-- Term-based history
-- Configurable history depth
-- Archived-plan inclusion
-- Per-objective history depth
+A lower-priority improvement does not compensate for a worse
+higher-priority result.
 
-## Non-goals of v1
+## Generation behavior
 
-- No claim of artificial intelligence
-- No final automatic teacher decision
-- No mandatory perfect arrangement
-- No student voting inside the engine
-- No medical/support rules yet
+The current UI can request many attempts and several displayed results.
+The engine:
+
+1.  Generates candidate assignments.
+2.  Evaluates historical conflicts.
+3.  Compares candidates by objective priority.
+4.  Deduplicates equivalent arrangements.
+5.  Returns the strongest distinct candidates.
+
+## Teacher control
+
+The teacher can:
+
+-   Enable/disable historical avoidance options
+-   Generate recommendations
+-   Inspect candidate quality/conflicts
+-   Select a candidate
+-   Manually modify assignments
+-   Save the final plan
+
+Generated output is a recommendation, not an automatic final record.
+
+## Explainability
+
+Violations are structured rather than stored as translated sentences.
+
+Examples:
+
+``` text
+previous-partner
+previous-desk
+previous-seat
+```
+
+`SeatingPlanManager.vue` converts these structures into localized
+messages.
+
+## History
+
+Only relevant saved seating-plan history should be considered.
+Archived/inactive plans are excluded by the current planning workflow
+when generating recommendations.
+
+## Relationship to room layout
+
+The engine reasons in terms of `deskNumber` and `seatNumber`. Visual
+concepts such as:
+
+-   Whiteboard
+-   Teacher position
+-   Classroom drawing
+-   Excel layout
+
+belong to the UI/export layer and do not alter the current engine
+objectives.
+
+## Non-goals for v1
+
+The current engine does not yet model:
+
+-   Front/back classroom zones
+-   Accessibility/support seats
+-   Pinned students
+-   Student preference voting
+-   Attendance
+-   Grades
+-   Social relationships beyond prior desk partners
+
+These are future features and should be added deliberately.
+
+## Related documents
+
+-   `SEATING_ENGINE.md` --- implementation/API notes
+-   `PLANNING_ENGINE_ROADMAP.md` --- future algorithm roadmap
+-   `DECISIONS.md` --- architecture/product decisions

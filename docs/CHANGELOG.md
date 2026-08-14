@@ -1,75 +1,76 @@
 # Changelog
 
-## Unreleased
+This changelog records major project milestones rather than every
+individual commit.
+
+## Unreleased --- August 2026 milestone
 
 ### Added
 
-- Class Workspace
-- Manage Class action
-- Class Overview tab
-- Embedded Enrollment Management
-- Embedded Seating Plan Management
-- Embedded Intelligent Seating Planner
-- Separate school and selected-class contexts
+-   Multi-school application context
+-   Available-school loading
+-   School selector
+-   Dedicated no-school state
+-   Responsive/auto-collapsing navigation behavior
+-   User profile improvements
+-   Room teacher-position configuration
+-   Room layout preview
+-   Classroom-style seating-plan visualization
+-   Physical desk grouping by seats-per-desk
+-   Whiteboard/front-of-room representation
+-   Teacher placement in seating-plan layout
+-   Excel (`.xlsx`) seating-plan export
+-   Print-oriented Excel layout and filename generation
 
 ### Changed
 
-- Simplified top-level navigation
-- Removed Enrollments from the sidebar
-- Removed Seating Plans from the sidebar
-- Enrollment and seating workflows now belong to the selected class
-- Classes remain highlighted while the workspace is open
-- Top-level navigation clears selected-class context
-- Documentation now describes the class-oriented hierarchy
+-   Browser language now initializes Japanese for Japanese browser
+    locale and English otherwise, unless a saved locale exists.
+-   School context and class context are reset more safely when
+    navigation context changes.
+-   Seating-plan presentation is more spatial and classroom-oriented.
+-   Documentation has been rewritten to reflect the current
+    architecture.
 
-### Architecture
+### Transitional
 
-```text
-Selected School
-└── Classes
-    └── Selected Class
-        ├── Overview
-        ├── Students
-        └── Seating Plans
-```
+-   Legacy `ClassroomPage.vue` remains temporarily.
+-   Dashboard/Home replacement is the next structural UI milestone.
 
-## v0.8.0 — Internationalization work
+## Previous milestone --- Class Workspace
 
 ### Added
 
-- Vue I18n 11
-- English and Japanese locale catalogs
-- Browser locale detection
-- Locale persistence
-- Settings language selector
-- Localized management pages
-- Localized Planning Engine interface
-- Localized quality labels and conflict explanations
+-   `ClassWorkspace.vue`
+-   Manage Class action
+-   Overview tab
+-   Embedded EnrollmentManager
+-   Embedded SeatingPlanManager
 
-### Remaining
+### Changed
 
-- Legacy Classroom page
-- Login/authentication localization
-- Shared UI-state review
-- Localized validation
-- Japanese terminology review
+-   Enrollment and seating-plan workflows moved under selected class
+    context.
+-   Classes remain the navigation context while the workspace is open.
 
-## v0.7.0 — Planning Engine v1
+## Previous milestone --- Internationalization
 
-- Historical seating analysis
-- Priority-based comparison
-- Three distinct recommendations
-- Teacher preview and selection
-- Structured conflict explanations
+-   Added Vue I18n
+-   Added English/Japanese catalogs
+-   Added language selector/settings
+-   Localized modern management workflows
+-   Added locale persistence
 
-## v0.6.0 — Student Management
+## Previous milestone --- Planning Engine v1
 
-- Student CRUD
-- Search
-- Archive workflow
-- Real-time updates
+-   Added framework-independent seating engine
+-   Added historical partner/desk/seat constraints
+-   Added multiple candidate generation
+-   Added structured violations and candidate selection
 
-## v0.5.0 — School domain foundation
+## Previous milestone --- School domain migration
 
-- School-scoped collections
-- Core academic and facility domains
+-   Introduced school-scoped Firestore structure
+-   Added buildings, rooms, courses, classes, enrollments, and seating
+    plans
+-   Migrated student data toward school ownership

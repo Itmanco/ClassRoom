@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx-js-style";
+import ExcelJS from "exceljs";
 
 function safeFileName(value) {
   return String(value || "seating-plan")
@@ -18,17 +18,71 @@ function studentLabel(student) {
   return student.name || "";
 }
 
+function printedAtLabel() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+
+  const month = String(
+    now.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    now.getDate(),
+  ).padStart(2, "0");
+
+  const hours = String(
+    now.getHours(),
+  ).padStart(2, "0");
+
+  const minutes = String(
+    now.getMinutes(),
+  ).padStart(2, "0");
+
+  return (
+    `${year}-${month}-${day} ` +
+    `${hours}:${minutes}`
+  );
+}
+
+function exportTimestamp() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+
+  const month = String(
+    now.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    now.getDate(),
+  ).padStart(2, "0");
+
+  const hours = String(
+    now.getHours(),
+  ).padStart(2, "0");
+
+  const minutes = String(
+    now.getMinutes(),
+  ).padStart(2, "0");
+
+  return (
+    `${year}-${month}-${day}_` +
+    `${hours}-${minutes}`
+  );
+}
+
 function cellStyle({
   bold = false,
   fontSize = 11,
   horizontal = "center",
-  vertical = "center",
+  vertical = "middle",
   border = true,
 } = {}) {
   const style = {
     font: {
       bold,
-      sz: fontSize,
+      size: fontSize,
     },
 
     alignment: {
@@ -42,7 +96,7 @@ function cellStyle({
     const edge = {
       style: "thin",
       color: {
-        rgb: "777777",
+        argb: "FF777777",
       },
     };
 
@@ -59,15 +113,37 @@ function cellStyle({
 
 function setCell(
   worksheet,
-  address,
+  row,
+  column,
   value,
   style = {},
 ) {
-  worksheet[address] = {
-    t: "s",
-    v: value == null ? "" : String(value),
-    s: style,
-  };
+  // Internal layout uses zero-based indexes.
+  // ExcelJS uses one-based indexes.
+  const cell = worksheet.getCell(
+    row + 1,
+    column + 1,
+  );
+
+  cell.value =
+    value == null
+      ? ""
+      : String(value);
+
+  if (style.font) {
+    cell.font = style.font;
+  }
+
+  if (style.alignment) {
+    cell.alignment =
+      style.alignment;
+  }
+
+  if (style.border) {
+    cell.border = style.border;
+  }
+
+  return cell;
 }
 
 function merge(
@@ -77,49 +153,41 @@ function merge(
   endRow,
   endCol,
 ) {
-  worksheet["!merges"].push({
-    s: {
-      r: startRow,
-      c: startCol,
-    },
-
-    e: {
-      r: endRow,
-      c: endCol,
-    },
-  });
+  worksheet.mergeCells(
+    startRow + 1,
+    startCol + 1,
+    endRow + 1,
+    endCol + 1,
+  );
 }
 
-function exportTimestamp() {
-  const now = new Date();
+function excelColumnLetter(
+  zeroBasedColumn,
+) {
+  let value =
+    zeroBasedColumn + 1;
 
-  const year =
-    now.getFullYear();
+  let result = "";
 
-  const month =
-    String(
-      now.getMonth() + 1,
-    ).padStart(2, "0");
+  while (value > 0) {
+    const remainder =
+      (value - 1) % 26;
 
-  const day =
-    String(
-      now.getDate(),
-    ).padStart(2, "0");
+    result =
+      String.fromCharCode(
+        65 + remainder,
+      ) + result;
 
-  const hours =
-    String(
-      now.getHours(),
-    ).padStart(2, "0");
+    value =
+      Math.floor(
+        (value - 1) / 26,
+      );
+  }
 
-  const minutes =
-    String(
-      now.getMinutes(),
-    ).padStart(2, "0");
-
-  return `${year}-${month}-${day}_${hours}-${minutes}`;
+  return result;
 }
 
-export function exportSeatingPlan({
+export async function exportSeatingPlan({
   plan,
   classroom,
   room,
@@ -139,18 +207,28 @@ export function exportSeatingPlan({
 
   const deskCount =
     Number(
-      plan.deskCount ||
-      room.deskCount,
+      room.deskCount ||
+      plan.deskCount,
     ) || 0;
 
   const seatsPerDesk =
     Number(
-      plan.seatsPerDesk ||
-      room.seatsPerDesk,
+      room.seatsPerDesk ||
+      plan.seatsPerDesk,
     ) || 1;
+
+  const desksPerRow =
+    Math.max(
+      1,
+      Number(
+        room.desksPerRow ||
+        plan.desksPerRow,
+      ) || 2,
+    );
 
   const teacherPosition =
     room.teacherPosition ||
+    plan.teacherPosition ||
     "front-left";
 
   const studentMap =
@@ -175,40 +253,102 @@ export function exportSeatingPlan({
       ),
     );
 
+  // --------------------------------------------------
+  // Workbook
+  // --------------------------------------------------
+
   const workbook =
-    XLSX.utils.book_new();
+    new ExcelJS.Workbook();
 
-  const worksheet = {
-    "!ref": "A1:A1",
-    "!merges": [],
-  };
+  workbook.creator =
+    "Classroom Manager";
 
-  /*
-   * Classroom layout:
-   *
-   * left desk block
-   * central aisle
-   * right desk block
-   */
+  workbook.created =
+    new Date();
 
-  const leftStartColumn = 1;
+  const worksheet =
+    workbook.addWorksheet(
+      "Seating Plan",
+      {
+        pageSetup: {
+          paperSize: 9,
+          orientation: "landscape",
 
-  const aisleWidth = 2;
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 1,
 
-  const rightStartColumn =
-    leftStartColumn +
-    seatsPerDesk +
-    aisleWidth;
+          horizontalCentered: true,
+          verticalCentered: true,
+
+          margins: {
+            left: 0.25,
+            right: 0.25,
+            top: 0.3,
+            bottom: 0.3,
+            header: 0.15,
+            footer: 0.15,
+          },
+        },
+      },
+    );
+
+  worksheet.views = [
+    {
+      showGridLines: false,
+    },
+  ];
+
+  // --------------------------------------------------
+  // Classroom geometry
+  // --------------------------------------------------
+
+  // Column 0 works as a small left margin.
+  const firstDeskColumn = 1;
+
+  // One narrow column between physical desks.
+  const deskGapColumns = 1;
+
+  const deskWidth =
+    seatsPerDesk;
+
+  const totalDeskColumns =
+    desksPerRow *
+    deskWidth;
+
+  const totalGapColumns =
+    Math.max(
+      0,
+      desksPerRow - 1,
+    ) * deskGapColumns;
 
   const totalColumns =
-    rightStartColumn +
-    seatsPerDesk;
+    firstDeskColumn +
+    totalDeskColumns +
+    totalGapColumns;
+
+  const deskStartColumn = (
+    deskIndex,
+  ) =>
+    firstDeskColumn +
+    deskIndex *
+      (
+        deskWidth +
+        deskGapColumns
+      );
 
   let row = 0;
 
   // --------------------------------------------------
-  // Title
+  // Class title
   // --------------------------------------------------
+
+  const classTitle =
+    classroom
+      ? `${classroom.code || ""} ${
+          classroom.name || ""
+        }`.trim()
+      : "Class";
 
   merge(
     worksheet,
@@ -220,11 +360,9 @@ export function exportSeatingPlan({
 
   setCell(
     worksheet,
-    XLSX.utils.encode_cell({
-      r: row,
-      c: 0,
-    }),
-    plan.title,
+    row,
+    0,
+    classTitle,
     cellStyle({
       bold: true,
       fontSize: 16,
@@ -232,23 +370,18 @@ export function exportSeatingPlan({
     }),
   );
 
+  // --------------------------------------------------
+  // Building / classroom
+  // --------------------------------------------------
+
   row += 1;
 
-  // --------------------------------------------------
-  // Class / room / plan date
-  // --------------------------------------------------
-
-  const classLabel =
-    classroom
-      ? `${classroom.code || ""} ${
-          classroom.name || ""
-        }`.trim()
-      : "";
-
-  const roomLabel =
-    `${room.code || room.id || ""} ${
-      room.name || ""
-    }`.trim();
+  const locationLabel = [
+    room.buildingId,
+    room.code || room.id,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   merge(
     worksheet,
@@ -260,34 +393,27 @@ export function exportSeatingPlan({
 
   setCell(
     worksheet,
-    XLSX.utils.encode_cell({
-      r: row,
-      c: 0,
-    }),
-    [
-      classLabel,
-      roomLabel,
-      plan.planDate,
-    ]
-      .filter(Boolean)
-      .join("  ·  "),
+    row,
+    0,
+    locationLabel,
     cellStyle({
-      fontSize: 10,
+      fontSize: 9,
       border: false,
     }),
   );
 
-  row += 2;
-
-    // --------------------------------------------------
+  // One blank row before classroom front.
+  row += 6;
+  const classroomFrontRow = row;
+  // --------------------------------------------------
   // Teacher + whiteboard
   // --------------------------------------------------
 
   const usableStartColumn =
-    leftStartColumn;
+    firstDeskColumn;
 
   const usableEndColumn =
-    totalColumns - 2;
+    totalColumns - 1;
 
   let boardStart =
     usableStartColumn;
@@ -304,10 +430,8 @@ export function exportSeatingPlan({
 
     setCell(
       worksheet,
-      XLSX.utils.encode_cell({
-        r: row,
-        c: teacherColumn,
-      }),
+      row,
+      teacherColumn,
       "Teacher",
       cellStyle({
         bold: true,
@@ -315,8 +439,10 @@ export function exportSeatingPlan({
       }),
     );
 
+    // One empty column between
+    // teacher and whiteboard.
     boardStart =
-      teacherColumn + 1;
+      teacherColumn + 2;
   }
 
   if (
@@ -328,10 +454,8 @@ export function exportSeatingPlan({
 
     setCell(
       worksheet,
-      XLSX.utils.encode_cell({
-        r: row,
-        c: teacherColumn,
-      }),
+      row,
+      teacherColumn,
       "Teacher",
       cellStyle({
         bold: true,
@@ -339,8 +463,10 @@ export function exportSeatingPlan({
       }),
     );
 
+    // One empty column between
+    // whiteboard and teacher.
     boardEnd =
-      teacherColumn - 1;
+      teacherColumn - 2;
   }
 
   if (
@@ -354,12 +480,15 @@ export function exportSeatingPlan({
       boardEnd,
     );
 
+    /*
+     * ExcelJS applies the border to
+     * the merged cell range correctly,
+     * including the right border.
+     */
     setCell(
       worksheet,
-      XLSX.utils.encode_cell({
-        r: row,
-        c: boardStart,
-      }),
+      row,
+      boardStart,
       "WHITEBOARD",
       cellStyle({
         bold: true,
@@ -368,71 +497,66 @@ export function exportSeatingPlan({
     );
   }
 
+  // Blank row after classroom front.
   row += 2;
 
   // --------------------------------------------------
   // Student desks
   // --------------------------------------------------
 
+  const firstDeskLayoutRow =
+    row;
+
   for (
-    let deskNumber = 1;
-    deskNumber <= deskCount;
-    deskNumber += 2
+    let firstDeskNumber = 1;
+    firstDeskNumber <= deskCount;
+    firstDeskNumber += desksPerRow
   ) {
-    const leftDesk =
-      deskNumber;
+    const desksInThisRow =
+      Math.min(
+        desksPerRow,
+        deskCount -
+          firstDeskNumber +
+          1,
+      );
 
-    const rightDesk =
-      deskNumber + 1 <= deskCount
-        ? deskNumber + 1
-        : null;
-
-    // ------------------------------
+    // --------------------------------
     // Desk labels
-    // ------------------------------
+    // --------------------------------
 
-    merge(
-      worksheet,
-      row,
-      leftStartColumn,
-      row,
-      leftStartColumn +
+    for (
+      let deskIndex = 0;
+      deskIndex <
+        desksInThisRow;
+      deskIndex += 1
+    ) {
+      const deskNumber =
+        firstDeskNumber +
+        deskIndex;
+
+      const startColumn =
+        deskStartColumn(
+          deskIndex,
+        );
+
+      const endColumn =
+        startColumn +
         seatsPerDesk -
-        1,
-    );
+        1;
 
-    setCell(
-      worksheet,
-      XLSX.utils.encode_cell({
-        r: row,
-        c: leftStartColumn,
-      }),
-      `Desk ${leftDesk}`,
-      cellStyle({
-        bold: false,
-        fontSize: 7,
-        border: false,
-      }),
-    );
-
-    if (rightDesk) {
       merge(
         worksheet,
         row,
-        rightStartColumn,
+        startColumn,
         row,
-        rightStartColumn +
-          seatsPerDesk -
-          1,
+        endColumn,
       );
 
       setCell(
         worksheet,
-        XLSX.utils.encode_cell({
-          r: row,
-          c: rightStartColumn,
-        }),
-        `Desk ${rightDesk}`,
+        row,
+        startColumn,
+        `Desk ${deskNumber}`,
         cellStyle({
           bold: false,
           fontSize: 7,
@@ -443,81 +567,58 @@ export function exportSeatingPlan({
 
     row += 1;
 
-    // ------------------------------
+    // --------------------------------
     // Student seats
-    // ------------------------------
+    // --------------------------------
 
     for (
-      let seatNumber = 1;
-      seatNumber <= seatsPerDesk;
-      seatNumber += 1
+      let deskIndex = 0;
+      deskIndex <
+        desksInThisRow;
+      deskIndex += 1
     ) {
-      const leftStudentId =
-        assignmentMap.get(
-          `${leftDesk}:${seatNumber}`,
+      const deskNumber =
+        firstDeskNumber +
+        deskIndex;
+
+      const startColumn =
+        deskStartColumn(
+          deskIndex,
         );
 
-      const leftStudent =
-        leftStudentId
-          ? studentMap.get(
-              String(
-                leftStudentId,
-              ),
-            )
-          : null;
-
-      setCell(
-        worksheet,
-        XLSX.utils.encode_cell({
-          r: row,
-          c:
-            leftStartColumn +
-            seatNumber -
-            1,
-        }),
-        studentLabel(
-          leftStudent,
-        ),
-        cellStyle({
-          bold:
-            Boolean(
-              leftStudent,
-            ),
-          fontSize: 11,
-        }),
-      );
-
-      if (rightDesk) {
-        const rightStudentId =
+      for (
+        let seatNumber = 1;
+        seatNumber <=
+          seatsPerDesk;
+        seatNumber += 1
+      ) {
+        const studentId =
           assignmentMap.get(
-            `${rightDesk}:${seatNumber}`,
+            `${deskNumber}:${seatNumber}`,
           );
 
-        const rightStudent =
-          rightStudentId
+        const student =
+          studentId
             ? studentMap.get(
                 String(
-                  rightStudentId,
+                  studentId,
                 ),
               )
             : null;
 
         setCell(
           worksheet,
-          XLSX.utils.encode_cell({
-            r: row,
-            c:
-              rightStartColumn +
-              seatNumber -
-              1,
-          }),
+          row,
+          startColumn +
+            seatNumber -
+            1,
           studentLabel(
-            rightStudent,
+            student,
           ),
           cellStyle({
             bold:
               Boolean(
-                rightStudent,
+                student,
               ),
             fontSize: 11,
           }),
@@ -525,8 +626,15 @@ export function exportSeatingPlan({
       }
     }
 
+    /*
+     * Leave one visual spacer row
+     * between physical desk rows.
+     */
     row += 2;
   }
+
+  const afterDeskLayoutRow =
+    row;
 
   // --------------------------------------------------
   // Teacher at back
@@ -541,17 +649,13 @@ export function exportSeatingPlan({
     const teacherColumn =
       teacherPosition ===
       "back-left"
-        ? leftStartColumn
-        : rightStartColumn +
-          seatsPerDesk -
-          1;
+        ? firstDeskColumn
+        : totalColumns - 1;
 
     setCell(
       worksheet,
-      XLSX.utils.encode_cell({
-        r: row,
-        c: teacherColumn,
-      }),
+      row,
+      teacherColumn,
       "Teacher",
       cellStyle({
         bold: true,
@@ -563,213 +667,278 @@ export function exportSeatingPlan({
   }
 
   // --------------------------------------------------
-  // Worksheet range
+  // Footer spacing
   // --------------------------------------------------
 
-  worksheet["!ref"] =
-    XLSX.utils.encode_range({
-      s: {
-        r: 0,
-        c: 0,
-      },
+  row += 1;
 
-      e: {
-        r: Math.max(
-          row,
-          1,
-        ),
-        c:
-          totalColumns -
-          1,
-      },
-    });
+  const footerStartRow =
+    row;
+
+  // --------------------------------------------------
+  // Seating plan details
+  // --------------------------------------------------
+
+  const academicYear =
+    classroom?.academicYear ||
+    "";
+
+  const semester =
+    classroom?.semester ||
+    "";
+
+  const planDetails = [
+    plan.title,
+
+    academicYear
+      ? `Academic year ${academicYear}`
+      : "",
+
+    semester
+      ? `Semester ${semester}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  merge(
+    worksheet,
+    row,
+    0,
+    row,
+    totalColumns - 1,
+  );
+
+  setCell(
+    worksheet,
+    row,
+    0,
+    planDetails,
+    cellStyle({
+      fontSize: 8,
+      horizontal: "right",
+      border: false,
+    }),
+  );
+
+  row += 1;
+
+  // --------------------------------------------------
+  // Printed time
+  // --------------------------------------------------
+
+  merge(
+    worksheet,
+    row,
+    0,
+    row,
+    totalColumns - 1,
+  );
+
+  setCell(
+    worksheet,
+    row,
+    0,
+    `Printed: ${printedAtLabel()}`,
+    cellStyle({
+      fontSize: 8,
+      horizontal: "right",
+      border: false,
+    }),
+  );
+
+  row += 1;
+
+  // --------------------------------------------------
+  // Room summary
+  // --------------------------------------------------
+
+  merge(
+    worksheet,
+    row,
+    0,
+    row,
+    totalColumns - 1,
+  );
+
+  setCell(
+    worksheet,
+    row,
+    0,
+    [
+      `${deskCount} desks`,
+      `${seatsPerDesk} seats/desk`,
+      `${desksPerRow} desks/row`,
+      `Capacity: ${
+        deskCount *
+        seatsPerDesk
+      }`,
+    ].join(" · "),
+    cellStyle({
+      fontSize: 8,
+      horizontal: "right",
+      border: false,
+    }),
+  );
+
+  row += 1;
+
+  const lastContentRow =
+    row - 1;
 
   // --------------------------------------------------
   // Column widths
   // --------------------------------------------------
 
-  worksheet["!cols"] =
-    Array.from(
-      {
-        length:
-          totalColumns,
-      },
-      (
-        _,
-        columnIndex,
-      ) => {
-        const aisleStart =
-          leftStartColumn +
-          seatsPerDesk;
+  for (
+    let columnIndex = 0;
+    columnIndex <
+      totalColumns;
+    columnIndex += 1
+  ) {
+    const column =
+      worksheet.getColumn(
+        columnIndex + 1,
+      );
 
-        const aisleEnd =
-          rightStartColumn;
+    if (
+      columnIndex === 0
+    ) {
+      column.width = 2;
 
-        const isAisle =
-          columnIndex >=
-            aisleStart &&
-          columnIndex <
-            aisleEnd;
+      continue;
+    }
 
-        if (
-          columnIndex === 0
-        ) {
-          return {
-            wch: 3,
-          };
-        }
+    const relativeColumn =
+      columnIndex -
+      firstDeskColumn;
 
-        return {
-          wch: isAisle
-            ? 4
-            : 18,
-        };
-      },
-    );
+    const blockWidth =
+      deskWidth +
+      deskGapColumns;
+
+    const positionInBlock =
+      relativeColumn %
+      blockWidth;
+
+    const isGap =
+      positionInBlock >=
+      deskWidth;
+
+    column.width =
+      isGap
+        ? 2.5
+        : 13;
+  }
 
   // --------------------------------------------------
   // Row heights
   // --------------------------------------------------
 
-  const rowCount =
-    Math.max(
-      row + 1,
-      1,
-    );
+  // Class title
+  worksheet.getRow(
+    1,
+  ).height = 24;
 
-  worksheet["!rows"] =
-    Array.from(
-      {
-        length:
-          rowCount,
-      },
-      () => ({
-        hpt: 30,
-      }),
-    );
+  // Building / room
+  worksheet.getRow(
+    2,
+  ).height = 18;
 
-  // Title
-  worksheet["!rows"][0] = {
-    hpt: 24,
-  };
-
-  // Class / room / date
-  if (
-    worksheet["!rows"][1]
-  ) {
-    worksheet["!rows"][1] = {
-      hpt: 20,
-    };
-  }
-
-  // Empty row before front
-  if (
-    worksheet["!rows"][2]
-  ) {
-    worksheet["!rows"][2] = {
-      hpt: 8,
-    };
-  }
+  // Blank row
+  worksheet.getRow(
+    3,
+  ).height = 8;
 
   // Teacher / whiteboard
-  if (
-    worksheet["!rows"][3]
-  ) {
-    worksheet["!rows"][3] = {
-      hpt: 24,
-    };
-  }
+  worksheet.getRow(
+    classroomFrontRow + 1,
+  ).height = 24;
 
-  // Empty row after whiteboard
-  if (
-    worksheet["!rows"][4]
-  ) {
-    worksheet["!rows"][4] = {
-      hpt: 8,
-    };
-  }
+  // Blank after whiteboard
+  worksheet.getRow(
+    classroomFrontRow + 2,
+  ).height = 8;
 
   /*
-   * From row 5 onward:
+   * Each physical classroom row:
    *
    * desk label
-   * student names
-   * empty spacer
+   * students
+   * spacer
    */
 
   for (
-    let deskRow = 5;
-    deskRow < rowCount;
+    let deskRow =
+      firstDeskLayoutRow;
+    deskRow <
+      afterDeskLayoutRow;
     deskRow += 3
   ) {
-    // Desk number
-    worksheet["!rows"][
-      deskRow
-    ] = {
-      hpt: 14,
-    };
+    worksheet.getRow(
+      deskRow + 1,
+    ).height = 14;
 
-    // Student cells
-    if (
-      worksheet["!rows"][
-        deskRow + 1
-      ]
-    ) {
-      worksheet["!rows"][
-        deskRow + 1
-      ] = {
-        hpt: 30,
-      };
-    }
+    worksheet.getRow(
+      deskRow + 2,
+    ).height = 30;
 
-    // Spacer
-    if (
-      worksheet["!rows"][
-        deskRow + 2
-      ]
-    ) {
-      worksheet["!rows"][
-        deskRow + 2
-      ] = {
-        hpt: 8,
-      };
-    }
+    worksheet.getRow(
+      deskRow + 3,
+    ).height = 8;
   }
 
-  // --------------------------------------------------
-  // Print / page setup
-  // --------------------------------------------------
+  // Footer
+  worksheet.getRow(
+    footerStartRow + 1,
+  ).height = 15;
 
-  worksheet["!pageSetup"] = {
-    orientation: "landscape",
-    paperSize: 9, // A4
-    fitToWidth: 1,
-    fitToHeight: 1,
-  };
+  worksheet.getRow(
+    footerStartRow + 2,
+  ).height = 14;
 
-  worksheet["!margins"] = {
-    left: 0.3,
-    right: 0.3,
-    top: 0.4,
-    bottom: 0.4,
-    header: 0.2,
-    footer: 0.2,
-  };
-
-  worksheet["!printOptions"] = {
-    horizontalCentered: true,
-    verticalCentered: true,
-  };
+  worksheet.getRow(
+    footerStartRow + 3,
+  ).height = 14;
 
   // --------------------------------------------------
-  // Add worksheet
+  // Print area
   // --------------------------------------------------
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    worksheet,
-    "Seating Plan",
-  );
+  const lastColumnLetter =
+    excelColumnLetter(
+      totalColumns - 1,
+    );
+
+  worksheet.pageSetup.printArea =
+    `A1:${lastColumnLetter}${
+      lastContentRow + 1
+    }`;
+
+  /*
+   * Reinforce print setup after
+   * all worksheet content exists.
+   */
+  worksheet.pageSetup.paperSize =
+    9;
+
+  worksheet.pageSetup.orientation =
+    "landscape";
+
+  worksheet.pageSetup.fitToPage =
+    true;
+
+  worksheet.pageSetup.fitToWidth =
+    1;
+
+  worksheet.pageSetup.fitToHeight =
+    1;
+
+  worksheet.pageSetup.horizontalCentered =
+    true;
+
+  worksheet.pageSetup.verticalCentered =
+    true;
 
   // --------------------------------------------------
   // Filename
@@ -785,8 +954,51 @@ export function exportSeatingPlan({
       classNumber,
     )}_${exportTimestamp()}.xlsx`;
 
-  XLSX.writeFile(
-    workbook,
-    fileName,
+  // --------------------------------------------------
+  // Browser download
+  // --------------------------------------------------
+
+  const buffer =
+    await workbook.xlsx.writeBuffer();
+
+  const blob =
+    new Blob(
+      [buffer],
+      {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob,
+    );
+
+  const anchor =
+    document.createElement(
+      "a",
+    );
+
+  anchor.href = url;
+
+  anchor.download =
+    fileName;
+
+  document.body.appendChild(
+    anchor,
+  );
+
+  anchor.click();
+
+  anchor.remove();
+
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(
+        url,
+      );
+    },
+    1000,
   );
 }

@@ -126,6 +126,22 @@
         </label>
 
         <label>
+          {{ $t("rooms.fields.desksPerRow") }}
+
+          <input
+            v-model.number="form.desksPerRow"
+            type="number"
+            min="1"
+            :max="form.deskCount || 1"
+            required
+          />
+
+          <small>
+            {{ $t("rooms.form.desksPerRowHelp") }}
+          </small>
+        </label>
+
+        <label>
           {{ $t("rooms.fields.seatsPerDesk") }}
 
           <input
@@ -364,6 +380,8 @@
                 $t("rooms.preview.summary", {
                   desks: previewingRoom.deskCount,
                   seats: previewingRoom.seatsPerDesk,
+                  perRow:
+                    previewingRoom.desksPerRow || 2,
                   capacity: previewingRoom.capacity,
                 })
               }}
@@ -406,7 +424,17 @@
             </div>
           </div>
 
-          <div class="preview-desk-grid">
+          <div
+            class="preview-desk-grid"
+            :style="{
+              gridTemplateColumns:
+                `repeat(${
+                  Number(
+                    previewingRoom.desksPerRow,
+                  ) || 2
+                }, minmax(0, 1fr))`,
+            }"
+          >
             <article
               v-for="deskNumber in Number(previewingRoom.deskCount)"
               :key="deskNumber"
@@ -483,6 +511,7 @@ function createEmptyForm() {
     roomNumber: 1,
     deskCount: 9,
     seatsPerDesk: 2,
+    desksPerRow: 2,
     active: true,
     teacherPosition: "front-left",
   };
@@ -659,6 +688,8 @@ export default {
         roomNumber: room.roomNumber,
         deskCount: room.deskCount,
         seatsPerDesk: room.seatsPerDesk,
+        desksPerRow:
+          room.desksPerRow || 2,
         active: room.active !== false,
         teacherPosition:
           room.teacherPosition || "front-left",
@@ -1071,7 +1102,7 @@ button:disabled {
   }
 
   .preview-desk-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
 

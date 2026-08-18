@@ -276,7 +276,8 @@
       "deskCount": "Number of desks",
       "seatsPerDesk": "Seats per desk",
       "capacity": "Capacity",
-      "teacherPosition": "Teacher position"
+      "teacherPosition": "Teacher position",
+      "desksPerRow": "Desks per row"
     },
     "teacherPositions": {
       "frontLeft": "Left of whiteboard",
@@ -289,7 +290,8 @@
       "editTitle": "Edit room",
       "noActiveBuilding": "Create an active building before adding rooms.",
       "suggestedCode": "Suggested: {code}",
-      "capacityHelp": "Calculated from desks × seats per desk."
+      "capacityHelp": "Calculated from desks × seats per desk.",
+      "desksPerRowHelp": "Number of desks placed across each physical classroom row."
     },
     "placeholders": {
       "building": "Select a building",
@@ -302,7 +304,7 @@
       "preview": "Preview"
     },
     "preview": {
-      "summary": "{desks} desks · {seats} seats per desk · capacity {capacity}",
+      "summary": "{desks} desks · {seats} seats per desk · {perRow} desks per row · capacity {capacity}",
       "whiteboard": "Whiteboard",
       "teacher": "Teacher",
       "desk": "Desk {number}"

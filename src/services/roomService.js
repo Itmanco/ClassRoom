@@ -61,6 +61,17 @@ function validateRoom(room) {
     room.seatsPerDesk,
     "Seats per desk",
   );
+  const desksPerRow =
+    requirePositiveInteger(
+      room.desksPerRow || 2,
+      "Desks per row",
+    );
+
+  if (desksPerRow > deskCount) {
+    throw new Error(
+      "Desks per row cannot exceed desk count.",
+    );
+  }
 
   if (!name) {
     throw new Error("A room name is required.");
@@ -88,6 +99,7 @@ function validateRoom(room) {
     roomNumber,
     deskCount,
     seatsPerDesk,
+    desksPerRow,
     capacity: deskCount * seatsPerDesk,
     teacherPosition,
     active: room.active !== false,

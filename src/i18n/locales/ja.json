@@ -276,7 +276,8 @@
       "deskCount": "机の数",
       "seatsPerDesk": "机ごとの座席数",
       "capacity": "定員",
-      "teacherPosition": "講師席の位置"
+      "teacherPosition": "講師席の位置",
+      "desksPerRow": "1列あたりの机数"
     },
     "teacherPositions": {
       "frontLeft": "ホワイトボードの左",
@@ -289,7 +290,8 @@
       "editTitle": "教室を編集",
       "noActiveBuilding": "教室を追加する前に、使用中の校舎を登録してください。",
       "suggestedCode": "推奨コード：{code}",
-      "capacityHelp": "机の数 × 机ごとの座席数で自動計算されます。"
+      "capacityHelp": "机の数 × 机ごとの座席数で自動計算されます。",
+      "desksPerRowHelp": "教室の横1列に配置する机の数です。"
     },
     "placeholders": {
       "building": "校舎を選択",
@@ -302,7 +304,7 @@
       "preview": "プレビュー"
     },
     "preview": {
-      "summary": "机 {desks}台・1台あたり {seats}席・定員 {capacity}名",
+      "summary": "机 {desks}台・1台あたり {seats}席・1列 {perRow}台・定員 {capacity}名",
       "whiteboard": "ホワイトボード",
       "teacher": "講師席",
       "desk": "机 {number}"

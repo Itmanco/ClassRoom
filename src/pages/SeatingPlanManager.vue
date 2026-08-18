@@ -364,7 +364,12 @@
             </div>
 
             <div class="student-zone">
-              <div class="desk-grid">
+              <div class="desk-grid"
+                :style="{
+                  gridTemplateColumns:
+                    `repeat(${desksPerRow}, minmax(0, 1fr))`,
+                }"
+              >
                 <article
                   v-for="desk in groupedDesks"
                   :key="desk.deskNumber"
@@ -754,6 +759,19 @@ export default {
       return (
         this.selectedRoom?.teacherPosition ||
         "front-right"
+      );
+    },
+
+    desksPerRow() {
+      if (!this.selectedRoom) {
+        return 2;
+      }
+
+      return Math.max(
+        1,
+        Number(
+          this.selectedRoom.desksPerRow,
+        ) || 2,
       );
     },
 
@@ -1221,6 +1239,14 @@ export default {
             seatsPerDesk: Number(
               this.selectedRoom.seatsPerDesk,
             ),
+            desksPerRow:
+              Number(
+                this.selectedRoom.desksPerRow,
+              ) || 2,
+
+            teacherPosition:
+              this.selectedRoom.teacherPosition ||
+              "front-left",
             assignments: this.seats
               .filter((seat) => seat.studentId)
               .map((seat) => ({
@@ -1315,7 +1341,7 @@ export default {
       this.selectedCandidateIndex = 0;
     },
 
-    exportPlan(plan) {
+    async exportPlan(plan) {
       const room =
         this.rooms.find(
           (item) =>
@@ -1323,7 +1349,7 @@ export default {
         ) || this.selectedRoom;
 
       try {
-        exportSeatingPlan({
+        await exportSeatingPlan({
           plan,
           classroom: this.selectedClass,
           room,
@@ -1747,15 +1773,13 @@ button {
     width: 100%;
     box-sizing: border-box;
   }
-}
 
-@media (max-width: 800px) {
   .classroom-layout {
     padding: 20px 14px;
   }
 
   .desk-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 22px;
   }
 

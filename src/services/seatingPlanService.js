@@ -78,10 +78,21 @@ function validatePlan(plan) {
   const roomId = requireText(plan.roomId, "Room ID");
   const deskCount = Number(plan.deskCount);
   const seatsPerDesk = Number(plan.seatsPerDesk);
+  const desksPerRow = Number(plan.desksPerRow || 2,);
+  const allowedTeacherPositions = [
+    "front-left",
+    "front-right",
+    "back-left",
+    "back-right",
+  ];
+  const teacherPosition = allowedTeacherPositions.includes(plan.teacherPosition,)
+      ? plan.teacherPosition : "front-left";
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(planDate)) throw new Error("Plan date must use YYYY-MM-DD.");
   if (!Number.isInteger(deskCount) || deskCount < 1) throw new Error("Desk count must be positive.");
   if (!Number.isInteger(seatsPerDesk) || seatsPerDesk < 1) throw new Error("Seats per desk must be positive.");
+  if (!Number.isInteger(desksPerRow) || desksPerRow < 1 || desksPerRow > deskCount) { throw new Error("Desks per row is invalid.",);
+}
 
   return {
     title,
@@ -89,6 +100,8 @@ function validatePlan(plan) {
     roomId,
     deskCount,
     seatsPerDesk,
+    desksPerRow,
+    teacherPosition,
     capacity: deskCount * seatsPerDesk,
     assignments: validateAssignments(plan.assignments, deskCount, seatsPerDesk),
     active: plan.active !== false,

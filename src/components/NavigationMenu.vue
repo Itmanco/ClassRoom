@@ -39,13 +39,20 @@
 
     <div class="navigation-links">
       <button
-        @click="$emit('change-page', 'classroom')"
-        :class="{ active: currentPage === 'classroom' }"
-        :title="collapsed ? $t('navigation.classroom') : ''"
+        @click="$emit('change-page', 'dashboard')"
+        :class="{ active: currentPage === 'dashboard' }"
+        :title="
+          collapsed
+            ? $t('navigation.dashboard')
+            : ''
+        "
       >
-        <span class="nav-icon">🏠</span>
+        <span class="nav-icon">
+          📊
+        </span>
+
         <span v-if="!collapsed">
-          {{ $t("navigation.classroom") }}
+          {{ $t("navigation.dashboard") }}
         </span>
       </button>
 

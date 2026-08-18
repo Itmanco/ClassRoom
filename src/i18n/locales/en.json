@@ -25,6 +25,7 @@
   },
   "navigation": {
       "classroom": "Classroom",
+      "dashboard": "Dashboard",
       "students": "Students",
       "courses": "Courses",
       "buildings": "Buildings",
@@ -606,6 +607,29 @@
         "tooManyRequests": "Too many attempts. Please wait and try again.",
         "changeError": "Unable to update your password: {error}"
       }
+    }
+  },
+
+  "dashboard": {
+    "eyebrow": "School overview",
+    "title": "Dashboard",
+    "description": "An overview of the currently selected school.",
+    "summary": {
+      "students": "Students",
+      "classes": "Classes",
+      "rooms": "Rooms",
+      "courses": "Courses"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "description": "Recent class and seating-plan activity will appear here.",
+      "empty": "No recent activity yet."
+    },
+    "messages": {
+      "title": "Messages",
+      "description": "School messages and announcements will appear here.",
+      "empty": "No messages yet.",
+      "loadError": "Unable to load dashboard information."
     }
   }
 }

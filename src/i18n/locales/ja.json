@@ -25,6 +25,7 @@
   },
   "navigation": {
       "classroom": "教室管理",
+      "dashboard": "ダッシュボード",
       "students": "生徒",
       "courses": "科目",
       "buildings": "校舎",
@@ -607,6 +608,29 @@
         "tooManyRequests": "試行回数が多すぎます。しばらく待ってから再度お試しください。",
         "changeError": "パスワードを更新できませんでした：{error}"
       }
+    }
+  },
+
+  "dashboard": {
+    "eyebrow": "学校概要",
+    "title": "ダッシュボード",
+    "description": "現在選択している学校の概要を表示します。",
+    "summary": {
+      "students": "生徒",
+      "classes": "クラス",
+      "rooms": "教室",
+      "courses": "コース"
+    },
+    "activity": {
+      "title": "最近のアクティビティ",
+      "description": "クラスや座席表の最近の活動をここに表示します。",
+      "empty": "最近のアクティビティはありません。"
+    },
+    "messages": {
+      "title": "メッセージ",
+      "description": "学校からのメッセージやお知らせをここに表示します。",
+      "empty": "現在メッセージはありません。",
+      "loadError": "ダッシュボード情報を読み込めませんでした。"
     }
   }
 }

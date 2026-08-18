@@ -39,8 +39,8 @@
     />
 
     <main>
-      <ClassroomPage
-        v-if="currentPage === 'classroom'"
+      <DashboardPage
+        v-if="currentPage === 'dashboard'"
         :school-id="session.activeSchool"
       />
 
@@ -113,7 +113,7 @@ import NavigationMenu from "./components/NavigationMenu.vue";
 import LoginModal from "./components/LoginModal.vue";
 
 import NoSchoolPage from "./pages/NoSchoolPage.vue";
-import ClassroomPage from "./pages/ClassroomPage.vue";
+import DashboardPage from "./pages/DashboardPage.vue";
 import StudentManager from "./pages/StudentManager.vue";
 import CourseManager from "./pages/CourseManager.vue";
 import BuildingManager from "./pages/BuildingManager.vue";
@@ -130,7 +130,7 @@ export default {
     NavigationMenu,
     LoginModal,
     NoSchoolPage,
-    ClassroomPage,
+    DashboardPage,
     StudentManager,
     CourseManager,
     BuildingManager,
@@ -144,7 +144,7 @@ export default {
   data() {
     return {
       loading: true,
-      currentPage: "classroom",
+      currentPage: "dashboard",
       selectedClassId: "",
 
       session: {
@@ -325,7 +325,7 @@ export default {
         await signOut(auth);
 
         this.selectedClassId = "";
-        this.currentPage = "classroom";
+        this.currentPage = "dashboard";
 
         this.session = {
           firebaseUser: null,

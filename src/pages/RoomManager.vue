@@ -715,6 +715,7 @@ export default {
         const roomId = await saveRoom(
           this.schoolId,
           this.form,
+          this.editingRoomId,
         );
 
         this.message = this.$t(

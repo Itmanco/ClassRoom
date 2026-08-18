@@ -258,7 +258,7 @@ export default {
 
     closeClassWorkspace() {
       this.selectedClassId = "";
-      this.currentPage = "classes";
+      this.currentPage = "dashboard";
     },
 
     async handleSchoolChange(schoolId) {
@@ -296,7 +296,7 @@ export default {
         };
 
         this.selectedClassId = "";
-        this.currentPage = "classes";
+        this.currentPage = "dashboard";
       } catch (error) {
         console.error(
           "Unable to change school:",

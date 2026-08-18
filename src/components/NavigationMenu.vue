@@ -121,6 +121,25 @@
           {{ $t("navigation.settings") }}
         </span>
       </button>
+
+      <button
+        v-if="isSystemAdmin"
+        @click="$emit('change-page', 'admin')"
+        :class="{ active: currentPage === 'admin' }"
+        :title="
+          collapsed
+            ? $t('navigation.admin')
+            : ''
+        "
+      >
+        <span class="nav-icon">
+          🛠️
+        </span>
+
+        <span v-if="!collapsed">
+          {{ $t("navigation.admin") }}
+        </span>
+      </button>
     </div>
 
     <UserProfileCard
@@ -171,6 +190,11 @@ export default {
     profile: {
       type: Object,
       default: null,
+    },
+
+    isSystemAdmin: {
+      type: Boolean,
+      default: false,
     },
   },
 

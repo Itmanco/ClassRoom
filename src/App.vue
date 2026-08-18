@@ -15,6 +15,7 @@
   <NoSchoolPage
     v-else-if="
       session.initialized &&
+      !isSystemAdmin &&
       session.schools.length === 0
     "
     :user="session.firebaseUser"
@@ -31,7 +32,8 @@
       :user="session.firebaseUser"
       :profile="session.profile"
       :schools="session.schools"
-      :active-school="session.activeSchool"
+      :active-school="session.activeSchool" 
+      :is-system-admin="isSystemAdmin" 
       @change-page="changePage"
       @change-school="handleSchoolChange"
       @open-profile="openProfile"
@@ -87,6 +89,13 @@
         :profile="session.profile"
         @profile-updated="handleProfileUpdated"
       />
+
+      <AdminPage
+        v-if="
+          currentPage === 'admin' &&
+          isSystemAdmin
+        "
+      />
     </main>
   </div>
 </template>
@@ -108,6 +117,9 @@ import {
 import {
   getUserSchools,
 } from "./services/schoolService";
+import {
+  getSchoolMembership,
+} from "./services/membershipService";
 
 import NavigationMenu from "./components/NavigationMenu.vue";
 import LoginModal from "./components/LoginModal.vue";
@@ -122,6 +134,7 @@ import ClassManager from "./pages/ClassManager.vue";
 import ClassWorkspace from "./pages/ClassWorkspace.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 import ProfilePage from "./pages/ProfilePage.vue";
+import AdminPage from "./pages/AdminPage.vue";
 
 export default {
   name: "App",
@@ -139,6 +152,7 @@ export default {
     ClassWorkspace,
     SettingsPage,
     ProfilePage,
+    AdminPage,
   },
 
   data() {
@@ -152,6 +166,7 @@ export default {
         profile: null,
         schools: [],
         activeSchool: null,
+        membership: null,
         initialized: false,
       },
     };
@@ -164,6 +179,14 @@ export default {
       }
 
       return this.currentPage;
+    },
+
+    isSystemAdmin() {
+      const result =
+        this.session.profile?.systemRole ===
+        "system-admin";
+
+      return result;
     },
   },
 
@@ -182,7 +205,6 @@ export default {
 
   methods: {
     async initializeSession(firebaseUser) {
-
       try {
         const profile =
           await getCurrentUserProfile(
@@ -213,6 +235,42 @@ export default {
               : null;
         }
 
+        let membership = null;
+
+        const isSystemAdmin =
+          profile?.systemRole ===
+          "system-admin";
+
+        if (
+          activeSchool &&
+          !isSystemAdmin
+        ) {
+          try {
+            membership =
+              await getSchoolMembership(
+                activeSchool,
+                firebaseUser.uid,
+              );
+          } catch (error) {
+            console.error(
+              "Unable to load school membership:",
+              error,
+            );
+          }
+        }
+
+        if (
+          !membership &&
+          !isSystemAdmin &&
+          profile?.role
+        ) {
+          membership = {
+            role: profile.role,
+            active: true,
+            legacyFallback: true,
+          };
+        }
+
         this.session.firebaseUser =
           firebaseUser;
 
@@ -224,6 +282,8 @@ export default {
 
         this.session.activeSchool =
           activeSchool;
+
+        this.session.membership = membership;
 
         this.session.initialized = true;
 
@@ -239,6 +299,7 @@ export default {
         this.session.profile = null;
         this.session.schools = [];
         this.session.activeSchool = null;
+        this.session.membership = null;
         this.session.initialized = true;
       }
     },
@@ -258,7 +319,7 @@ export default {
 
     closeClassWorkspace() {
       this.selectedClassId = "";
-      this.currentPage = "dashboard";
+      this.currentPage = "classes";
     },
 
     async handleSchoolChange(schoolId) {
@@ -271,7 +332,8 @@ export default {
 
       const schoolExists =
         this.session.schools.some(
-          (school) => school.id === schoolId,
+          (school) =>
+            school.id === schoolId,
         );
 
       if (!schoolExists) {
@@ -281,7 +343,29 @@ export default {
       const previousSchool =
         this.session.activeSchool;
 
+      const previousMembership =
+        this.session.membership;
+
       try {
+        const membership =
+          await getSchoolMembership(
+            schoolId,
+            this.session.firebaseUser.uid,
+          );
+
+        const resolvedMembership =
+          membership ||
+          (
+            this.session.profile?.role
+              ? {
+                  role:
+                    this.session.profile.role,
+                  active: true,
+                  legacyFallback: true,
+                }
+              : null
+          );
+
         await updateActiveSchool(
           this.session.firebaseUser.uid,
           schoolId,
@@ -289,6 +373,9 @@ export default {
 
         this.session.activeSchool =
           schoolId;
+
+        this.session.membership =
+          resolvedMembership;
 
         this.session.profile = {
           ...this.session.profile,
@@ -305,11 +392,14 @@ export default {
 
         this.session.activeSchool =
           previousSchool;
+
+        this.session.membership =
+          previousMembership;
       }
     },
 
     openProfile() {
-       this.selectedClassId = "";
+      this.selectedClassId = "";
       this.currentPage = "profile";
     },
 
@@ -332,6 +422,7 @@ export default {
           profile: null,
           schools: [],
           activeSchool: null,
+          membership: null,
           initialized: false,
         };
       } catch (error) {

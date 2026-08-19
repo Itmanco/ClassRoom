@@ -1,5 +1,9 @@
 <template>
-  <div class="admin-page">
+  <AdminSchoolManager
+    v-if="section === 'schools'"
+    @back="section = ''"
+  />
+  <div v-else class="admin-page">
     <header class="page-header">
       <p class="eyebrow">
         System Administration
@@ -25,7 +29,7 @@
 
         <button
           type="button"
-          @click="$emit('open-section', 'schools')"
+          @click="section = 'schools'"
         >
           Manage Schools
         </button>
@@ -51,12 +55,20 @@
 </template>
 
 <script>
+import AdminSchoolManager from "./AdminSchoolManager.vue";
+
 export default {
   name: "AdminPage",
 
-  emits: [
-    "open-section",
-  ],
+  components: {
+    AdminSchoolManager,
+  },
+
+  data() {
+    return {
+      section: "",
+    };
+  },
 };
 </script>
 

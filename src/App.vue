@@ -116,6 +116,7 @@ import {
 } from "./services/userService";
 import {
   getUserSchools,
+  watchSchools,
 } from "./services/schoolService";
 import {
   getSchoolMembership,
@@ -160,6 +161,7 @@ export default {
       loading: true,
       currentPage: "dashboard",
       selectedClassId: "",
+      schoolUnsubscribe: null,
 
       session: {
         firebaseUser: null,
@@ -190,6 +192,11 @@ export default {
     },
   },
 
+  beforeUnmount() {
+    if (this.schoolUnsubscribe) {
+      this.schoolUnsubscribe();
+    }
+  },
   mounted() {
     onAuthStateChanged(auth, async (user) => {
       this.loading = false;
@@ -271,20 +278,12 @@ export default {
           };
         }
 
-        this.session.firebaseUser =
-          firebaseUser;
-
-        this.session.profile =
-          profile;
-
-        this.session.schools =
-          schools;
-
-        this.session.activeSchool =
-          activeSchool;
-
+        this.session.firebaseUser = firebaseUser;
+        this.session.profile = profile;
+        this.session.schools = schools;
+        this.session.activeSchool = activeSchool;
         this.session.membership = membership;
-
+        this.startSchoolListener();
         this.session.initialized = true;
 
       } catch (error) {
@@ -300,7 +299,7 @@ export default {
         this.session.schools = [];
         this.session.activeSchool = null;
         this.session.membership = null;
-        this.session.initialized = true;
+        this.session.initialized = true;        
       }
     },
 
@@ -412,6 +411,11 @@ export default {
 
     async handleSignOut() {
       try {
+
+        if (this.schoolUnsubscribe) {
+          this.schoolUnsubscribe();
+          this.schoolUnsubscribe = null;
+        }
         await signOut(auth);
 
         this.selectedClassId = "";
@@ -428,6 +432,52 @@ export default {
       } catch (error) {
         console.error("Unable to sign out:", error);
       }
+    },
+
+    startSchoolListener() {
+      if (this.schoolUnsubscribe) {
+        this.schoolUnsubscribe();
+        this.schoolUnsubscribe = null;
+      }
+
+      if (!this.isSystemAdmin) {
+        return;
+      }
+
+      this.schoolUnsubscribe =
+        watchSchools(
+          (items) => {
+            const activeSchools =
+              items.filter(
+                (school) =>
+                  school.active !== false,
+              );
+
+            this.session.schools =
+              activeSchools;
+
+            const activeSchoolStillExists =
+              activeSchools.some(
+                (school) =>
+                  school.id ===
+                  this.session.activeSchool,
+              );
+
+            if (!activeSchoolStillExists) {
+              this.session.activeSchool =
+                activeSchools.length > 0
+                  ? activeSchools[0].id
+                  : null;
+            }
+          },
+
+          (error) => {
+            console.error(
+              "Unable to watch schools:",
+              error,
+            );
+          },
+        );
     },
   },
 };

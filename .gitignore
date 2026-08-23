@@ -28,3 +28,5 @@ pnpm-debug.log*
 deleteme.vue
 serviceAccountKey.json
 school-structure.json
+
+firestore-debug.log

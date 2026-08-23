@@ -3,51 +3,99 @@
     v-if="section === 'schools'"
     @back="section = ''"
   />
-  <div v-else class="admin-page">
+
+  <AdminUserManager
+    v-else-if="section === 'users'"
+    @back="section = ''"
+  />
+
+  <div
+    v-else
+    class="admin-page"
+  >
     <header class="page-header">
       <p class="eyebrow">
-        System Administration
+        {{ $t("admin.eyebrow") }}
       </p>
 
       <h1>
-        🛠️ Admin Console
+        🛠️ {{ $t("admin.title") }}
       </h1>
 
       <p>
-        Manage schools, users, and platform data.
+        {{ $t("admin.description") }}
       </p>
     </header>
 
     <section class="admin-grid">
       <article class="admin-card">
-        <h2>🏫 Schools</h2>
+        <h2>
+          🏫
+          {{ $t("admin.sections.schools.title") }}
+        </h2>
 
         <p>
-          Create, edit, archive, and eventually
-          permanently delete schools.
+          {{
+            $t(
+              "admin.sections.schools.description",
+            )
+          }}
         </p>
 
         <button
           type="button"
           @click="section = 'schools'"
         >
-          Manage Schools
+          {{
+            $t(
+              "admin.sections.schools.action",
+            )
+          }}
+        </button>
+      </article>
+
+      <article class="admin-card">
+        <h2>
+          👥
+          {{ $t("admin.sections.users.title") }}
+        </h2>
+
+        <p>
+          {{
+            $t(
+              "admin.sections.users.description",
+            )
+          }}
+        </p>
+
+        <button
+          type="button"
+          @click="section = 'users'"
+        >
+          {{
+            $t(
+              "admin.sections.users.action",
+            )
+          }}
         </button>
       </article>
 
       <article class="admin-card disabled">
-        <h2>👥 Users</h2>
+        <h2>
+          👩‍🏫
+          {{
+            $t(
+              "admin.sections.teachers.title",
+            )
+          }}
+        </h2>
 
         <p>
-          User and role management will be added next.
-        </p>
-      </article>
-
-      <article class="admin-card disabled">
-        <h2>👩‍🏫 Teachers</h2>
-
-        <p>
-          Teacher management will be added after users.
+          {{
+            $t(
+              "admin.sections.teachers.description",
+            )
+          }}
         </p>
       </article>
     </section>
@@ -56,12 +104,14 @@
 
 <script>
 import AdminSchoolManager from "./AdminSchoolManager.vue";
+import AdminUserManager from "./AdminUserManager.vue";
 
 export default {
   name: "AdminPage",
 
   components: {
     AdminSchoolManager,
+    AdminUserManager,
   },
 
   data() {
@@ -135,5 +185,11 @@ export default {
 
 .admin-card.disabled {
   opacity: 0.6;
+}
+
+@media (max-width: 700px) {
+  .admin-page {
+    padding: 20px 14px;
+  }
 }
 </style>

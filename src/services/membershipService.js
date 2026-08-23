@@ -1,15 +1,21 @@
 import { db } from "../firebase-init";
 
 import {
+  collection,
+  collectionGroup,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 const ALLOWED_ROLES = [
-  "admin",
+  "school-admin",
   "teacher",
   "student",
 ];
@@ -69,6 +75,30 @@ function getMembershipRef(
   );
 }
 
+function getMembershipsRef(
+  schoolId,
+) {
+  return collection(
+    db,
+    "schools",
+    requireText(
+      schoolId,
+      "School ID",
+    ),
+    "members",
+  );
+}
+
+function mapMembership(
+  documentSnapshot,
+) {
+  return {
+    id:
+      documentSnapshot.id,
+    ...documentSnapshot.data(),
+  };
+}
+
 export async function getSchoolMembership(
   schoolId,
   uid,
@@ -92,10 +122,44 @@ export async function getSchoolMembership(
     return null;
   }
 
-  return {
-    id: snapshot.id,
-    ...snapshot.data(),
-  };
+  return mapMembership(
+    snapshot,
+  );
+}
+
+export async function getSchoolMemberships(
+  schoolId,
+) {
+  const snapshot =
+    await getDocs(
+      getMembershipsRef(
+        schoolId,
+      ),
+    );
+
+  return snapshot.docs
+    .map(
+      mapMembership,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) =>
+        String(
+          first.userUid ||
+          first.id,
+        ).localeCompare(
+          String(
+            second.userUid ||
+            second.id,
+          ),
+          undefined,
+          {
+            sensitivity: "base",
+          },
+        ),
+    );
 }
 
 export async function createSchoolMembership(
@@ -106,10 +170,16 @@ export async function createSchoolMembership(
     active = true,
   },
 ) {
+  const normalizedUid =
+    requireText(
+      uid,
+      "User ID",
+    );
+
   const membershipRef =
     getMembershipRef(
       schoolId,
-      uid,
+      normalizedUid,
     );
 
   const existing =
@@ -127,13 +197,12 @@ export async function createSchoolMembership(
     membershipRef,
     {
       userUid:
-        requireText(
-          uid,
-          "User ID",
-        ),
+        normalizedUid,
 
       role:
-        normalizeRole(role),
+        normalizeRole(
+          role,
+        ),
 
       active:
         active !== false,
@@ -145,6 +214,8 @@ export async function createSchoolMembership(
         serverTimestamp(),
     },
   );
+
+  return membershipRef.id;
 }
 
 export async function updateSchoolMembership(
@@ -181,7 +252,9 @@ export async function updateSchoolMembership(
     role !== undefined
   ) {
     data.role =
-      normalizeRole(role);
+      normalizeRole(
+        role,
+      );
   }
 
   if (
@@ -197,12 +270,54 @@ export async function updateSchoolMembership(
   );
 }
 
-export function isAdminMembership(
+export async function setSchoolMembershipActive(
+  schoolId,
+  uid,
+  active,
+) {
+  await updateSchoolMembership(
+    schoolId,
+    uid,
+    {
+      active:
+        active !== false,
+    },
+  );
+}
+
+export async function removeSchoolMembership(
+  schoolId,
+  uid,
+) {
+  const membershipRef =
+    getMembershipRef(
+      schoolId,
+      uid,
+    );
+
+  const existing =
+    await getDoc(
+      membershipRef,
+    );
+
+  if (!existing.exists()) {
+    throw new Error(
+      "School membership does not exist.",
+    );
+  }
+
+  await deleteDoc(
+    membershipRef,
+  );
+}
+
+export function isSchoolAdminMembership(
   membership,
 ) {
   return (
     membership?.active !== false &&
-    membership?.role === "admin"
+    membership?.role ===
+      "school-admin"
   );
 }
 
@@ -211,7 +326,8 @@ export function isTeacherMembership(
 ) {
   return (
     membership?.active !== false &&
-    membership?.role === "teacher"
+    membership?.role ===
+      "teacher"
   );
 }
 
@@ -220,6 +336,57 @@ export function isStudentMembership(
 ) {
   return (
     membership?.active !== false &&
-    membership?.role === "student"
+    membership?.role ===
+      "student"
+  );
+}
+
+export async function getUserSchoolMemberships(
+  uid,
+) {
+  const normalizedUid =
+    requireText(
+      uid,
+      "User ID",
+    );
+
+  const membershipsQuery =
+    query(
+      collectionGroup(
+        db,
+        "members",
+      ),
+      where(
+        "userUid",
+        "==",
+        normalizedUid,
+      ),
+      where(
+        "active",
+        "==",
+        true,
+      ),
+    );
+
+  const snapshot =
+    await getDocs(
+      membershipsQuery,
+    );
+
+  return snapshot.docs.map(
+    (documentSnapshot) => {
+      const schoolRef =
+        documentSnapshot.ref.parent.parent;
+
+      return {
+        id:
+          documentSnapshot.id,
+
+        ...documentSnapshot.data(),
+
+        schoolId:
+          schoolRef?.id || "",
+      };
+    },
   );
 }

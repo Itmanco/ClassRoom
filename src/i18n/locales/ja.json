@@ -8,6 +8,7 @@
     "delete": "削除",
     "edit": "編集",
     "close": "閉じる",
+    "back": "戻る",
     "loading": "読み込み中...",
     "language": "言語",
     "active": "在籍中",
@@ -632,6 +633,152 @@
       "description": "学校からのメッセージやお知らせをここに表示します。",
       "empty": "現在メッセージはありません。",
       "loadError": "ダッシュボード情報を読み込めませんでした。"
+    }
+  },
+
+  "admin": {
+    "eyebrow": "システム管理",
+    "title": "管理コンソール",
+    "description": "学校、ユーザー、プラットフォームデータを管理します。",
+    "sections": {
+      "schools": {
+        "title": "学校",
+        "description": "学校の作成、編集、アーカイブ、管理を行います。",
+        "action": "学校を管理"
+      },
+      "users": {
+        "title": "ユーザー",
+        "description": "プラットフォームのユーザーとシステム権限を管理します。",
+        "action": "ユーザーを管理"
+      },
+      "teachers": {
+        "title": "教師",
+        "description": "ユーザー管理の後に教師管理を追加する予定です。"
+      }
+    }
+  },
+
+  "adminSchools": {
+    "eyebrow": "システム管理",
+    "title": "学校",
+    "description": "プラットフォームに登録されている学校を管理します。",
+    "form": {
+      "createTitle": "学校を作成",
+      "editTitle": "学校を編集"
+    },
+    "fields": {
+      "id": "学校ID",
+      "name": "学校名",
+      "country": "国",
+      "city": "市区町村",
+      "ownerUid": "所有者UID",
+      "ownerUidPlaceholder": "任意"
+    },
+    "actions": {
+      "create": "学校を作成",
+      "saveChanges": "変更を保存",
+      "reactivate": "再有効化"
+    },
+    "list": {
+      "title": "登録済み学校",
+      "count": "{count}校",
+      "loading": "学校を読み込んでいます...",
+      "owner": "所有者: {uid}"
+    },
+    "messages": {
+      "created": "学校 {school} を作成しました。",
+      "updated": "学校 {school} を更新しました。",
+      "archived": "学校 {school} をアーカイブしました。",
+      "reactivated": "学校 {school} を再有効化しました。",
+      "archiveConfirm": "{school} をアーカイブしますか？",
+      "reactivateConfirm": "{school} を再有効化しますか？",
+      "loadError": "学校を読み込めませんでした: {error}",
+      "saveError": "学校を保存できませんでした: {error}",
+      "archiveError": "学校をアーカイブできませんでした: {error}",
+      "reactivateError": "学校を再有効化できませんでした: {error}"
+    }
+  },
+
+  "adminUsers": {
+    "eyebrow": "システム管理",
+    "title": "ユーザー",
+    "description": "プラットフォームのユーザーとシステム権限を管理します。",
+    "fields": {
+      "systemRole": "システム権限"
+    },
+    "roles": {
+      "normalUser": "一般ユーザー",
+      "systemAdmin": "システム管理者"
+    },
+    "list": {
+      "title": "登録済みユーザー",
+      "count": "{count}人",
+      "loading": "ユーザーを読み込んでいます...",
+      "uid": "UID: {uid}",
+      "schools": "所属学校数: {count}"
+    },
+    "messages": {
+      "roleConfirm": "{user} の権限を「{role}」に変更しますか？",
+      "roleUpdated": "{user} のシステム権限を更新しました。",
+      "loadError": "ユーザーを読み込めませんでした: {error}",
+      "roleError": "システム権限を更新できませんでした: {error}",
+      "lastAdmin": "最後のシステム管理者の権限を解除することはできません。"
+    },
+    "memberships": {
+      "title": "学校アクセス",
+      "description": "学校ごとの役割とアクセス権を管理します。",
+      "manage": "アクセスを管理",
+      "hide": "アクセスを閉じる",
+      "loading": "学校アクセスを読み込んでいます...",
+      "empty": "このユーザーには学校への所属がありません。",
+      "addTitle": "学校アクセスを追加",
+      "school": "学校",
+      "selectSchool": "学校を選択",
+      "role": "役割",
+      "add": "アクセスを追加",
+      "deactivate": "無効化",
+      "reactivate": "再有効化",
+      "remove": "削除",
+      "roles": {
+        "schoolAdmin": "学校管理者",
+        "teacher": "教師",
+        "student": "生徒"
+      },
+      "added": "{user} を {school} に追加しました。",
+      "roleUpdated": "学校での役割を更新しました。",
+      "reactivated": "学校アクセスを再有効化しました。",
+      "deactivated": "学校アクセスを無効化しました。",
+      "removed": "学校アクセスを削除しました。",
+      "roleConfirm": "{school} での {user} の役割を変更しますか？",
+      "reactivateConfirm": "{user} の {school} へのアクセスを再有効化しますか？",
+      "deactivateConfirm": "{user} の {school} へのアクセスを無効化しますか？",
+      "removeConfirm": "{user} を {school} から削除しますか？",
+      "schoolLoadError": "学校を読み込めませんでした: {error}",
+      "loadError": "学校アクセスを読み込めませんでした: {error}",
+      "addError": "学校アクセスを追加できませんでした: {error}",
+      "roleError": "学校での役割を更新できませんでした: {error}",
+      "statusError": "学校アクセスを更新できませんでした: {error}",
+      "removeError": "学校アクセスを削除できませんでした: {error}"
+    },
+    "create": {
+      "title": "ユーザー作成",
+      "description": "Firebase Authentication アカウント、ユーザープロフィール、必要に応じて学校所属を作成します。",
+      "action": "ユーザーを作成",
+      "creating": "作成中...",
+      "created": "{user} を作成しました。",
+      "error": "ユーザーを作成できませんでした: {error}",
+      "fields": {
+        "email": "メールアドレス",
+        "password": "仮パスワード",
+        "firstName": "名",
+        "lastName": "姓",
+        "displayName": "表示名",
+        "displayNamePlaceholder": "任意",
+        "language": "言語",
+        "school": "初期所属学校",
+        "noSchool": "学校なし",
+        "schoolRole": "初期学校ロール"
+      }
     }
   }
 }

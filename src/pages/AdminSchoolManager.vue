@@ -3,15 +3,15 @@
     <header class="page-header">
       <div>
         <p class="eyebrow">
-          System Administration
+          {{ $t("adminSchools.eyebrow") }}
         </p>
 
         <h1>
-          🏫 Schools
+          🏫 {{ $t("adminSchools.title") }}
         </h1>
 
         <p>
-          Manage schools available in the platform.
+          {{ $t("adminSchools.description") }}
         </p>
       </div>
 
@@ -20,7 +20,7 @@
         class="secondary"
         @click="$emit('back')"
       >
-        ← Back
+        ← {{ $t("common.back") }}
       </button>
     </header>
 
@@ -42,8 +42,8 @@
       <h2>
         {{
           isEditing
-            ? "Edit School"
-            : "Create School"
+            ? $t("adminSchools.form.editTitle")
+            : $t("adminSchools.form.createTitle")
         }}
       </h2>
 
@@ -52,7 +52,7 @@
         @submit.prevent="submitSchool"
       >
         <label>
-          School ID
+          {{ $t("adminSchools.fields.id") }}
 
           <input
             v-model.trim="form.id"
@@ -63,7 +63,7 @@
         </label>
 
         <label>
-          School name
+          {{ $t("adminSchools.fields.name") }}
 
           <input
             v-model.trim="form.name"
@@ -73,7 +73,7 @@
         </label>
 
         <label>
-          Country
+          {{ $t("adminSchools.fields.country") }}
 
           <input
             v-model.trim="form.country"
@@ -83,7 +83,7 @@
         </label>
 
         <label>
-          City
+          {{ $t("adminSchools.fields.city") }}
 
           <input
             v-model.trim="form.city"
@@ -93,12 +93,16 @@
         </label>
 
         <label>
-          Owner UID
+          {{ $t("adminSchools.fields.ownerUid") }}
 
           <input
             v-model.trim="form.ownerUid"
             type="text"
-            placeholder="Optional"
+            :placeholder="
+              $t(
+                'adminSchools.fields.ownerUidPlaceholder',
+              )
+            "
           />
         </label>
 
@@ -108,7 +112,7 @@
             type="checkbox"
           />
 
-          Active
+          {{ $t("common.active") }}
         </label>
 
         <div class="actions">
@@ -119,10 +123,14 @@
           >
             {{
               saving
-                ? "Saving..."
+                ? $t("common.saving")
                 : isEditing
-                  ? "Save Changes"
-                  : "Create School"
+                  ? $t(
+                      "adminSchools.actions.saveChanges",
+                    )
+                  : $t(
+                      "adminSchools.actions.create",
+                    )
             }}
           </button>
 
@@ -133,7 +141,7 @@
             :disabled="saving"
             @click="resetForm"
           >
-            Cancel
+            {{ $t("common.cancel") }}
           </button>
         </div>
       </form>
@@ -143,17 +151,24 @@
       <div class="section-heading">
         <div>
           <h2>
-            Existing Schools
+            {{ $t("adminSchools.list.title") }}
           </h2>
 
           <p>
-            {{ schools.length }} school(s)
+            {{
+              $t(
+                "adminSchools.list.count",
+                {
+                  count: schools.length,
+                },
+              )
+            }}
           </p>
         </div>
       </div>
 
       <p v-if="loading">
-        Loading schools...
+        {{ $t("adminSchools.list.loading") }}
       </p>
 
       <div
@@ -184,8 +199,8 @@
               >
                 {{
                   school.active === false
-                    ? "Archived"
-                    : "Active"
+                    ? $t("common.archived")
+                    : $t("common.active")
                 }}
               </span>
             </div>
@@ -205,7 +220,14 @@
               v-if="school.ownerUid"
               class="technical-value"
             >
-              Owner: {{ school.ownerUid }}
+              {{
+                $t(
+                  "adminSchools.list.owner",
+                  {
+                    uid: school.ownerUid,
+                  },
+                )
+              }}
             </p>
           </div>
 
@@ -214,7 +236,7 @@
               type="button"
               @click="editSchool(school)"
             >
-              Edit
+              {{ $t("common.edit") }}
             </button>
 
             <button
@@ -227,7 +249,7 @@
                 )
               "
             >
-              Archive
+              {{ $t("common.archive") }}
             </button>
 
             <button
@@ -240,7 +262,11 @@
                 )
               "
             >
-              Reactivate
+              {{
+                $t(
+                  "adminSchools.actions.reactivate",
+                )
+              }}
             </button>
           </div>
         </article>
@@ -330,7 +356,13 @@ export default {
               false;
 
             this.errorMessage =
-              error.message;
+              this.$t(
+                "adminSchools.messages.loadError",
+                {
+                  error:
+                    error.message,
+                },
+              );
           },
         );
     },
@@ -385,6 +417,9 @@ export default {
       this.errorMessage = "";
 
       try {
+        const wasEditing =
+          this.isEditing;
+
         const schoolId =
           await saveSchool(
             this.form,
@@ -392,9 +427,14 @@ export default {
           );
 
         this.message =
-          this.isEditing
-            ? `School ${schoolId} updated.`
-            : `School ${schoolId} created.`;
+          this.$t(
+            wasEditing
+              ? "adminSchools.messages.updated"
+              : "adminSchools.messages.created",
+            {
+              school: schoolId,
+            },
+          );
 
         this.form =
           createEmptyForm();
@@ -403,7 +443,13 @@ export default {
           null;
       } catch (error) {
         this.errorMessage =
-          error.message;
+          this.$t(
+            "adminSchools.messages.saveError",
+            {
+              error:
+                error.message,
+            },
+          );
       } finally {
         this.saving = false;
       }
@@ -414,7 +460,13 @@ export default {
     ) {
       const confirmed =
         window.confirm(
-          `Archive ${school.name}?`,
+          this.$t(
+            "adminSchools.messages.archiveConfirm",
+            {
+              school:
+                school.name,
+            },
+          ),
         );
 
       if (!confirmed) {
@@ -430,10 +482,22 @@ export default {
         );
 
         this.message =
-          `School ${school.name} archived.`;
+          this.$t(
+            "adminSchools.messages.archived",
+            {
+              school:
+                school.name,
+            },
+          );
       } catch (error) {
         this.errorMessage =
-          error.message;
+          this.$t(
+            "adminSchools.messages.archiveError",
+            {
+              error:
+                error.message,
+            },
+          );
       }
     },
 
@@ -442,7 +506,13 @@ export default {
     ) {
       const confirmed =
         window.confirm(
-          `Reactivate ${school.name}?`,
+          this.$t(
+            "adminSchools.messages.reactivateConfirm",
+            {
+              school:
+                school.name,
+            },
+          ),
         );
 
       if (!confirmed) {
@@ -458,10 +528,22 @@ export default {
         );
 
         this.message =
-          `School ${school.name} reactivated.`;
+          this.$t(
+            "adminSchools.messages.reactivated",
+            {
+              school:
+                school.name,
+            },
+          );
       } catch (error) {
         this.errorMessage =
-          error.message;
+          this.$t(
+            "adminSchools.messages.reactivateError",
+            {
+              error:
+                error.message,
+            },
+          );
       }
     },
   },

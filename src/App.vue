@@ -120,6 +120,7 @@ import {
 } from "./services/schoolService";
 import {
   getSchoolMembership,
+  getUserSchoolMemberships,
 } from "./services/membershipService";
 
 import NavigationMenu from "./components/NavigationMenu.vue";
@@ -218,13 +219,57 @@ export default {
             firebaseUser.uid,
           );
 
-        const schoolIds =
-          profile?.schools || [];
+        const isSystemAdmin =
+          profile?.systemRole ===
+          "system-admin";
 
-        const schools =
-          await getUserSchools(
-            schoolIds,
+        let schools = [];
+        let memberships = [];
+
+        if (isSystemAdmin) {
+          schools =
+            await getUserSchools(
+              profile?.schools || [],
+            );
+        } else {
+          memberships =
+            await getUserSchoolMemberships(
+              firebaseUser.uid,
+            );
+            //TODO: remove
+            console.log(
+              "Firebase UID:",
+              firebaseUser.uid,
+            );
+
+            console.log(
+              "Memberships found:",
+              memberships,
+            );
+
+          const schoolIds =
+            memberships
+              .map(
+                (membership) =>
+                  membership.schoolId,
+              )
+              .filter(Boolean);
+              //TODO: remove
+              console.log(
+                "School IDs from memberships:",
+                schoolIds,
+              );
+
+          
+          schools =
+            await getUserSchools(
+              schoolIds,
+            );
+          console.log(
+            "Schools loaded:",
+            schools,
           );
+        }
 
         let activeSchool =
           profile?.activeSchool || null;
@@ -244,26 +289,16 @@ export default {
 
         let membership = null;
 
-        const isSystemAdmin =
-          profile?.systemRole ===
-          "system-admin";
-
         if (
           activeSchool &&
           !isSystemAdmin
         ) {
-          try {
-            membership =
-              await getSchoolMembership(
+          membership =
+            memberships.find(
+              (item) =>
+                item.schoolId ===
                 activeSchool,
-                firebaseUser.uid,
-              );
-          } catch (error) {
-            console.error(
-              "Unable to load school membership:",
-              error,
-            );
-          }
+            ) || null;
         }
 
         if (
@@ -352,18 +387,15 @@ export default {
             this.session.firebaseUser.uid,
           );
 
-        const resolvedMembership =
-          membership ||
+        if (
+          !this.isSystemAdmin &&
           (
-            this.session.profile?.role
-              ? {
-                  role:
-                    this.session.profile.role,
-                  active: true,
-                  legacyFallback: true,
-                }
-              : null
-          );
+            !membership ||
+            membership.active === false
+          )
+        ) {
+          return;
+        }
 
         await updateActiveSchool(
           this.session.firebaseUser.uid,
@@ -374,8 +406,9 @@ export default {
           schoolId;
 
         this.session.membership =
-          resolvedMembership;
-
+          this.isSystemAdmin
+            ? null
+            : membership;
         this.session.profile = {
           ...this.session.profile,
           activeSchool: schoolId,

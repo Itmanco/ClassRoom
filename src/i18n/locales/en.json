@@ -8,6 +8,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close",
+    "back": "Back",
     "loading": "Loading...",
     "language": "Language",
     "active": "Active",
@@ -631,6 +632,152 @@
       "description": "School messages and announcements will appear here.",
       "empty": "No messages yet.",
       "loadError": "Unable to load dashboard information."
+    }
+  },
+
+  "admin": {
+    "eyebrow": "System Administration",
+    "title": "Admin Console",
+    "description": "Manage schools, users, and platform data.",
+    "sections": {
+      "schools": {
+        "title": "Schools",
+        "description": "Create, edit, archive, and manage schools.",
+        "action": "Manage Schools"
+      },
+      "users": {
+        "title": "Users",
+        "description": "Manage platform users and global system roles.",
+        "action": "Manage Users"
+      },
+      "teachers": {
+        "title": "Teachers",
+        "description": "Teacher management will be added after users."
+      }
+    }
+  },
+
+  "adminSchools": {
+    "eyebrow": "System Administration",
+    "title": "Schools",
+    "description": "Manage schools available on the platform.",
+    "form": {
+      "createTitle": "Create School",
+      "editTitle": "Edit School"
+    },
+    "fields": {
+      "id": "School ID",
+      "name": "School name",
+      "country": "Country",
+      "city": "City",
+      "ownerUid": "Owner UID",
+      "ownerUidPlaceholder": "Optional"
+    },
+    "actions": {
+      "create": "Create School",
+      "saveChanges": "Save Changes",
+      "reactivate": "Reactivate"
+    },
+    "list": {
+      "title": "Existing Schools",
+      "count": "{count} school(s)",
+      "loading": "Loading schools...",
+      "owner": "Owner: {uid}"
+    },
+    "messages": {
+      "created": "School {school} created.",
+      "updated": "School {school} updated.",
+      "archived": "School {school} archived.",
+      "reactivated": "School {school} reactivated.",
+      "archiveConfirm": "Archive {school}?",
+      "reactivateConfirm": "Reactivate {school}?",
+      "loadError": "Unable to load schools: {error}",
+      "saveError": "Unable to save school: {error}",
+      "archiveError": "Unable to archive school: {error}",
+      "reactivateError": "Unable to reactivate school: {error}"
+    }
+  },
+
+  "adminUsers": {
+    "eyebrow": "System Administration",
+    "title": "Users",
+    "description": "Manage platform users and global system roles.",
+    "fields": {
+      "systemRole": "System role"
+    },
+    "roles": {
+      "normalUser": "Normal user",
+      "systemAdmin": "System Admin"
+    },
+    "list": {
+      "title": "Existing Users",
+      "count": "{count} user(s)",
+      "loading": "Loading users...",
+      "uid": "UID: {uid}",
+      "schools": "Schools: {count}"
+    },
+    "messages": {
+      "roleConfirm": "Change {user} to {role}?",
+      "roleUpdated": "System role updated for {user}.",
+      "loadError": "Unable to load users: {error}",
+      "roleError": "Unable to update system role: {error}",
+      "lastAdmin": "The last System Admin cannot be demoted."
+    },
+    "memberships": {
+      "title": "School Access",
+      "description": "Manage this user's role and access for each school.",
+      "manage": "Manage Access",
+      "hide": "Hide Access",
+      "loading": "Loading school access...",
+      "empty": "This user has no school memberships.",
+      "addTitle": "Add school access",
+      "school": "School",
+      "selectSchool": "Select a school",
+      "role": "Role",
+      "add": "Add Access",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "remove": "Remove",
+      "roles": {
+        "schoolAdmin": "School Admin",
+        "teacher": "Teacher",
+        "student": "Student"
+      },
+      "added": "{user} was added to {school}.",
+      "roleUpdated": "School role updated.",
+      "reactivated": "School access reactivated.",
+      "deactivated": "School access deactivated.",
+      "removed": "School access removed.",
+      "roleConfirm": "Change {user}'s role for {school}?",
+      "reactivateConfirm": "Reactivate {user}'s access to {school}?",
+      "deactivateConfirm": "Deactivate {user}'s access to {school}?",
+      "removeConfirm": "Remove {user} from {school}?",
+      "schoolLoadError": "Unable to load schools: {error}",
+      "loadError": "Unable to load school access: {error}",
+      "addError": "Unable to add school access: {error}",
+      "roleError": "Unable to update school role: {error}",
+      "statusError": "Unable to update school access: {error}",
+      "removeError": "Unable to remove school access: {error}"
+    },
+    "create": {
+      "title": "Create User",
+      "description": "Create a Firebase Authentication account, user profile, and optional school membership.",
+      "action": "Create User",
+      "creating": "Creating...",
+      "created": "{user} was created successfully.",
+      "error": "Unable to create user: {error}",
+      "fields": {
+        "email": "Email",
+        "password": "Temporary password",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "Optional",
+        "language": "Language",
+        "school": "Initial school",
+        "noSchool": "No school",
+        "schoolRole": "Initial school role"
+      }
     }
   }
 }

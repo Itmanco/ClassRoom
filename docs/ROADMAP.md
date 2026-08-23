@@ -52,7 +52,7 @@ decisions.
 
 ### Multi-school UI
 
--   [x] Profile school IDs
+-   [x] Membership-based available schools
 -   [x] Available-school loading
 -   [x] Active-school selector
 -   [x] School-change reset behavior
@@ -99,10 +99,10 @@ decisions.
 
 ## Authorization
 
--   [ ] Define school membership model
--   [ ] Define role capabilities
--   [ ] Enforce membership in Firestore rules
--   [ ] Restrict administrative actions
+-   [x] Define school membership model
+-   [ ] Complete role capability matrix and UI enforcement
+-   [ ] Complete membership-aware Firestore rule enforcement
+-   [x] Add system-admin user/school administration foundation
 -   [ ] Test cross-school access
 
 ## Internationalization hardening
@@ -146,3 +146,12 @@ A reasonable v1.0 should include:
 -   Repeatable deployment
 -   Automated coverage for critical workflows
 -   Current public documentation
+
+### Admin / identity foundation completed
+
+-   [x] Separate system and school roles
+-   [x] Add `schools/{schoolId}/members/{uid}`
+-   [x] Add Admin Users and Admin Schools management
+-   [x] Add callable `createUser` function
+-   [x] Add isolated Auth + Firestore + Functions emulator workflow
+-   [ ] Deploy callable Functions when Blaze is intentionally enabled

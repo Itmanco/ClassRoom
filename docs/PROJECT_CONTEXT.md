@@ -108,3 +108,14 @@ intentionally accessed from the Class Workspace.
 -   Keep translation concerns out of the engine.
 -   Let teachers make final seating decisions.
 -   Make changes in small, reviewable commits.
+
+
+## 2026-08-23 admin/auth update
+
+- Firebase Auth UID is the canonical user ID.
+- `users/{uid}.systemRole` represents system-wide privilege (`system-admin` or null).
+- `schools/{schoolId}/members/{uid}` represents school access and role (`school-admin`, `teacher`, `student`) plus `active`.
+- Admin user creation is implemented through callable Cloud Function `createUser`.
+- Local development uses Authentication, Firestore, and Functions emulators together to avoid modifying production data.
+- Production Functions deployment requires Blaze and must follow `FIREBASE_BILLING_RUNBOOK.md`.
+- Next authorization work: complete role capability enforcement and account deactivate/reactivate behavior.

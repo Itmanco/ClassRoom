@@ -25,6 +25,8 @@ Manager.
   `TODO.md`                           Current actionable backlog
 
   `CHANGELOG.md`                      Completed milestone history
+
+  `FIREBASE_BILLING_RUNBOOK.md`       Safe Cloud Functions billing, deployment, monitoring, and shutdown procedure
   -----------------------------------------------------------------------
 
 ## Seating and planning

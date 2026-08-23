@@ -43,6 +43,10 @@ Print-ready Excel Export
 The application currently includes:
 
 - Firebase Authentication
+- System-admin and school membership roles
+- Admin user and school management
+- Callable Cloud Function for privileged user creation
+- Local Firebase Auth / Firestore / Functions emulator workflow
 - Persistent authenticated sessions
 - Firestore-backed user profiles
 - Multi-school user context
@@ -467,6 +471,7 @@ The primary Firestore structure is:
 users/{uid}
 
 schools/{schoolId}
+├── members/{uid}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -960,3 +965,9 @@ Key areas demonstrated by the project include:
 - Incremental migration of legacy application architecture
 
 Classroom Manager continues to evolve toward a practical school/class management and classroom-planning application.
+
+## Admin identity and local Firebase development
+
+Firebase Authentication UID is the canonical identity used by `users/{uid}` and school membership documents. System-wide privilege is stored as `users/{uid}.systemRole`; school-specific access is stored under `schools/{schoolId}/members/{uid}`. Privileged account creation is handled by the callable `createUser` Cloud Function.
+
+For development, Authentication, Firestore, and Functions run together in the Firebase Emulator Suite so user/role changes do not modify production data. Production Cloud Functions deployment requires Blaze; see `docs/FIREBASE_BILLING_RUNBOOK.md` before enabling billing.

@@ -31,10 +31,10 @@ in `CHANGELOG.md`; long-term direction belongs in `ROADMAP.md`.
 
 ## Multi-school/security
 
--   [ ] Formalize membership documents or equivalent authorization model
--   [ ] Define role permissions
+-   [x] Formalize membership documents (`schools/{schoolId}/members/{uid}`)
+-   [ ] Finish role permissions for system-admin / school-admin / teacher / student
 -   [ ] Update Firestore security rules
--   [ ] Test user with one school
+-   [x] Test user with one school using local emulators
 -   [ ] Test user with multiple schools
 -   [ ] Test user with no schools
 -   [ ] Test invalid/removed active school
@@ -67,3 +67,14 @@ in `CHANGELOG.md`; long-term direction belongs in `ROADMAP.md`.
 -   [ ] Review Node LTS/toolchain compatibility
 -   [ ] Audit dependencies without forced upgrades
 -   [ ] Evaluate Vite migration separately
+
+## Admin / Firebase Functions
+
+-   [x] Configure Firebase Functions codebase
+-   [x] Implement callable `createUser`
+-   [x] Configure Authentication, Firestore, and Functions emulators
+-   [x] Create and log in with a locally created school admin
+-   [ ] Add account deactivate/reactivate operation
+-   [ ] Complete role-aware UI permissions
+-   [ ] Review production Firestore rules before Functions deployment
+-   [ ] Enable Blaze only when production Cloud Functions are required; follow `FIREBASE_BILLING_RUNBOOK.md`

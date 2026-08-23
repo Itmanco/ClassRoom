@@ -43,6 +43,10 @@ Classroom Manager では現在、学校管理から座席表出力までの主�
 現在実装されている主な機能：
 
 - Firebase Authentication
+- システム管理者と学校メンバーシップのロール管理
+- 管理画面からのユーザー・学校アクセス管理
+- 特権ユーザー作成用 callable Cloud Function
+- Firebase Authentication / Firestore / Functions のローカル Emulator 開発環境
 - ログイン状態の保持
 - Firestore によるユーザープロフィール管理
 - 複数学校への対応
@@ -163,25 +167,20 @@ Firebase のパスワードを変更しても、すでに認証済みのクラ�
 
 ## 複数学校への対応
 
-ユーザープロフィールには、所属学校と現在使用している学校を保存できます。
+Firebase Authentication の UID をユーザーの正式な識別子として使用します。システム全体の権限と学校ごとの権限は分離しています。
 
-例：
-
-```js
-{
-  activeSchool: "school_japan",
-  schools: ["school_japan"],
-  role: "admin"
-}
+```text
+Firebase Authentication uid
+├── users/{uid}
+│   └── systemRole: system-admin | null
+└── schools/{schoolId}/members/{uid}
+    ├── role: school-admin | teacher | student
+    └── active
 ```
 
-ログインユーザーが利用可能な学校を読み込み、使用する学校を選択できます。
+`activeSchool` は現在使用している学校を表します。利用可能な学校は学校メンバーシップから解決し、学校を変更した場合は学校・クラス固有の UI 状態をリセットしてデータの混在を防ぎます。
 
-学校を変更した場合、学校・クラス固有の UI 状態をリセットし、異なる学校のデータが混在しないようにしています。
-
-現在の学校所属管理はプロフィールベースです。
-
-より強力なサーバー側の権限・ロール制御は今後の課題です。
+旧 `users.schools[]` / `users.role` は移行互換のため残る場合がありますが、学校アクセスの今後の基準はメンバーシップドキュメントです。
 
 ---
 
@@ -469,6 +468,7 @@ docs/INTERNATIONALIZATION.md
 users/{uid}
 
 schools/{schoolId}
+├── members/{uid}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -559,6 +559,8 @@ docs/ARCHITECTURE.md
 
 - Firebase Authentication
 - Cloud Firestore
+- Cloud Functions for Firebase（特権ユーザー作成）
+- Firebase Emulator Suite（Auth / Firestore / Functions）
 - ローカル管理・移行スクリプト用 Firebase Admin SDK
 
 ## 座席表 Excel 出力
@@ -688,6 +690,14 @@ npm install
 ```bash
 npm run serve
 ```
+
+特権操作を安全にテストする場合は、別ターミナルでローカル Emulator を起動します。
+
+```bash
+firebase emulators:start --only functions,auth,firestore
+```
+
+開発時の Vue アプリは Authentication、Firestore、Functions のローカル Emulator に接続し、本番データを変更せずにユーザー作成・ロール・学校アクセスを検証します。
 
 ESLint：
 
@@ -824,7 +834,7 @@ npm run deploy
 
 - 旧 `ClassroomPage.vue` と関連コンポーネント / service
 - Dashboard/Home への置き換え
-- より強力なサーバー側権限制御
+- ロール別 UI / Firestore 権限の最終調整
 - 自動テスト
 - 本番向けログ / エラーハンドリングの見直し
 - 一部の service / ブラウザ検証メッセージの国際化
@@ -926,6 +936,7 @@ docs/DOCUMENTATION_INDEX.md
 - `ROADMAP.md`
 - `TODO.md`
 - `CHANGELOG.md`
+- `FIREBASE_BILLING_RUNBOOK.md`
 - `PROJECT_CONTEXT.md`
 
 README は GitHub 上でプロジェクト全体を理解するための概要です。
@@ -954,3 +965,9 @@ README は GitHub 上でプロジェクト全体を理解するための概要�
 - 旧アーキテクチャからの段階的移行
 
 Classroom Manager は、実用的な学校・クラス管理と教室プランニングのためのアプリケーションを目指して、継続的に開発しています。
+
+## 🔐 管理ユーザー作成と Firebase Emulator
+
+システム管理者による新規ユーザー作成は、Vue クライアントから Firebase Admin SDK を直接使用せず、callable Cloud Function `createUser` を経由します。Function は Firebase Authentication アカウントを作成し、その UID を `users/{uid}` と初期学校メンバーシップに共通して使用します。
+
+開発中は Authentication / Firestore / Functions Emulator を同時に使用し、本番 Firebase データを変更しない構成を標準とします。Cloud Functions の本番デプロイには Blaze プランが必要なため、有効化・監視・停止・Spark への戻し方は `docs/FIREBASE_BILLING_RUNBOOK.md` にまとめています。

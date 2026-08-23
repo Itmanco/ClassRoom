@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-23 — Admin identity, memberships, and local Firebase emulators
+
+- Added system-level `system-admin` administration.
+- Added school membership documents at `schools/{schoolId}/members/{uid}` with `school-admin`, `teacher`, and `student` roles.
+- Added Admin School and Admin User management interfaces with English/Japanese translations.
+- Added callable `createUser` Cloud Function using Firebase Admin SDK.
+- Standardized Firebase Authentication UID as the canonical identifier for Auth, user profiles, and memberships.
+- Added local Authentication, Firestore, and Functions emulator workflow for isolated privileged development.
+- Added Firebase billing runbook; production Functions deployment remains intentionally separate from local development.
+
+
 This changelog records major project milestones rather than every
 individual commit.
 

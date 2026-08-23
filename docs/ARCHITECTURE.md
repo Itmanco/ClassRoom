@@ -3,8 +3,7 @@
 ## Overview
 
 Classroom Manager uses a Vue 3 frontend, Firebase Authentication, Cloud
-Firestore, a service layer, a framework-independent seating engine, and
-a client-side Excel export service.
+Firestore, a service layer, Firebase callable Cloud Functions for privileged operations, a framework-independent seating engine, and a client-side Excel export service.
 
 ``` text
 App.vue
@@ -80,8 +79,18 @@ must be cleared on school change.
 If an authenticated user has no assigned school, `NoSchoolPage.vue` is
 shown rather than rendering managers with a null school ID.
 
-Current membership is profile-driven. Strong Firestore membership/role
-enforcement is future work.
+School access is membership-driven. Firebase Authentication UID is the canonical user identifier. System-level authorization is stored on `users/{uid}.systemRole`, while school-level authorization is stored in `schools/{schoolId}/members/{uid}`.
+
+``` text
+Firebase Authentication uid
+├── users/{uid}
+│   └── systemRole: system-admin | null
+└── schools/{schoolId}/members/{uid}
+    ├── role: school-admin | teacher | student
+    └── active
+```
+
+Legacy `users.schools[]` / `users.role` fields may still exist during migration, but membership documents are the target source of truth for school access.
 
 ## Class context
 
@@ -282,3 +291,21 @@ Engineering
 ├── Lazy loading
 └── Possible Vue CLI → Vite migration
 ```
+
+
+## Privileged user administration
+
+System administrators can manage users and school access from the Admin interface. Creating an Authentication account is a privileged server operation and is implemented through the callable `createUser` Cloud Function. The function creates the Firebase Auth account first, then reuses that UID for `users/{uid}` and any initial `schools/{schoolId}/members/{uid}` document.
+
+## Local Firebase emulator workflow
+
+Privileged operations are developed and tested against the Firebase Authentication, Firestore, and Functions emulators before production deployment.
+
+``` text
+Vue development app
+├── Authentication Emulator :9099
+├── Firestore Emulator      :8080
+└── Functions Emulator      :5001
+```
+
+This isolates development data from the production Firebase project. Production Cloud Functions deployment requires Blaze; billing activation and shutdown procedures are documented in `FIREBASE_BILLING_RUNBOOK.md`.

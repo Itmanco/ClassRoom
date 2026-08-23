@@ -9,6 +9,7 @@ identity/profile data is stored under `users/{uid}`.
 users/{uid}
 
 schools/{schoolId}
+├── members/{uid}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -35,11 +36,9 @@ Observed/current profile shape includes fields such as:
 {
   displayName: "Motta Jaime",
   email: "user@example.com",
-  role: "admin",
   activeSchool: "school_japan",
-  schools: ["school_japan"],
+  systemRole: "system-admin", // or null
   language: "en",
-  photoURL: "",
   firstName: "Jaime",
   lastName: "Motta",
   createdAt: Timestamp,
@@ -49,13 +48,33 @@ Observed/current profile shape includes fields such as:
 
 Notes:
 
--   `uid` comes from Firebase Authentication.
--   `schools` contains school IDs available to the user.
--   `activeSchool` identifies the current working school.
--   `role` exists in the profile, but the complete authorization model
-    is not yet finished.
--   `language` may coexist with locally persisted UI language;
-    application behavior is defined by current source code.
+- `uid` comes from Firebase Authentication and is the canonical user identifier.
+- `systemRole` is for application-wide privileges; currently `system-admin` or `null`.
+- `activeSchool` identifies the current working school and must resolve to an available school.
+- School authorization is not derived from the system role. It is represented by membership documents.
+- Legacy `schools[]` and `role` profile fields can remain temporarily during migration but are not the target authorization model.
+
+## School memberships
+
+Path:
+
+``` text
+schools/{schoolId}/members/{uid}
+```
+
+Current membership shape:
+
+``` js
+{
+  userUid: "firebase-auth-uid",
+  role: "school-admin", // school-admin | teacher | student
+  active: true,
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+The document ID and `userUid` must correspond to the same Firebase Authentication UID. Memberships are the target source of truth for school access and school-specific roles.
 
 ## Schools
 
@@ -266,7 +285,7 @@ This is particularly important for:
 
 ## Security status
 
-Authentication is implemented, but profile membership and roles should
+Authentication and membership documents are implemented. Firestore authorization rules should
 not be treated as complete authorization by themselves.
 
 Future security work should enforce:

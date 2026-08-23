@@ -15,10 +15,9 @@ identifies the selected class workflow.
 **Reason:** A class selection must never replace or imply school
 authorization.
 
-## D003 --- Profile-based available schools
+## D003 --- Membership-based school access
 
-**Decision:** User profiles contain available school IDs and an active
-school.
+**Decision:** Firebase Authentication UID is the canonical identity. `users/{uid}.systemRole` controls system-wide privileges, while `schools/{schoolId}/members/{uid}` controls school access and the school-specific role. `activeSchool` remains user session/profile state.
 
 **Status:** Implemented for UI/application context.
 
@@ -140,3 +139,16 @@ architecture.
 **Reason:** Vue CLI and older dependency chains can produce breaking
 changes. Modernization should occur on a dedicated branch with
 regression testing.
+
+
+## D014 --- Privileged account creation uses Cloud Functions
+
+**Decision:** Firebase Authentication users are created by a callable Cloud Function, not directly by the Vue client.
+
+**Reason:** Creating and administering other Auth users requires trusted server-side Firebase Admin SDK privileges. The generated Auth UID is reused for the profile and membership documents.
+
+## D015 --- Emulator-first privileged development
+
+**Decision:** User administration and other privileged Firebase operations are tested with the Authentication, Firestore, and Functions emulators before production deployment.
+
+**Reason:** This prevents development mistakes from corrupting production identities or Firestore data and allows Cloud Functions work before Blaze is intentionally enabled.

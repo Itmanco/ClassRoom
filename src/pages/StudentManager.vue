@@ -257,6 +257,10 @@ export default {
       type: String,
       required: true,
     },
+    actorRole: {
+      type: String,
+      default: "",
+    },
   },
 
   data() {
@@ -410,6 +414,10 @@ export default {
           this.schoolId,
           this.form,
           this.editingStudentId,
+          {
+            actorRole:
+              this.actorRole,
+          },
         );
 
         this.successMessage = wasCreating
@@ -472,6 +480,10 @@ export default {
         await archiveStudent(
           this.schoolId,
           student.id,
+          {
+            actorRole:
+              this.actorRole,
+          },
         );
 
         this.successMessage = this.$t(

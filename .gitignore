@@ -30,3 +30,7 @@ serviceAccountKey.json
 school-structure.json
 
 firestore-debug.log
+
+# Firebase Emulator local data
+emulator-data/
+firebase-debug.log

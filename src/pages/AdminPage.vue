@@ -9,6 +9,12 @@
     @back="section = ''"
   />
 
+  <AdminAuditLog
+    v-else-if="section === 'audit'"
+    :school-id="schoolId"
+    @back="section = ''"
+  />
+
   <div
     v-else
     class="admin-page"
@@ -80,6 +86,36 @@
         </button>
       </article>
 
+      <article class="admin-card">
+        <h2>
+          🧾
+          {{
+            $t(
+              "admin.sections.audit.title",
+            )
+          }}
+        </h2>
+
+        <p>
+          {{
+            $t(
+              "admin.sections.audit.description",
+            )
+          }}
+        </p>
+
+        <button
+          type="button"
+          @click="section = 'audit'"
+        >
+          {{
+            $t(
+              "admin.sections.audit.action",
+            )
+          }}
+        </button>
+      </article>
+
       <article class="admin-card disabled">
         <h2>
           👩‍🏫
@@ -105,6 +141,7 @@
 <script>
 import AdminSchoolManager from "./AdminSchoolManager.vue";
 import AdminUserManager from "./AdminUserManager.vue";
+import AdminAuditLog from "./AdminAuditLog.vue";
 
 export default {
   name: "AdminPage",
@@ -112,6 +149,14 @@ export default {
   components: {
     AdminSchoolManager,
     AdminUserManager,
+    AdminAuditLog,
+  },
+
+  props: {
+    schoolId: {
+      type: String,
+      required: true,
+    },
   },
 
   data() {

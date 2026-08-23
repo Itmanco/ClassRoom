@@ -49,6 +49,11 @@
       <StudentManager
         v-if="currentPage === 'students'"
         :school-id="session.activeSchool"
+        :actor-role="
+          isSystemAdmin
+            ? 'system-admin'
+            : session.membership?.role || ''
+        "
       />
 
       <CourseManager
@@ -95,6 +100,7 @@
           currentPage === 'admin' &&
           isSystemAdmin
         "
+        :school-id="session.activeSchool"
       />
     </main>
   </div>

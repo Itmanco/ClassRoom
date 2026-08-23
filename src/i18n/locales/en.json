@@ -653,6 +653,11 @@
       "teachers": {
         "title": "Teachers",
         "description": "Teacher management will be added after users."
+      },
+      "audit": {
+        "title": "Activity Log",
+        "description": "Review recent administrative and school activity.",
+        "action": "View Activity"
       }
     }
   },
@@ -778,6 +783,45 @@
         "noSchool": "No school",
         "schoolRole": "Initial school role"
       }
+    }
+  },
+
+  "adminAudit": {
+    "eyebrow": "System Administration",
+    "title": "Activity Log",
+    "description": "Review recent administrative and school activity.",
+    "recent": "Recent Activity",
+    "refresh": "Refresh",
+    "empty": "No activity has been recorded yet.",
+    "changedFields": "Changed fields",
+    "loadError": "Unable to load activity: {error}",
+    "actions": {
+      "student.created": "Student created",
+      "student.updated": "Student updated",
+      "student.archived": "Student archived",
+      "student.reactivated": "Student reactivated"
+    },
+    "entities": {
+      "student": "Student",
+      "user": "User",
+      "membership": "Membership",
+      "class": "Class",
+      "course": "Course",
+      "room": "Room",
+      "building": "Building",
+      "school": "School"
+    },
+    "details": {
+      "action": "Action",
+      "entityType": "Object type",
+      "entityId": "Object ID",
+      "entityName": "Object name",
+      "actor": "Performed by",
+      "actorUid": "User UID",
+      "role": "Role",
+      "school": "School ID",
+      "time": "Date and time",
+      "additional": "Additional details"
     }
   }
 }

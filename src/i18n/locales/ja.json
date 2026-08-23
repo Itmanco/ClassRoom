@@ -654,6 +654,11 @@
       "teachers": {
         "title": "教師",
         "description": "ユーザー管理の後に教師管理を追加する予定です。"
+      },
+      "audit": {
+        "title": "操作履歴",
+        "description": "最近の管理操作や学校内の変更履歴を確認します。",
+        "action": "操作履歴を見る"
       }
     }
   },
@@ -779,6 +784,45 @@
         "noSchool": "学校なし",
         "schoolRole": "初期学校ロール"
       }
+    }
+  },
+
+  "adminAudit": {
+    "eyebrow": "システム管理",
+    "title": "操作履歴",
+    "description": "最近の管理操作と学校内の変更履歴を確認します。",
+    "recent": "最近の操作",
+    "refresh": "更新",
+    "empty": "まだ操作履歴はありません。",
+    "changedFields": "変更された項目",
+    "loadError": "操作履歴を読み込めませんでした: {error}",
+    "actions": {
+      "student.created": "生徒を作成",
+      "student.updated": "生徒を更新",
+      "student.archived": "生徒をアーカイブ",
+      "student.reactivated": "生徒を再有効化"
+    },
+    "entities": {
+      "student": "生徒",
+      "user": "ユーザー",
+      "membership": "メンバー",
+      "class": "クラス",
+      "course": "コース",
+      "room": "教室",
+      "building": "建物",
+      "school": "学校"
+    },
+    "details": {
+      "action": "操作",
+      "entityType": "対象種類",
+      "entityId": "対象 ID",
+      "entityName": "対象名",
+      "actor": "実行者",
+      "actorUid": "ユーザー UID",
+      "role": "役割",
+      "school": "学校 ID",
+      "time": "日時",
+      "additional": "追加情報"
     }
   }
 }

@@ -822,7 +822,17 @@
       "role": "役割",
       "school": "学校 ID",
       "time": "日時",
-      "additional": "追加情報"
+      "additional": "追加情報",
+      "changes": "変更内容",
+      "previousValue": "変更前",
+      "updatedValue": "変更後"
+    },
+    "fields": {
+      "name": "名前",
+      "hiragana": "ひらがな",
+      "gender_id": "性別",
+      "country": "国",
+      "isActive": "有効状態"
     }
   }
 }

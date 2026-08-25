@@ -329,6 +329,72 @@
               </strong>
             </div>
 
+            <!-- Detailed before / after values -->
+            <div
+              v-if="
+                log.details?.changes &&
+                Object.keys(
+                  log.details.changes,
+                ).length
+              "
+              class="changes-detail"
+            >
+              <span class="detail-title">
+                {{
+                  $t(
+                    "adminAudit.details.changes",
+                  )
+                }}
+              </span>
+
+              <div
+                v-for="
+                  (change, field)
+                  in log.details.changes
+                "
+                :key="field"
+                class="change-item"
+              >
+                <strong class="change-field">
+                  {{ fieldLabel(field) }}
+                </strong>
+
+                <div class="change-values">
+                  <span>
+                    {{
+                      $t(
+                        "adminAudit.details.previousValue",
+                      )
+                    }}:
+
+                    <strong>
+                      {{
+                        formatDetailValue(
+                          change.before,
+                        )
+                      }}
+                    </strong>
+                  </span>
+
+                  <span>
+                    {{
+                      $t(
+                        "adminAudit.details.updatedValue",
+                      )
+                    }}:
+
+                    <strong>
+                      {{
+                        formatDetailValue(
+                          change.after,
+                        )
+                      }}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div
               v-if="
                 additionalDetails(log)
@@ -492,6 +558,22 @@ export default {
         : translated;
     },
 
+    fieldLabel(
+      field,
+    ) {
+      const key =
+        `adminAudit.fields.${field}`;
+
+      const translated =
+        this.$t(
+          key,
+        );
+
+      return translated === key
+        ? field
+        : translated;
+    },
+
     additionalDetails(
       log,
     ) {
@@ -506,6 +588,7 @@ export default {
       const excludedKeys = [
         "entityName",
         "studentName",
+        "changes",
       ];
 
       return Object.entries(
@@ -773,6 +856,42 @@ button:disabled {
   color: #667085;
 }
 
+.changes-detail {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #d0d5dd;
+}
+
+.change-item {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.change-field {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.change-values {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 12px;
+}
+
+.change-values span {
+  color: #667085;
+}
+
+.change-values strong {
+  color: #1d2939;
+}
+
 @media (max-width: 700px) {
   .audit-page {
     padding: 20px 14px;
@@ -797,5 +916,41 @@ button:disabled {
     width: 100%;
     justify-content: space-between;
   }
+
+  .changes-detail {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #d0d5dd;
+}
+
+.change-item {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.change-field {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.change-values {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 12px;
+}
+
+.change-values span {
+  color: #667085;
+}
+
+.change-values strong {
+  color: #1d2939;
+}
 }
 </style>

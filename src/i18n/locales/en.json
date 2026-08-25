@@ -821,7 +821,17 @@
       "role": "Role",
       "school": "School ID",
       "time": "Date and time",
-      "additional": "Additional details"
+      "additional": "Additional details",
+      "changes": "Changes",
+      "previousValue": "Previous value",
+      "updatedValue": "Updated value"
+    },
+    "fields": {
+      "name": "Name",
+      "hiragana": "Hiragana",
+      "gender_id": "Gender",
+      "country": "Country",
+      "isActive": "Active status"
     }
   }
 }

@@ -151,7 +151,7 @@ function validateStudent(
   };
 }
 
-function getChangedFields(
+function getChanges(
   previous,
   next,
 ) {
@@ -163,11 +163,32 @@ function getChangedFields(
     "isActive",
   ];
 
-  return trackedFields.filter(
-    (field) =>
-      previous?.[field] !==
-      next?.[field],
-  );
+  const changes = {};
+
+  for (
+    const field
+    of trackedFields
+  ) {
+    const before =
+      previous?.[field];
+
+    const after =
+      next?.[field];
+
+    if (
+      before !== after
+    ) {
+      changes[field] = {
+        before:
+          before ?? null,
+
+        after:
+          after ?? null,
+      };
+    }
+  }
+
+  return changes;
 }
 
 export async function getStudents(
@@ -292,13 +313,18 @@ export async function saveStudent(
       ? existing.data()
       : null;
 
-  const changedFields =
+  const changes =
     previous
-      ? getChangedFields(
+      ? getChanges(
           previous,
           normalized,
         )
-      : [];
+      : {};
+
+  const changedFields =
+    Object.keys(
+      changes,
+    );
 
   let action =
     existing.exists()
@@ -348,14 +374,19 @@ export async function saveStudent(
 
           changedFields,
 
-          details:
-            action ===
-            "student.created"
-              ? {
-                  studentName:
-                    normalized.name,
-                }
-              : {},
+          details: {
+            entityName:
+              normalized.name,
+
+            ...(
+              action !==
+              "student.created"
+                ? {
+                    changes,
+                  }
+                : {}
+            ),
+          },
         },
       );
 
@@ -447,9 +478,16 @@ export async function archiveStudent(
           ],
 
           details: {
-            studentName:
+            entityName:
               student.name ||
               "",
+
+            changes: {
+              isActive: {
+                before: true,
+                after: false,
+              },
+            },
           },
         },
       );

@@ -101,6 +101,7 @@
           isSystemAdmin
         "
         :school-id="session.activeSchool"
+        :is-system-admin="isSystemAdmin"
       />
     </main>
   </div>

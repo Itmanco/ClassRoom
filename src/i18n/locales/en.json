@@ -799,7 +799,8 @@
       "student.created": "Student created",
       "student.updated": "Student updated",
       "student.archived": "Student archived",
-      "student.reactivated": "Student reactivated"
+      "student.reactivated": "Student reactivated",
+      "user.created": "User created"
     },
     "entities": {
       "student": "Student",

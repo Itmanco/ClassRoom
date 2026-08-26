@@ -124,7 +124,7 @@ export function createAuditLogWrite(
 
 export async function getRecentAuditLogs(
   schoolId,
-  maxResults = 50,
+  options = {},
 ) {
   const normalizedSchoolId =
     requireText(
@@ -132,7 +132,16 @@ export async function getRecentAuditLogs(
       "School ID",
     );
 
-  const auditQuery =
+  const maxResults =
+    Number(
+      options.maxResults,
+    ) || 50;
+
+  const isSystemAdmin =
+    options.isSystemAdmin ===
+    true;
+
+  const schoolAuditQuery =
     query(
       collection(
         db,
@@ -145,21 +154,95 @@ export async function getRecentAuditLogs(
         "desc",
       ),
       limit(
-        Number(maxResults) || 50,
+        maxResults,
       ),
     );
 
-  const snapshot =
+  const schoolSnapshot =
     await getDocs(
-      auditQuery,
+      schoolAuditQuery,
     );
 
-  return snapshot.docs.map(
-    (documentSnapshot) => ({
-      id:
-        documentSnapshot.id,
+  const schoolLogs =
+    schoolSnapshot.docs.map(
+      (documentSnapshot) => ({
+        id:
+          `school-${documentSnapshot.id}`,
 
-      ...documentSnapshot.data(),
-    }),
-  );
+        documentId:
+          documentSnapshot.id,
+
+        scope:
+          "school",
+
+        ...documentSnapshot.data(),
+      }),
+    );
+
+  if (!isSystemAdmin) {
+    return schoolLogs;
+  }
+
+  const systemAuditQuery =
+    query(
+      collection(
+        db,
+        "systemAuditLogs",
+      ),
+      orderBy(
+        "createdAt",
+        "desc",
+      ),
+      limit(
+        maxResults,
+      ),
+    );
+
+  const systemSnapshot =
+    await getDocs(
+      systemAuditQuery,
+    );
+
+  const systemLogs =
+    systemSnapshot.docs.map(
+      (documentSnapshot) => ({
+        id:
+          `system-${documentSnapshot.id}`,
+
+        documentId:
+          documentSnapshot.id,
+
+        scope:
+          "system",
+
+        ...documentSnapshot.data(),
+      }),
+    );
+
+  return [
+    ...schoolLogs,
+    ...systemLogs,
+  ]
+    .sort(
+      (a, b) => {
+        const aTime =
+          a.createdAt
+            ?.toMillis?.() ||
+          0;
+
+        const bTime =
+          b.createdAt
+            ?.toMillis?.() ||
+          0;
+
+        return (
+          bTime -
+          aTime
+        );
+      },
+    )
+    .slice(
+      0,
+      maxResults,
+    );
 }

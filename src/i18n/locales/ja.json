@@ -800,7 +800,8 @@
       "student.created": "生徒を作成",
       "student.updated": "生徒を更新",
       "student.archived": "生徒をアーカイブ",
-      "student.reactivated": "生徒を再有効化"
+      "student.reactivated": "生徒を再有効化",
+      "user.created": "ユーザーを作成"
     },
     "entities": {
       "student": "生徒",

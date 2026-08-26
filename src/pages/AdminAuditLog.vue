@@ -453,6 +453,10 @@ export default {
       type: String,
       required: true,
     },
+    isSystemAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
 
   data() {
@@ -491,7 +495,11 @@ export default {
         this.logs =
           await getRecentAuditLogs(
             this.schoolId,
-            50,
+            {
+              maxResults: 50,
+              isSystemAdmin:
+                this.isSystemAdmin,
+            },
           );
       } catch (error) {
         this.errorMessage =

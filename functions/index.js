@@ -154,7 +154,7 @@ function normalizeSchoolRole(
 exports.createUser =
   onCall(
       async (request) => {
-        await requireSystemAdmin(
+        const admin = await requireSystemAdmin(
             request,
         );
 
@@ -307,6 +307,55 @@ exports.createUser =
               FieldValue.serverTimestamp(),
             });
           }
+
+          const auditRef =
+            db
+                .collection("systemAuditLogs")
+                .doc();
+
+          await auditRef.set({
+            action:
+              "user.created",
+
+            entityType:
+              "user",
+
+            entityId:
+              uid,
+
+            actorUid:
+              admin.uid,
+
+            actorEmail:
+              admin.profile.email ||
+              request.auth.token.email ||
+              "",
+
+            actorRole:
+              admin.profile.systemRole ||
+              "system-admin",
+
+            schoolId:
+              schoolId || null,
+
+            changedFields: [],
+
+            details: {
+              entityName:
+                displayName,
+
+              email,
+
+              schoolId:
+                schoolId || null,
+
+              schoolRole:
+                schoolRole || null,
+            },
+
+            createdAt:
+              FieldValue.serverTimestamp(),
+          });
 
           return {
             uid,

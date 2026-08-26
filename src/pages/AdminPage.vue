@@ -12,6 +12,7 @@
   <AdminAuditLog
     v-else-if="section === 'audit'"
     :school-id="schoolId"
+    :is-system-admin="isSystemAdmin"
     @back="section = ''"
   />
 
@@ -156,6 +157,10 @@ export default {
     schoolId: {
       type: String,
       required: true,
+    },
+    isSystemAdmin: {
+      type: Boolean,
+      default: false,
     },
   },
 

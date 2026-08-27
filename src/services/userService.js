@@ -99,6 +99,54 @@ export async function getUsers() {
   );
 }
 
+export async function getUsersByIds(
+  userIds,
+) {
+  if (!Array.isArray(userIds)) {
+    return [];
+  }
+
+  const normalizedIds =
+    [
+      ...new Set(
+        userIds
+          .map(
+            (uid) =>
+              String(uid).trim(),
+          )
+          .filter(Boolean),
+      ),
+    ];
+
+  const users =
+    await Promise.all(
+      normalizedIds.map(
+        async (uid) => {
+          const snapshot =
+            await getDoc(
+              doc(
+                db,
+                "users",
+                uid,
+              ),
+            );
+
+          if (!snapshot.exists()) {
+            return null;
+          }
+
+          return mapUser(
+            snapshot,
+          );
+        },
+      ),
+    );
+
+  return sortUsers(
+    users.filter(Boolean),
+  );
+}
+
 export function watchUsers(
   onChange,
   onError,

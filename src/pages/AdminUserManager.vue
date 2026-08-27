@@ -130,6 +130,7 @@
           {{ $t("adminUsers.create.fields.school") }}
 
           <select
+            v-if="isSystemAdmin"
             v-model="createUserForm.schoolId"
           >
             <option value="">
@@ -148,6 +149,12 @@
               {{ school.name }}
             </option>
           </select>
+          <input
+            v-else
+            type="text"
+            :value="schoolName(schoolId)"
+            disabled
+          />
         </label>
 
         <label>
@@ -155,7 +162,11 @@
 
           <select
             v-model="createUserForm.schoolRole"
-            :disabled="!createUserForm.schoolId"
+            :disabled="
+              isSystemAdmin
+                ? !createUserForm.schoolId
+                : !schoolId
+            "
           >
             <option value="school-admin">
               {{
@@ -274,7 +285,10 @@
               </p>
             </div>
 
-            <div class="role-controls">
+            <div
+              v-if="isSystemAdmin"
+              class="role-controls"
+            >
               <label>
                 {{
                   $t(
@@ -690,6 +704,7 @@ import {
 
 import {
   createManagedUser,
+  getManagedSchoolUsers,
   setManagedUserSystemRole,
 } from "../services/adminUserService";
 
@@ -699,6 +714,18 @@ export default {
   emits: [
     "back",
   ],
+
+  props: {
+    schoolId: {
+      type: String,
+      required: true,
+    },
+
+    isSystemAdmin: {
+      type: Boolean,
+      default: false,
+    },
+  },
 
   data() {
     return {
@@ -724,7 +751,10 @@ export default {
         lastName: "",
         displayName: "",
         language: "en",
-        schoolId: "",
+        schoolId:
+          this.isSystemAdmin
+            ? ""
+            : this.schoolId,
         schoolRole: "teacher",
       },
 
@@ -733,8 +763,20 @@ export default {
   },
 
   computed: {
-    activeSchools() {
+    allowedSchools() {
+      if (this.isSystemAdmin) {
+        return this.schools;
+      }
+
       return this.schools.filter(
+        (school) =>
+          school.id ===
+          this.schoolId,
+      );
+    },
+
+    activeSchools() {
+      return this.allowedSchools.filter(
         (school) =>
           school.active !== false,
       );
@@ -769,58 +811,100 @@ export default {
       }
     },
 
-    startListener() {
+    setUsers(
+      items,
+    ) {
+      this.users =
+        items;
+
+      const membershipForms = {
+        ...this.membershipForms,
+      };
+
+      items.forEach(
+        (user) => {
+          if (
+            !membershipForms[
+              user.id
+            ]
+          ) {
+            membershipForms[
+              user.id
+            ] = {
+              schoolId:
+                this.isSystemAdmin
+                  ? ""
+                  : this.schoolId,
+
+              role:
+                "teacher",
+            };
+          }
+        },
+      );
+
+      this.membershipForms =
+        membershipForms;
+    },
+
+    async startListener() {
       if (this.unsubscribe) {
         this.unsubscribe();
+        this.unsubscribe = null;
       }
 
       this.loading = true;
+      this.errorMessage = "";
 
-      this.unsubscribe =
-        watchUsers(
-          (items) => {
-            this.users = items;
-
-            const membershipForms = {
-              ...this.membershipForms,
-            };
-
-            items.forEach(
-              (user) => {
-                if (
-                  !membershipForms[
-                    user.id
-                  ]
-                ) {
-                  membershipForms[
-                    user.id
-                  ] = {
-                    schoolId: "",
-                    role: "teacher",
-                  };
-                }
-              },
-            );
-
-            this.membershipForms =
-              membershipForms;
-
-            this.loading = false;
-          },
-
-          (error) => {
-            this.loading = false;
-
-            this.errorMessage =
-              this.$t(
-                "adminUsers.messages.loadError",
-                {
-                  error:
-                    error.message,
-                },
+      if (this.isSystemAdmin) {
+        this.unsubscribe =
+          watchUsers(
+            (items) => {
+              this.setUsers(
+                items,
               );
-          },
+
+              this.loading = false;
+            },
+
+            (error) => {
+              this.loading = false;
+
+              this.errorMessage =
+                this.$t(
+                  "adminUsers.messages.loadError",
+                  {
+                    error:
+                      error.message,
+                  },
+                );
+            },
+          );
+
+        return;
+      }
+
+      try {
+        const users =
+          await getManagedSchoolUsers(
+            this.schoolId,
+          );
+
+        this.setUsers(
+          users,
         );
+      } catch (error) {
+        this.errorMessage =
+          this.$t(
+            "adminUsers.messages.loadError",
+            {
+              error:
+                error.message,
+            },
+          );
+      } finally {
+        this.loading = false;
+      }
     },
 
     async toggleMemberships(
@@ -856,7 +940,7 @@ export default {
 
         for (
           const school
-          of this.schools
+          of this.allowedSchools
         ) {
           const memberships =
             await getSchoolMemberships(
@@ -925,7 +1009,7 @@ export default {
           ),
         );
 
-      return this.schools.filter(
+      return this.allowedSchools.filter(
         (school) =>
           school.active !== false &&
           !assigned.has(
@@ -956,6 +1040,15 @@ export default {
       );
     },
 
+    canManageSchool(
+      schoolId,
+    ) {
+      return (
+        this.isSystemAdmin ||
+        schoolId === this.schoolId
+      );
+    },
+
     async addMembership(
       user,
     ) {
@@ -973,6 +1066,14 @@ export default {
 
       const schoolId =
         form.schoolId;
+
+      if (
+        !this.canManageSchool(
+          schoolId,
+        )
+      ) {
+        return;
+      }
 
       const role =
         form.role;
@@ -1019,8 +1120,13 @@ export default {
           ...this.membershipForms,
 
           [user.id]: {
-            schoolId: "",
-            role: "teacher",
+            schoolId:
+              this.isSystemAdmin
+                ? ""
+                : this.schoolId,
+
+            role:
+              "teacher",
           },
         };
 
@@ -1047,6 +1153,14 @@ export default {
       membership,
       event,
     ) {
+
+      if (
+        !this.canManageSchool(
+          membership.schoolId,
+        )
+      ) {
+        return;
+      }
       const newRole =
         event.target.value;
 
@@ -1131,6 +1245,13 @@ export default {
       membership,
       active,
     ) {
+      if (
+        !this.canManageSchool(
+          membership.schoolId,
+        )
+      ) {
+        return;
+      }
       const confirmed =
         window.confirm(
           this.$t(
@@ -1203,6 +1324,13 @@ export default {
       user,
       membership,
     ) {
+      if (
+        !this.canManageSchool(
+          membership.schoolId,
+        )
+      ) {
+        return;
+      }
       const confirmed =
         window.confirm(
           this.$t(
@@ -1368,7 +1496,10 @@ export default {
         lastName: "",
         displayName: "",
         language: "en",
-        schoolId: "",
+        schoolId:
+          this.isSystemAdmin
+            ? ""
+            : this.schoolId,
         schoolRole: "teacher",
       };
     },
@@ -1379,6 +1510,11 @@ export default {
       this.errorMessage = "";
 
       try {
+
+        const targetSchoolId =
+          this.isSystemAdmin
+            ? this.createUserForm.schoolId
+            : this.schoolId;
         const payload = {
           email:
             this.createUserForm.email,
@@ -1399,10 +1535,10 @@ export default {
             this.createUserForm.language,
 
           schoolId:
-            this.createUserForm.schoolId,
+            targetSchoolId,
 
           schoolRole:
-            this.createUserForm.schoolId
+            targetSchoolId
               ? this.createUserForm.schoolRole
               : null,
         };

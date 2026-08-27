@@ -1,0 +1,247 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------
+    // Authorization helpers
+    // ----------------------------------------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSystemAdmin() {
+      return signedIn()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.systemRole == "system-admin";
+    }
+
+    function isSchoolAdmin(schoolId) {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        ).data.role == "school-admin"
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        ).data.active == true;
+    }
+
+    function canAdministerSchool(schoolId) {
+      return isSystemAdmin()
+        || isSchoolAdmin(schoolId);
+    }
+
+    // ----------------------------------------
+    // Users
+    // ----------------------------------------
+
+    match /users/{userId} {
+
+      allow read: if signedIn()
+                  && (
+                    request.auth.uid == userId
+                    || isSystemAdmin()
+                  );
+
+      // Normal users may edit only their own
+      // non-administrative profile fields.
+      allow update: if signedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data
+                         .diff(resource.data)
+                         .affectedKeys()
+                         .hasOnly([
+                           "displayName",
+                           "firstName",
+                           "lastName",
+                           "activeSchool",
+                           "updatedAt"
+                         ])
+                    && (
+                      !request.resource.data
+                        .diff(resource.data)
+                        .affectedKeys()
+                        .hasAny([
+                          "activeSchool"
+                        ])
+                      ||
+                      request.resource.data.activeSchool
+                        in resource.data.schools
+                    );
+
+      // System Admin may change system-level
+      // administrative fields.
+      allow update: if isSystemAdmin()
+                    && request.resource.data
+                         .diff(resource.data)
+                         .affectedKeys()
+                         .hasOnly([
+                           "systemRole",
+                           "updatedAt"
+                         ]);
+
+      // User creation is handled by Cloud Functions.
+      allow create, delete: if false;
+    }
+
+    // ----------------------------------------
+    // Schools
+    // ----------------------------------------
+
+    match /schools/{schoolId} {
+
+      allow read: if signedIn()
+                  && (
+                    resource.data.userUid
+                      == request.auth.uid
+                    || isSystemAdmin()
+                  );
+
+      allow create, update, delete:
+        if isSystemAdmin();
+
+      // --------------------------------------
+      // Students
+      // --------------------------------------
+
+      match /students/{studentId} {
+        allow read, write: if signedIn();
+      }
+
+      // --------------------------------------
+      // Buildings
+      // --------------------------------------
+
+      match /buildings/{buildingId} {
+        allow read, write: if signedIn();
+      }
+
+      // --------------------------------------
+      // Rooms
+      // --------------------------------------
+
+      match /rooms/{roomId} {
+        allow read, write: if signedIn();
+      }
+
+      // --------------------------------------
+      // Courses
+      // --------------------------------------
+
+      match /courses/{courseId} {
+        allow read, write: if signedIn();
+      }
+
+      // --------------------------------------
+      // Classes
+      // --------------------------------------
+
+      match /classes/{classId} {
+        allow read, write: if signedIn();
+
+        match /enrollments/{enrollmentId} {
+          allow read, write: if signedIn();
+        }
+
+        match /seatingPlans/{seatingPlanId} {
+          allow read, write: if signedIn();
+        }
+      }
+
+      // --------------------------------------
+      // School memberships
+      // --------------------------------------
+
+      match /members/{memberId} {
+
+        allow read: if signedIn()
+                    && (
+                      request.auth.uid
+                        == memberId
+                      || canAdministerSchool(
+                        schoolId
+                      )
+                    );
+
+        allow create, update, delete:
+          if canAdministerSchool(
+            schoolId
+          );
+      }
+
+      // --------------------------------------
+      // School activity logs
+      // --------------------------------------
+
+      match /auditLogs/{logId} {
+
+        allow read:
+          if canAdministerSchool(
+            schoolId
+          );
+
+        // Some current audit events are written
+        // directly by the client together with
+        // the school operation.
+        allow create:
+          if canAdministerSchool(
+            schoolId
+          );
+
+        // Audit history is immutable.
+        allow update, delete:
+          if false;
+      }
+    }
+
+    // ----------------------------------------
+    // System activity logs
+    // ----------------------------------------
+
+    match /systemAuditLogs/{logId} {
+
+      // Only System Admins can see global
+      // system-level audit history.
+      allow read:
+        if isSystemAdmin();
+
+      // These records are created by trusted
+      // Cloud Functions using the Admin SDK.
+      allow create, update, delete:
+        if false;
+    }
+
+    // ----------------------------------------
+    // Collection-group access for memberships
+    // ----------------------------------------
+
+    match /{path=**}/members/{memberId} {
+
+      allow read: if signedIn()
+                  && (
+                    resource.data.userUid
+                      == request.auth.uid
+                    || isSystemAdmin()
+                  );
+    }
+
+    // ----------------------------------------
+    // Legacy artifacts
+    // ----------------------------------------
+
+    match /artifacts/{appId}/students/{studentId} {
+      allow read, write:
+        if signedIn();
+    }
+
+    match /artifacts/{appId}/classrooms/{classroomId} {
+      allow read, write:
+        if signedIn();
+    }
+  }
+}

@@ -123,7 +123,7 @@
       </button>
 
       <button
-        v-if="isSystemAdmin"
+        v-if="canAccessAdmin"
         @click="$emit('change-page', 'admin')"
         :class="{ active: currentPage === 'admin' }"
         :title="
@@ -193,6 +193,11 @@ export default {
     },
 
     isSystemAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    canAccessAdmin: {
       type: Boolean,
       default: false,
     },

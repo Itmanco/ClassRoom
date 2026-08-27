@@ -18,6 +18,12 @@ const setSystemRoleCallable =
     "setSystemRole",
   );
 
+const getSchoolUsersCallable =
+  httpsCallable(
+    functions,
+    "getSchoolUsers",
+  );
+
 export async function createManagedUser(
   userData,
 ) {
@@ -40,4 +46,19 @@ export async function setManagedUserSystemRole(
     });
 
   return result.data;
+}
+
+export async function getManagedSchoolUsers(
+  schoolId,
+) {
+  const result =
+    await getSchoolUsersCallable({
+      schoolId,
+    });
+
+  return Array.isArray(
+    result.data,
+  )
+    ? result.data
+    : [];
 }

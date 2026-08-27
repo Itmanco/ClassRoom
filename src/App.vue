@@ -34,6 +34,7 @@
       :schools="session.schools"
       :active-school="session.activeSchool" 
       :is-system-admin="isSystemAdmin" 
+      :can-access-admin="canAccessAdmin" 
       @change-page="changePage"
       @change-school="handleSchoolChange"
       @open-profile="openProfile"
@@ -98,10 +99,11 @@
       <AdminPage
         v-if="
           currentPage === 'admin' &&
-          isSystemAdmin
+          canAccessAdmin
         "
         :school-id="session.activeSchool"
         :is-system-admin="isSystemAdmin"
+        :is-school-admin="isSchoolAdmin"
       />
     </main>
   </div>
@@ -197,6 +199,21 @@ export default {
         "system-admin";
 
       return result;
+    },
+
+    isSchoolAdmin() {
+      return (
+        this.session.membership?.active !== false &&
+        this.session.membership?.role ===
+          "school-admin"
+      );
+    },
+
+    canAccessAdmin() {
+      return (
+        this.isSystemAdmin ||
+        this.isSchoolAdmin
+      );
     },
   },
 

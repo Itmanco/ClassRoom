@@ -90,6 +90,98 @@ async function requireSystemAdmin(
 }
 
 /**
+ * Verifies that the caller can administer a school.
+ *
+ * System Admins may administer any school.
+ * School Admins may administer only schools where
+ * they have an active school-admin membership.
+ *
+ * @param {Object} request Callable function request.
+ * @param {string} schoolId School to authorize.
+ * @return {Promise<Object>} Administrator information.
+ */
+async function requireSchoolAdmin(
+    request,
+    schoolId,
+) {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "Authentication is required.",
+    );
+  }
+
+  const uid =
+    request.auth.uid;
+
+  const userDocument =
+    await db
+        .collection("users")
+        .doc(uid)
+        .get();
+
+  if (!userDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "User profile not found.",
+    );
+  }
+
+  const profile =
+    userDocument.data();
+
+  if (
+    profile.systemRole ===
+    "system-admin"
+  ) {
+    return {
+      uid,
+      profile,
+      role:
+        "system-admin",
+    };
+  }
+
+  const membershipDocument =
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("members")
+        .doc(uid)
+        .get();
+
+  if (!membershipDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "School Admin access is required.",
+    );
+  }
+
+  const membership =
+    membershipDocument.data();
+
+  if (
+    membership.role !==
+      "school-admin" ||
+    membership.active ===
+      false
+  ) {
+    throw new HttpsError(
+        "permission-denied",
+        "School Admin access is required.",
+    );
+  }
+
+  return {
+    uid,
+    profile,
+    role:
+      "school-admin",
+    membership,
+  };
+}
+
+/**
  * Validates and normalizes a required text value.
  *
  * @param {*} value Value to validate.
@@ -154,10 +246,6 @@ function normalizeSchoolRole(
 exports.createUser =
   onCall(
       async (request) => {
-        const admin = await requireSystemAdmin(
-            request,
-        );
-
         const data =
         request.data || {};
 
@@ -228,6 +316,21 @@ exports.createUser =
               "invalid-argument",
               "A school role is required when assigning a school.",
           );
+        }
+
+        let admin;
+
+        if (schoolId) {
+          admin =
+            await requireSchoolAdmin(
+                request,
+                schoolId,
+            );
+        } else {
+          admin =
+            await requireSystemAdmin(
+                request,
+            );
         }
 
         let authUser = null;
@@ -332,8 +435,7 @@ exports.createUser =
               "",
 
             actorRole:
-              admin.profile.systemRole ||
-              "system-admin",
+              admin.role,
 
             schoolId:
               schoolId || null,
@@ -432,6 +534,102 @@ exports.createUser =
               "Unable to create user.",
           );
         }
+      },
+  );
+
+exports.getSchoolUsers =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          requireText(
+              data.schoolId,
+              "School ID",
+          );
+
+        await requireSchoolAdmin(
+            request,
+            schoolId,
+        );
+
+        const membershipsSnapshot =
+          await db
+              .collection("schools")
+              .doc(schoolId)
+              .collection("members")
+              .get();
+
+        const userIds =
+          membershipsSnapshot.docs.map(
+              (documentSnapshot) =>
+                documentSnapshot.id,
+          );
+
+        const users =
+          await Promise.all(
+              userIds.map(
+                  async (uid) => {
+                    const userDocument =
+                      await db
+                          .collection("users")
+                          .doc(uid)
+                          .get();
+
+                    if (
+                      !userDocument.exists
+                    ) {
+                      return null;
+                    }
+
+                    const user =
+                      userDocument.data();
+
+                    return {
+                      id:
+                        uid,
+
+                      email:
+                        user.email || "",
+
+                      firstName:
+                        user.firstName || "",
+
+                      lastName:
+                        user.lastName || "",
+
+                      displayName:
+                        user.displayName || "",
+
+                      language:
+                        user.language || "en",
+                    };
+                  },
+              ),
+          );
+
+        return users
+            .filter(Boolean)
+            .sort(
+                (first, second) =>
+                  String(
+                      first.displayName ||
+                      first.email ||
+                      first.id,
+                  ).localeCompare(
+                      String(
+                          second.displayName ||
+                          second.email ||
+                          second.id,
+                      ),
+                      undefined,
+                      {
+                        sensitivity:
+                          "base",
+                      },
+                  ),
+            );
       },
   );
 

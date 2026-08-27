@@ -1,11 +1,22 @@
 <template>
   <AdminSchoolManager
-    v-if="section === 'schools'"
+    v-if="
+      section === 'schools' &&
+      isSystemAdmin
+    "
     @back="section = ''"
   />
 
   <AdminUserManager
-    v-else-if="section === 'users'"
+    v-else-if="
+      section === 'users' &&
+      (
+        isSystemAdmin ||
+        isSchoolAdmin
+      )
+    "
+    :school-id="schoolId"
+    :is-system-admin="isSystemAdmin"
     @back="section = ''"
   />
 
@@ -35,7 +46,9 @@
     </header>
 
     <section class="admin-grid">
-      <article class="admin-card">
+      <article 
+        v-if="isSystemAdmin"
+        class="admin-card">
         <h2>
           🏫
           {{ $t("admin.sections.schools.title") }}
@@ -61,7 +74,13 @@
         </button>
       </article>
 
-      <article class="admin-card">
+      <article
+        v-if="
+          isSystemAdmin ||
+          isSchoolAdmin
+        "
+        class="admin-card"
+      >
         <h2>
           👥
           {{ $t("admin.sections.users.title") }}
@@ -159,6 +178,10 @@ export default {
       required: true,
     },
     isSystemAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    isSchoolAdmin: {
       type: Boolean,
       default: false,
     },

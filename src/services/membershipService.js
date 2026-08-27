@@ -2,17 +2,19 @@ import { db } from "../firebase-init";
 
 import {
   collection,
-  collectionGroup,
-  deleteDoc,
+  collectionGroup,  
   doc,
   getDoc,
   getDocs,
   query,
   serverTimestamp,
-  setDoc,
-  updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
+
+import {
+  createAuditLogWrite,
+} from "./auditLogService";
 
 const ALLOWED_ROLES = [
   "school-admin",
@@ -169,12 +171,21 @@ export async function createSchoolMembership(
     role,
     active = true,
   },
+  options = {},
 ) {
   const normalizedUid =
     requireText(
       uid,
       "User ID",
     );
+
+  const normalizedRole =
+    normalizeRole(
+      role,
+    );
+
+  const normalizedActive =
+    active !== false;
 
   const membershipRef =
     getMembershipRef(
@@ -193,19 +204,37 @@ export async function createSchoolMembership(
     );
   }
 
-  await setDoc(
+  const userRef =
+    doc(
+      db,
+      "users",
+      normalizedUid,
+    );
+
+  const userSnapshot =
+    await getDoc(
+      userRef,
+    );
+
+  const user =
+    userSnapshot.exists()
+      ? userSnapshot.data()
+      : {};
+
+  const batch =
+    writeBatch(db);
+
+  batch.set(
     membershipRef,
     {
       userUid:
         normalizedUid,
 
       role:
-        normalizeRole(
-          role,
-        ),
+        normalizedRole,
 
       active:
-        active !== false,
+        normalizedActive,
 
       createdAt:
         serverTimestamp(),
@@ -214,6 +243,53 @@ export async function createSchoolMembership(
         serverTimestamp(),
     },
   );
+
+  const audit =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          "membership.created",
+
+        entityType:
+          "membership",
+
+        entityId:
+          normalizedUid,
+
+        actorRole:
+          options.actorRole ||
+          "",
+
+        changedFields: [],
+
+        details: {
+        entityName:
+          user.displayName ||
+          user.email ||
+          normalizedUid,
+
+        userUid:
+          normalizedUid,
+
+        email:
+          user.email || "",
+
+        role:
+          normalizedRole,
+
+        active:
+          normalizedActive,
+      },
+      },
+    );
+
+  batch.set(
+    audit.ref,
+    audit.data,
+  );
+
+  await batch.commit();
 
   return membershipRef.id;
 }
@@ -225,11 +301,18 @@ export async function updateSchoolMembership(
     role,
     active,
   },
+  options = {},
 ) {
+  const normalizedUid =
+    requireText(
+      uid,
+      "User ID",
+    );
+
   const membershipRef =
     getMembershipRef(
       schoolId,
-      uid,
+      normalizedUid,
     );
 
   const existing =
@@ -243,18 +326,26 @@ export async function updateSchoolMembership(
     );
   }
 
+  const previous =
+    existing.data();
+
   const data = {
     updatedAt:
       serverTimestamp(),
   };
 
+  let normalizedRole;
+
   if (
     role !== undefined
   ) {
-    data.role =
+    normalizedRole =
       normalizeRole(
         role,
       );
+
+    data.role =
+      normalizedRole;
   }
 
   if (
@@ -264,10 +355,159 @@ export async function updateSchoolMembership(
       active !== false;
   }
 
-  await updateDoc(
+  const roleChanged =
+    normalizedRole !== undefined &&
+    previous.role !==
+      normalizedRole;
+
+  const activeChanged =
+    active !== undefined &&
+    previous.active !==
+      data.active;
+
+  const batch =
+    writeBatch(db);
+
+  batch.update(
     membershipRef,
     data,
   );
+
+  let user = {};
+
+  if (
+    roleChanged ||
+    activeChanged
+  ) {
+    const userRef =
+      doc(
+        db,
+        "users",
+        normalizedUid,
+      );
+
+    const userSnapshot =
+      await getDoc(
+        userRef,
+      );
+
+    user =
+      userSnapshot.exists()
+        ? userSnapshot.data()
+        : {};
+  }
+
+  if (roleChanged) {
+    const audit =
+      createAuditLogWrite(
+        schoolId,
+        {
+          action:
+            "membership.roleChanged",
+
+          entityType:
+            "membership",
+
+          entityId:
+            normalizedUid,
+
+          actorRole:
+            options.actorRole ||
+            "",
+
+          changedFields: [
+            "role",
+          ],
+
+          details: {
+            entityName:
+              user.displayName ||
+              user.email ||
+              normalizedUid,
+
+            userUid:
+              normalizedUid,
+
+            email:
+              user.email || "",
+
+            changes: {
+              role: {
+                before:
+                  previous.role ||
+                  null,
+
+                after:
+                  normalizedRole,
+              },
+            },
+          },
+        },
+      );
+
+    batch.set(
+      audit.ref,
+      audit.data,
+    );
+  }
+
+  if (activeChanged) {
+    const audit =
+      createAuditLogWrite(
+        schoolId,
+        {
+          action:
+            data.active
+              ? "membership.reactivated"
+              : "membership.deactivated",
+
+          entityType:
+            "membership",
+
+          entityId:
+            normalizedUid,
+
+          actorRole:
+            options.actorRole ||
+            "",
+
+          changedFields: [
+            "active",
+          ],
+
+          details: {
+            entityName:
+              user.displayName ||
+              user.email ||
+              normalizedUid,
+
+            userUid:
+              normalizedUid,
+
+            email:
+              user.email || "",
+
+            changes: {
+              active: {
+                before:
+                  previous.active !==
+                  false,
+
+                after:
+                  data.active,
+              },
+            },
+          },
+        },
+      );
+
+    batch.set(
+      audit.ref,
+      audit.data,
+    );
+  }
+
+  await batch.commit();
 }
 
 export async function setSchoolMembershipActive(
@@ -288,11 +528,18 @@ export async function setSchoolMembershipActive(
 export async function removeSchoolMembership(
   schoolId,
   uid,
+  options = {},
 ) {
+  const normalizedUid =
+    requireText(
+      uid,
+      "User ID",
+    );
+
   const membershipRef =
     getMembershipRef(
       schoolId,
-      uid,
+      normalizedUid,
     );
 
   const existing =
@@ -306,9 +553,81 @@ export async function removeSchoolMembership(
     );
   }
 
-  await deleteDoc(
+  const membership =
+    existing.data();
+
+  const userRef =
+    doc(
+      db,
+      "users",
+      normalizedUid,
+    );
+
+  const userSnapshot =
+    await getDoc(
+      userRef,
+    );
+
+  const user =
+    userSnapshot.exists()
+      ? userSnapshot.data()
+      : {};
+
+  const batch =
+    writeBatch(db);
+
+  batch.delete(
     membershipRef,
   );
+
+  const audit =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          "membership.removed",
+
+        entityType:
+          "membership",
+
+        entityId:
+          normalizedUid,
+
+        actorRole:
+          options.actorRole ||
+          "",
+
+        changedFields: [],
+
+        details: {
+          entityName:
+            user.displayName ||
+            user.email ||
+            normalizedUid,
+
+          userUid:
+            normalizedUid,
+
+          email:
+            user.email || "",
+
+          previousRole:
+            membership.role ||
+            null,
+
+          previousActive:
+            membership.active !==
+            false,
+        },
+      },
+    );
+
+  batch.set(
+    audit.ref,
+    audit.data,
+  );
+
+  await batch.commit();
 }
 
 export function isSchoolAdminMembership(

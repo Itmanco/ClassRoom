@@ -673,7 +673,6 @@
 
 <script>
 import {
-  updateSystemRole,
   watchUsers,
 } from "../services/userService";
 
@@ -691,6 +690,7 @@ import {
 
 import {
   createManagedUser,
+  setManagedUserSystemRole,
 } from "../services/adminUserService";
 
 export default {
@@ -1317,7 +1317,7 @@ export default {
       this.errorMessage = "";
 
       try {
-        await updateSystemRole(
+        await setManagedUserSystemRole(
           user.id,
           role,
         );

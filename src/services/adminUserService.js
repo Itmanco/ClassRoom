@@ -12,6 +12,12 @@ const createUserCallable =
     "createUser",
   );
 
+const setSystemRoleCallable =
+  httpsCallable(
+    functions,
+    "setSystemRole",
+  );
+
 export async function createManagedUser(
   userData,
 ) {
@@ -19,6 +25,19 @@ export async function createManagedUser(
     await createUserCallable(
       userData,
     );
+
+  return result.data;
+}
+
+export async function setManagedUserSystemRole(
+  uid,
+  systemRole,
+) {
+  const result =
+    await setSystemRoleCallable({
+      uid,
+      systemRole,
+    });
 
   return result.data;
 }

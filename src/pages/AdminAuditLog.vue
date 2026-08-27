@@ -47,12 +47,49 @@
         </button>
       </div>
 
+      <div
+        v-if="isSystemAdmin"
+        class="scope-filters"
+      >
+        <button
+          type="button"
+          :class="{
+            active:
+              selectedScope === 'all'}"
+          @click="selectedScope = 'all'"
+        >
+          {{ $t("adminAudit.filters.all") }}
+        </button>
+
+        <button
+          type="button"
+          :class="{
+            active:
+              selectedScope === 'system',
+          }"
+          @click="selectedScope = 'system'"
+        >
+          {{ $t("adminAudit.filters.system") }}
+        </button>
+
+        <button
+          type="button"
+          :class="{
+            active:
+              selectedScope === 'school',
+          }"
+          @click="selectedScope = 'school'"
+        >
+          {{ $t("adminAudit.filters.school") }}
+        </button>
+      </div>
+
       <p v-if="loading">
         {{ $t("common.loading") }}
       </p>
 
       <p
-        v-else-if="logs.length === 0"
+        v-else-if="filteredLogs.length === 0"
         class="empty-state"
       >
         {{ $t("adminAudit.empty") }}
@@ -63,7 +100,7 @@
         class="audit-list"
       >
         <article
-          v-for="log in logs"
+          v-for="log in filteredLogs"
           :key="log.id"
           class="audit-card"
           :class="{
@@ -78,9 +115,22 @@
         >
           <div class="audit-main">
             <div>
-              <strong>
-                {{ actionLabel(log.action) }}
-              </strong>
+              <div class="action-heading">
+                <span
+                  class="scope-badge"
+                  :class="`scope-${log.scope}`"
+                >
+                  {{
+                    $t(
+                      `adminAudit.scopes.${log.scope}`,
+                    )
+                  }}
+                </span>
+
+                <strong>
+                  {{ actionLabel(log.action) }}
+                </strong>
+              </div>
 
               <div
                 v-if="entityName(log)"
@@ -465,6 +515,7 @@ export default {
       loading: true,
       errorMessage: "",
       selectedLogId: "",
+      selectedScope: "all",
     };
   },
 
@@ -475,7 +526,25 @@ export default {
   watch: {
     schoolId() {
       this.selectedLogId = "";
+      this.selectedScope = "all";
       this.loadLogs();
+    },
+  },
+
+  computed: {
+    filteredLogs() {
+      if (
+        this.selectedScope ===
+        "all"
+      ) {
+        return this.logs;
+      }
+
+      return this.logs.filter(
+        (log) =>
+          log.scope ===
+          this.selectedScope,
+      );
     },
   },
 
@@ -900,6 +969,51 @@ button:disabled {
   color: #1d2939;
 }
 
+.scope-filters {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.scope-filters button {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.scope-filters button.active {
+  background: #344054;
+  color: white;
+}
+
+.action-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.scope-system {
+  background: #eef4ff;
+  color: #3538cd;
+}
+
+.scope-school {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
 @media (max-width: 700px) {
   .audit-page {
     padding: 20px 14px;
@@ -925,40 +1039,8 @@ button:disabled {
     justify-content: space-between;
   }
 
-  .changes-detail {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed #d0d5dd;
-}
-
-.change-item {
-  margin-top: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.change-field {
-  display: block;
-  margin-bottom: 8px;
-}
-
-.change-values {
-  display: grid;
-  grid-template-columns:
-    repeat(
-      2,
-      minmax(0, 1fr)
-    );
-  gap: 12px;
-}
-
-.change-values span {
-  color: #667085;
-}
-
-.change-values strong {
-  color: #1d2939;
-}
+  .change-values {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -800,7 +800,11 @@
       "student.updated": "Student updated",
       "student.archived": "Student archived",
       "student.reactivated": "Student reactivated",
-      "user.created": "User created"
+      "user.created": "User created",
+      "user.systemRoleChanged": "System role changed",
+      "membership.created": "Membership added",
+      "membership.roleChanged": "Membership role changed",
+      "membership.removed": "Membership removed"
     },
     "entities": {
       "student": "Student",
@@ -832,7 +836,19 @@
       "hiragana": "Hiragana",
       "gender_id": "Gender",
       "country": "Country",
-      "isActive": "Active status"
+      "isActive": "Active status",
+      "systemRole": "System role",
+      "role": "Role",
+      "active": "Active"
+    },
+    "filters": {
+      "all": "All",
+      "system": "System",
+      "school": "School"
+    },
+    "scopes": {
+      "system": "System",
+      "school": "School"
     }
   }
 }

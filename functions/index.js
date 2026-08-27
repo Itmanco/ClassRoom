@@ -434,3 +434,189 @@ exports.createUser =
         }
       },
   );
+
+exports.setSystemRole =
+  onCall(
+      async (request) => {
+        const admin =
+          await requireSystemAdmin(
+              request,
+          );
+
+        const data =
+          request.data || {};
+
+        const uid =
+          requireText(
+              data.uid,
+              "User ID",
+          );
+
+        const requestedRole =
+          typeof data.systemRole ===
+            "string" ?
+            data.systemRole.trim() :
+            "";
+
+        const allowedRoles = [
+          "",
+          "system-admin",
+        ];
+
+        if (
+          !allowedRoles.includes(
+              requestedRole,
+          )
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "Unsupported system role.",
+          );
+        }
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(uid);
+
+        const userDocument =
+          await userRef.get();
+
+        if (!userDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              `User ${uid} does not exist.`,
+          );
+        }
+
+        const user =
+          userDocument.data();
+
+        const previousRole =
+          user.systemRole || null;
+
+        const nextRole =
+          requestedRole || null;
+
+        if (
+          previousRole ===
+          nextRole
+        ) {
+          return {
+            uid,
+            systemRole:
+              nextRole,
+          };
+        }
+
+        // Protect the last System Admin.
+        if (
+          previousRole ===
+            "system-admin" &&
+          nextRole !==
+            "system-admin"
+        ) {
+          const adminsSnapshot =
+            await db
+                .collection("users")
+                .where(
+                    "systemRole",
+                    "==",
+                    "system-admin",
+                )
+                .get();
+
+          if (
+            adminsSnapshot.size <= 1
+          ) {
+            throw new HttpsError(
+                "failed-precondition",
+                "The last System Admin cannot be demoted.",
+            );
+          }
+        }
+
+        const batch =
+          db.batch();
+
+        batch.update(
+            userRef,
+            {
+              systemRole:
+                nextRole,
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        const auditRef =
+          db
+              .collection("systemAuditLogs")
+              .doc();
+
+        batch.set(
+            auditRef,
+            {
+              action:
+                "user.systemRoleChanged",
+
+              entityType:
+                "user",
+
+              entityId:
+                uid,
+
+              actorUid:
+                admin.uid,
+
+              actorEmail:
+                admin.profile.email ||
+                request.auth.token.email ||
+                "",
+
+              actorRole:
+                admin.profile.systemRole ||
+                "system-admin",
+
+              schoolId:
+                null,
+
+              changedFields: [
+                "systemRole",
+              ],
+
+              details: {
+                entityName:
+                  user.displayName ||
+                  user.email ||
+                  uid,
+
+                email:
+                  user.email || "",
+
+                changes: {
+                  systemRole: {
+                    before:
+                      previousRole,
+
+                    after:
+                      nextRole,
+                  },
+                },
+              },
+
+              createdAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        await batch.commit();
+
+        return {
+          uid,
+          systemRole:
+            nextRole,
+        };
+      },
+  );

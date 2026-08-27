@@ -801,7 +801,11 @@
       "student.updated": "生徒を更新",
       "student.archived": "生徒をアーカイブ",
       "student.reactivated": "生徒を再有効化",
-      "user.created": "ユーザーを作成"
+      "user.created": "ユーザーを作成",
+      "user.systemRoleChanged": "システム権限を変更",
+      "membership.created": "メンバーシップを追加",
+      "membership.roleChanged": "メンバーシップの役割を変更",
+      "membership.removed": "メンバーシップを削除"
     },
     "entities": {
       "student": "生徒",
@@ -833,7 +837,19 @@
       "hiragana": "ひらがな",
       "gender_id": "性別",
       "country": "国",
-      "isActive": "有効状態"
+      "isActive": "有効状態",
+      "systemRole": "システム権限",
+      "role": "役割",
+      "active": "有効"
+    },
+    "filters": {
+      "all": "すべて",
+      "system": "システム",
+      "school": "学校"
+    },
+    "scopes": {
+      "system": "システム",
+      "school": "学校"
     }
   }
 }

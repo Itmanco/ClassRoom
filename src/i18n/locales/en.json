@@ -762,7 +762,10 @@
       "addError": "Unable to add school access: {error}",
       "roleError": "Unable to update school role: {error}",
       "statusError": "Unable to update school access: {error}",
-      "removeError": "Unable to remove school access: {error}"
+      "removeError": "Unable to remove school access: {error}",
+      "selfRoleChangeError": "You cannot change your own school role.",
+      "selfDeactivateError": "You cannot deactivate your own school access.",
+      "selfRemoveError": "You cannot remove your own school access."
     },
     "create": {
       "title": "Create User",
@@ -796,15 +799,23 @@
     "changedFields": "Changed fields",
     "loadError": "Unable to load activity: {error}",
     "actions": {
-      "student.created": "Student created",
-      "student.updated": "Student updated",
-      "student.archived": "Student archived",
-      "student.reactivated": "Student reactivated",
-      "user.created": "User created",
-      "user.systemRoleChanged": "System role changed",
-      "membership.created": "Membership added",
-      "membership.roleChanged": "Membership role changed",
-      "membership.removed": "Membership removed"
+      "student": {
+        "created": "Student created",
+        "updated": "Student updated",
+        "archived": "Student archived",
+        "reactivated": "Student reactivated"
+      },
+      "user": {
+        "created": "User created",
+        "systemRoleChanged": "System role changed"
+      },
+      "membership": {
+        "created": "Membership added",
+        "roleChanged": "Membership role changed",
+        "deactivated": "Membership deactivated",
+        "reactivated": "Membership reactivated",
+        "removed": "Membership removed"
+      }
     },
     "entities": {
       "student": "Student",

@@ -432,11 +432,12 @@
                           membership.role
                         "
                         :disabled="
+                          user.id === currentUserUid ||
                           savingMembershipKey ===
-                          membershipKey(
-                            membership.schoolId,
-                            user.id,
-                          )
+                            membershipKey(
+                              membership.schoolId,
+                              user.id,
+                            )
                         "
                         @change="
                           changeMembershipRole(
@@ -570,7 +571,17 @@
                   }}
                 </p>
 
-                <div class="add-membership">
+                <div
+                  v-if="
+                    isSystemAdmin
+                      ? availableSchoolsFor(user.id).length > 0
+                      : !hasMembershipInSchool(
+                          user.id,
+                          schoolId,
+                        )
+                  "
+                  class="add-membership"
+                >
                   <h5>
                     {{
                       $t(
@@ -725,6 +736,11 @@ export default {
       type: Boolean,
       default: false,
     },
+
+    currentUserUid: {
+      type: String,
+      default: "",
+    },
   },
 
   data() {
@@ -768,11 +784,13 @@ export default {
         return this.schools;
       }
 
-      return this.schools.filter(
-        (school) =>
-          school.id ===
-          this.schoolId,
-      );
+      return [
+        {
+          id: this.schoolId,
+          name: this.schoolId,
+          active: true,
+        },
+      ];
     },
 
     activeSchools() {
@@ -784,7 +802,16 @@ export default {
   },
 
   mounted() {
-    this.loadSchools();
+    if (this.isSystemAdmin) {
+      this.loadSchools();
+    } else {
+      this.schools = [
+        {
+          id: this.schoolId,
+        },
+      ];
+    }
+
     this.startListener();
   },
 
@@ -1049,6 +1076,21 @@ export default {
       );
     },
 
+    hasMembershipInSchool(
+      userId,
+      schoolId,
+    ) {
+      return (
+        this.membershipsByUser[
+          userId
+        ]?.some(
+          (membership) =>
+            membership.schoolId ===
+            schoolId,
+        ) || false
+      );
+    },
+
     async addMembership(
       user,
     ) {
@@ -1153,7 +1195,20 @@ export default {
       membership,
       event,
     ) {
+      if (
+        user.id ===
+        this.currentUserUid
+      ) {
+        event.target.value =
+          membership.role;
 
+        this.errorMessage =
+          this.$t(
+            "adminUsers.memberships.selfRoleChangeError",
+          );
+
+        return;
+      }
       if (
         !this.canManageSchool(
           membership.schoolId,
@@ -1212,6 +1267,20 @@ export default {
             role:
               newRole,
           },
+          {
+            actorRole:
+              this.isSystemAdmin
+                ? "system-admin"
+                : "school-admin",
+
+            entityName:
+              user.displayName ||
+              user.email ||
+              user.id,
+
+            email:
+              user.email || "",
+          },
         );
 
         await this.loadMemberships(
@@ -1245,6 +1314,17 @@ export default {
       membership,
       active,
     ) {
+      if (
+        user.id ===
+        this.currentUserUid
+      ) {
+        this.errorMessage =
+          this.$t(
+            "adminUsers.memberships.selfDeactivateError",
+          );
+
+        return;
+      }
       if (
         !this.canManageSchool(
           membership.schoolId,
@@ -1293,6 +1373,20 @@ export default {
           membership.schoolId,
           user.id,
           active,
+          {
+            actorRole:
+              this.isSystemAdmin
+                ? "system-admin"
+                : "school-admin",
+
+            entityName:
+              user.displayName ||
+              user.email ||
+              user.id,
+
+            email:
+              user.email || "",
+          },
         );
 
         await this.loadMemberships(
@@ -1324,6 +1418,17 @@ export default {
       user,
       membership,
     ) {
+      if (
+        user.id ===
+        this.currentUserUid
+      ) {
+        this.errorMessage =
+          this.$t(
+            "adminUsers.memberships.selfRemoveError",
+          );
+
+        return;
+      }
       if (
         !this.canManageSchool(
           membership.schoolId,
@@ -1369,6 +1474,20 @@ export default {
         await removeSchoolMembership(
           membership.schoolId,
           user.id,
+          {
+            actorRole:
+              this.isSystemAdmin
+                ? "system-admin"
+                : "school-admin",
+
+            entityName:
+              user.displayName ||
+              user.email ||
+              user.id,
+
+            email:
+              user.email || "",
+          },
         );
 
         await this.loadMemberships(
@@ -1547,6 +1666,10 @@ export default {
           await createManagedUser(
             payload,
           );
+
+        if (!this.isSystemAdmin) {
+          await this.startListener();
+        }
 
         this.message =
           this.$t(

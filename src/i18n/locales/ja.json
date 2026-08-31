@@ -763,7 +763,10 @@
       "addError": "学校アクセスを追加できませんでした: {error}",
       "roleError": "学校での役割を更新できませんでした: {error}",
       "statusError": "学校アクセスを更新できませんでした: {error}",
-      "removeError": "学校アクセスを削除できませんでした: {error}"
+      "removeError": "学校アクセスを削除できませんでした: {error}",
+      "selfRoleChangeError": "自分自身の学校内の権限は変更できません。",
+      "selfDeactivateError": "自分自身の学校アクセスは無効化できません。",
+      "selfRemoveError": "自分自身の学校アクセスは削除できません。"
     },
     "create": {
       "title": "ユーザー作成",
@@ -797,15 +800,23 @@
     "changedFields": "変更された項目",
     "loadError": "操作履歴を読み込めませんでした: {error}",
     "actions": {
-      "student.created": "生徒を作成",
-      "student.updated": "生徒を更新",
-      "student.archived": "生徒をアーカイブ",
-      "student.reactivated": "生徒を再有効化",
-      "user.created": "ユーザーを作成",
-      "user.systemRoleChanged": "システム権限を変更",
-      "membership.created": "メンバーシップを追加",
-      "membership.roleChanged": "メンバーシップの役割を変更",
-      "membership.removed": "メンバーシップを削除"
+      "student": {
+        "created": "学生を作成",
+        "updated": "学生情報を更新",
+        "archived": "学生をアーカイブ",
+        "reactivated": "学生を再有効化"
+      },
+      "user": {
+        "created": "ユーザーを作成",
+        "systemRoleChanged": "システム権限を変更"
+      },
+      "membership": {
+        "created": "学校アクセスを追加",
+        "roleChanged": "学校内の権限を変更",
+        "deactivated": "学校アクセスを無効化",
+        "reactivated": "学校アクセスを再有効化",
+        "removed": "学校アクセスを削除"
+      }
     },
     "entities": {
       "student": "生徒",

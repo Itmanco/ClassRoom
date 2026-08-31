@@ -104,6 +104,9 @@
         :school-id="session.activeSchool"
         :is-system-admin="isSystemAdmin"
         :is-school-admin="isSchoolAdmin"
+        :current-user-uid="
+          session.firebaseUser?.uid || ''
+        "
       />
     </main>
   </div>
@@ -260,16 +263,6 @@ export default {
             await getUserSchoolMemberships(
               firebaseUser.uid,
             );
-            //TODO: remove
-            console.log(
-              "Firebase UID:",
-              firebaseUser.uid,
-            );
-
-            console.log(
-              "Memberships found:",
-              memberships,
-            );
 
           const schoolIds =
             memberships
@@ -278,21 +271,11 @@ export default {
                   membership.schoolId,
               )
               .filter(Boolean);
-              //TODO: remove
-              console.log(
-                "School IDs from memberships:",
-                schoolIds,
-              );
-
           
           schools =
             await getUserSchools(
               schoolIds,
             );
-          console.log(
-            "Schools loaded:",
-            schools,
-          );
         }
 
         let activeSchool =

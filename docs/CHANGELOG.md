@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-01 — School Admin authorization and membership management
+
+- Added school-scoped Admin access for active `school-admin` memberships.
+- Added School Admin user creation restricted to the active school.
+- Added School Admin membership role changes, deactivation, reactivation, and removal.
+- Added UI and Firestore-rule protection preventing School Admins from changing, deactivating, or removing their own school membership.
+- Added backend protection preventing a System Admin from changing their own system role.
+- Added scoped School Admin user discovery without broad client reads of other `/users/{uid}` profiles.
+- Scoped `user.created` audit events to the affected school when a school is assigned; no-school user creation remains system-scoped.
+- Added membership deactivation/reactivation audit coverage.
+- Completed emulator E2E regression coverage through cross-school isolation and Teacher regression.
+
+
 ## 2026-08-23 — Admin identity, memberships, and local Firebase emulators
 
 - Added system-level `system-admin` administration.

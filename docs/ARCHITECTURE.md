@@ -92,6 +92,16 @@ Firebase Authentication uid
 
 Legacy `users.schools[]` / `users.role` fields may still exist during migration, but membership documents are the target source of truth for school access.
 
+### Administrative authorization
+
+System Admin has global administration. Active `school-admin` membership grants Admin access only for the relevant school.
+
+School Admin can create users in that school and manage other users' memberships there. School Admin user discovery is performed through the privileged `getSchoolUsers` backend so the client does not need broad read access to other `/users/{uid}` profiles.
+
+School Admin cannot change, deactivate, or remove their own membership. System Admin cannot change their own system role.
+
+Audit scope follows the affected resource. School-affecting events are stored under `schools/{schoolId}/auditLogs/{logId}`; system-only events are stored under `systemAuditLogs/{logId}`. For System Admin, Activity Log intentionally combines the selected school's events with system events rather than aggregating every school's audit log.
+
 ## Class context
 
 `selectedClassId` is application/workspace state.

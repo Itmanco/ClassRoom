@@ -43,9 +43,11 @@ Print-ready Excel Export
 The application currently includes:
 
 - Firebase Authentication
-- System-admin and school membership roles
-- Admin user and school management
-- Callable Cloud Function for privileged user creation
+- System Admin and school-scoped role authorization
+- System Admin school/user administration
+- School Admin scoped user and membership management
+- Administrative activity/audit log
+- Callable Cloud Functions for privileged user administration
 - Local Firebase Auth / Firestore / Functions emulator workflow
 - Persistent authenticated sessions
 - Firestore-backed user profiles
@@ -73,7 +75,7 @@ The application currently includes:
 - Responsive navigation
 - GitHub Pages deployment
 
-The current structural milestone is replacing the legacy Classroom/Home page with a school Dashboard.
+The current security milestone is hardening membership invariants and the remaining school-domain Firestore authorization rules.
 
 ---
 
@@ -165,27 +167,28 @@ Changing a Firebase password does not automatically invalidate an already authen
 
 ---
 
-## Multi-school Context
+## Multi-school Context and Authorization
 
-A user profile can contain school membership and an active-school preference.
+Firebase Authentication UID is the canonical user identifier. System-wide privilege and school-specific access are intentionally separated.
 
-Example:
-
-```js
-{
-  activeSchool: "school_japan",
-  schools: ["school_japan"],
-  role: "admin"
-}
+```text
+Firebase Authentication uid
+├── users/{uid}
+│   └── systemRole: system-admin | null
+└── schools/{schoolId}/members/{uid}
+    ├── role: school-admin | teacher | student
+    └── active
 ```
 
-The application loads the schools available to the authenticated user and allows the user to select the active school.
+The application resolves available schools from active membership documents and stores an `activeSchool` preference.
 
 Changing schools resets school/class-specific UI state so that data from different schools is not mixed.
 
-Current school membership is profile-based.
+System Admin has global administration. An active `school-admin` membership grants Admin access only for that school. School Admin can create users for the active school and manage other users' memberships there.
 
-Stronger server-enforced membership and role authorization remains future work.
+School Admin user discovery is performed through a scoped callable backend rather than broad direct client reads of other `/users/{uid}` profiles.
+
+Legacy `users.schools[]` / `users.role` fields may remain during migration, but membership documents are the authorization source of truth for school access.
 
 ---
 
@@ -835,7 +838,8 @@ Known areas for future improvement include:
 
 - Legacy `ClassroomPage.vue` and related classroom components/services
 - Dashboard/Home replacement
-- Stronger server-enforced authorization
+- Complete school/role-aware Firestore hardening for the remaining domain collections
+- Membership identity and immutability rule hardening
 - Automated test coverage
 - Production logging/error handling review
 - Some service/browser validation messages are not yet fully localized

@@ -100,10 +100,14 @@ decisions.
 ## Authorization
 
 -   [x] Define school membership model
--   [ ] Complete role capability matrix and UI enforcement
--   [ ] Complete membership-aware Firestore rule enforcement
 -   [x] Add system-admin user/school administration foundation
--   [ ] Test cross-school access
+-   [x] Add school-admin scoped administration
+-   [x] Add school-admin user creation and membership management
+-   [x] Add administrator self-access protection
+-   [x] Test cross-school Admin access rejection
+-   [ ] Complete role capability matrix outside the Admin surface
+-   [ ] Enforce membership identity/immutability invariants
+-   [ ] Complete membership-aware Firestore rule enforcement for domain collections
 
 ## Internationalization hardening
 

@@ -152,3 +152,25 @@ regression testing.
 **Decision:** User administration and other privileged Firebase operations are tested with the Authentication, Firestore, and Functions emulators before production deployment.
 
 **Reason:** This prevents development mistakes from corrupting production identities or Firestore data and allows Cloud Functions work before Blaze is intentionally enabled.
+
+## 2026-09-01 — Audit scope follows the affected resource
+
+**Decision:** Audit scope is determined by the affected resource, not by the actor's privilege level.
+
+A user created with a school membership produces one school-scoped `user.created` event under `schools/{schoolId}/auditLogs/{logId}`. A user created without a school produces one system-scoped event under `systemAuditLogs/{logId}`.
+
+For System Admin, Activity Log remains selected-school aware: **All** combines the selected school's events with system events, **School** shows only the selected school's events, and **System** shows only system events.
+
+**Reason:** This keeps school history visible to the relevant School Admin without duplicating the same event into multiple audit scopes.
+
+## 2026-09-01 — Protect administrators from self-removing critical access
+
+**Decision:** School Admin cannot change, deactivate, or remove their own school membership. System Admin cannot change their own `systemRole`.
+
+**Reason:** Prevent accidental administrative lockout. UI protection improves usability, while Firestore rules/backend validation remain the security boundary.
+
+## 2026-09-01 — School Admin user discovery remains scoped
+
+**Decision:** Do not grant School Admin broad direct-read access to other `/users/{uid}` documents. Use the privileged school-scoped backend to return only the user fields needed by Admin Users.
+
+**Reason:** School administration requires identity information without granting client-side access to the global user collection.

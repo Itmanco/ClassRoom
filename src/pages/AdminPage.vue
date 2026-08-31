@@ -17,6 +17,7 @@
     "
     :school-id="schoolId"
     :is-system-admin="isSystemAdmin"
+    :current-user-uid="currentUserUid"
     @back="section = ''"
   />
 
@@ -184,6 +185,10 @@ export default {
     isSchoolAdmin: {
       type: Boolean,
       default: false,
+    },
+    currentUserUid: {
+      type: String,
+      default: "",
     },
   },
 

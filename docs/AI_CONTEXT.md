@@ -143,3 +143,17 @@ replacement and safe legacy removal.
 - Local development uses Authentication, Firestore, and Functions emulators together to avoid modifying production data.
 - Production Functions deployment requires Blaze and must follow `FIREBASE_BILLING_RUNBOOK.md`.
 - Next authorization work: complete role capability enforcement and account deactivate/reactivate behavior.
+
+## Admin authorization checkpoint — 2026-09-01
+
+- Firebase Auth UID is canonical across Auth, `users/{uid}`, and `schools/{schoolId}/members/{uid}`.
+- `users/{uid}.systemRole == "system-admin"` grants global administration.
+- Active `school-admin` membership grants Admin access only for that school.
+- School Admin can create users in the school and manage other memberships there.
+- School Admin cannot change, deactivate, or remove their own membership.
+- System Admin cannot change their own system role.
+- School Admin user loading must not be solved by weakening `/users` reads; use the scoped privileged backend.
+- Audit scope follows the affected resource: school user creation is school-scoped; no-school creation is system-scoped.
+- System Admin Activity Log intentionally uses selected school + system logs, not every school's logs.
+- Emulator E2E regression coverage passed through cross-school isolation and Teacher regression.
+- Next security work: membership identity/immutability invariants, broader domain Firestore rules, and `createUser` rollback robustness.

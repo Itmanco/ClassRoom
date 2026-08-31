@@ -43,9 +43,11 @@ Classroom Manager では現在、学校管理から座席表出力までの主�
 現在実装されている主な機能：
 
 - Firebase Authentication
-- システム管理者と学校メンバーシップのロール管理
-- 管理画面からのユーザー・学校アクセス管理
-- 特権ユーザー作成用 callable Cloud Function
+- システム管理者と学校単位のロール認可
+- システム管理者による学校・ユーザー管理
+- 学校管理者による学校単位のユーザー・メンバーシップ管理
+- 管理操作の Activity / Audit Log
+- 特権ユーザー管理用 callable Cloud Functions
 - Firebase Authentication / Firestore / Functions のローカル Emulator 開発環境
 - ログイン状態の保持
 - Firestore によるユーザープロフィール管理
@@ -73,7 +75,7 @@ Classroom Manager では現在、学校管理から座席表出力までの主�
 - レスポンシブナビゲーション
 - GitHub Pages デプロイ
 
-現在の構造上の次のマイルストーンは、旧 Classroom/Home ページを学校 Dashboard に置き換えることです。
+現在のセキュリティ上の次のマイルストーンは、メンバーシップ不変条件と残りの学校ドメイン Firestore 権限を強化することです。
 
 ---
 
@@ -180,7 +182,11 @@ Firebase Authentication uid
 
 `activeSchool` は現在使用している学校を表します。利用可能な学校は学校メンバーシップから解決し、学校を変更した場合は学校・クラス固有の UI 状態をリセットしてデータの混在を防ぎます。
 
-旧 `users.schools[]` / `users.role` は移行互換のため残る場合がありますが、学校アクセスの今後の基準はメンバーシップドキュメントです。
+旧 `users.schools[]` / `users.role` は移行互換のため残る場合がありますが、学校アクセスの認可はメンバーシップドキュメントを基準とします。
+
+System Admin はシステム全体を管理し、有効な `school-admin` メンバーシップを持つ School Admin は対象学校のみ Admin 機能を利用できます。School Admin は対象学校のユーザー作成と、他ユーザーのメンバーシップ管理を行えます。
+
+School Admin のユーザー取得は、他ユーザーの `/users/{uid}` をクライアントから広く読み取れるようにするのではなく、学校権限を検証する callable backend を使用します。
 
 ---
 
@@ -834,7 +840,8 @@ npm run deploy
 
 - 旧 `ClassroomPage.vue` と関連コンポーネント / service
 - Dashboard/Home への置き換え
-- ロール別 UI / Firestore 権限の最終調整
+- 残りのドメインコレクションに対する学校・ロール単位の Firestore 権限強化
+- メンバーシップ ID / `userUid` 不変条件の強化
 - 自動テスト
 - 本番向けログ / エラーハンドリングの見直し
 - 一部の service / ブラウザ検証メッセージの国際化

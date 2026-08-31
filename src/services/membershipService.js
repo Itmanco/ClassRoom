@@ -373,29 +373,13 @@ export async function updateSchoolMembership(
     data,
   );
 
-  let user = {};
+  const entityName =
+    options.entityName ||
+    normalizedUid;
 
-  if (
-    roleChanged ||
-    activeChanged
-  ) {
-    const userRef =
-      doc(
-        db,
-        "users",
-        normalizedUid,
-      );
-
-    const userSnapshot =
-      await getDoc(
-        userRef,
-      );
-
-    user =
-      userSnapshot.exists()
-        ? userSnapshot.data()
-        : {};
-  }
+  const email =
+    options.email ||
+    "";
 
   if (roleChanged) {
     const audit =
@@ -420,16 +404,12 @@ export async function updateSchoolMembership(
           ],
 
           details: {
-            entityName:
-              user.displayName ||
-              user.email ||
-              normalizedUid,
+            entityName,
 
             userUid:
               normalizedUid,
 
-            email:
-              user.email || "",
+            email,
 
             changes: {
               role: {
@@ -476,16 +456,12 @@ export async function updateSchoolMembership(
           ],
 
           details: {
-            entityName:
-              user.displayName ||
-              user.email ||
-              normalizedUid,
+            entityName,
 
             userUid:
               normalizedUid,
 
-            email:
-              user.email || "",
+            email,
 
             changes: {
               active: {
@@ -514,6 +490,7 @@ export async function setSchoolMembershipActive(
   schoolId,
   uid,
   active,
+  options = {},
 ) {
   await updateSchoolMembership(
     schoolId,
@@ -522,6 +499,7 @@ export async function setSchoolMembershipActive(
       active:
         active !== false,
     },
+    options,
   );
 }
 
@@ -556,22 +534,13 @@ export async function removeSchoolMembership(
   const membership =
     existing.data();
 
-  const userRef =
-    doc(
-      db,
-      "users",
-      normalizedUid,
-    );
+  const entityName =
+    options.entityName ||
+    normalizedUid;
 
-  const userSnapshot =
-    await getDoc(
-      userRef,
-    );
-
-  const user =
-    userSnapshot.exists()
-      ? userSnapshot.data()
-      : {};
+  const email =
+    options.email ||
+    "";
 
   const batch =
     writeBatch(db);
@@ -600,16 +569,12 @@ export async function removeSchoolMembership(
         changedFields: [],
 
         details: {
-          entityName:
-            user.displayName ||
-            user.email ||
-            normalizedUid,
+          entityName,
 
           userUid:
             normalizedUid,
 
-          email:
-            user.email || "",
+          email,
 
           previousRole:
             membership.role ||

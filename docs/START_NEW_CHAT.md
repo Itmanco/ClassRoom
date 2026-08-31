@@ -123,3 +123,16 @@ branch and regression testing.
 - Local development uses Authentication, Firestore, and Functions emulators together to avoid modifying production data.
 - Production Functions deployment requires Blaze and must follow `FIREBASE_BILLING_RUNBOOK.md`.
 - Next authorization work: complete role capability enforcement and account deactivate/reactivate behavior.
+
+## Latest checkpoint — 2026-09-01
+
+School Admin authorization is implemented and emulator-tested through cross-school isolation and Teacher regression.
+
+Before Admin badges/search, prioritize:
+
+1. Enforce membership identity (`memberId == userUid`).
+2. Prevent membership `userUid` mutation.
+3. Harden the remaining domain-collection Firestore rules.
+4. Improve `createUser` rollback cleanup.
+
+Do not weaken `/users` reads to make School Admin UI work. Audit scope follows the affected resource, and System Admin Activity Log intentionally combines the selected school's logs with system logs.

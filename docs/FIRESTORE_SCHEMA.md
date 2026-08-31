@@ -285,17 +285,27 @@ This is particularly important for:
 
 ## Security status
 
-Authentication and membership documents are implemented. Firestore authorization rules should
-not be treated as complete authorization by themselves.
+Authentication, canonical UID-based memberships, and the core Admin authorization path are implemented.
 
-Future security work should enforce:
+Current Admin enforcement includes:
 
--   User belongs to requested school
--   Role permits requested operation
--   Cross-school access is rejected
--   Administrative operations are restricted
+-   Active school membership checks for school access
+-   School Admin authority restricted to the relevant school
+-   System Admin global administration
+-   Cross-school Admin access rejection
+-   School Admin self-membership protection
+-   System Admin self-role-change protection in the privileged backend
+-   Scoped School Admin user discovery without broad `/users` client reads
+-   Separate school and system audit scopes
 
-Firestore rules must be reviewed alongside the final membership model.
+Security hardening is not complete. Remaining work includes:
+
+-   Enforce `memberId == request.resource.data.userUid` on membership creation
+-   Prevent `userUid` from changing after membership creation
+-   Replace remaining broad signed-in rules on students, buildings, rooms, courses, classes, enrollments, and seating plans with school/role-aware authorization
+-   Review remaining legacy/transitional rules
+
+Firestore rules must continue to be reviewed alongside the canonical membership model.
 
 ## Local schema inspection
 

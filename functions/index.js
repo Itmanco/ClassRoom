@@ -411,10 +411,10 @@ exports.createUser =
             });
           }
 
-          const auditRef =
-            db
-                .collection("systemAuditLogs")
-                .doc();
+          const auditRef = schoolId ? db.collection("schools")
+              .doc(schoolId).collection("auditLogs").doc() : db
+                  .collection("systemAuditLogs")
+                  .doc();
 
           await auditRef.set({
             action:
@@ -435,7 +435,9 @@ exports.createUser =
               "",
 
             actorRole:
-              admin.role,
+              admin.profile.systemRole ||
+              admin.role ||
+              null,
 
             schoolId:
               schoolId || null,
@@ -669,6 +671,17 @@ exports.setSystemRole =
           throw new HttpsError(
               "invalid-argument",
               "Unsupported system role.",
+          );
+        }
+
+        // A System Admin must never change
+        // their own system role.
+        if (
+          admin.uid === uid
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "You cannot change your own system role.",
           );
         }
 

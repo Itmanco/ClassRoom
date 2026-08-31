@@ -32,13 +32,20 @@ in `CHANGELOG.md`; long-term direction belongs in `ROADMAP.md`.
 ## Multi-school/security
 
 -   [x] Formalize membership documents (`schools/{schoolId}/members/{uid}`)
--   [ ] Finish role permissions for system-admin / school-admin / teacher / student
--   [ ] Update Firestore security rules
+-   [x] Implement System Admin administration foundation
+-   [x] Implement School Admin scoped user/membership administration
+-   [x] Protect School Admin from changing/deactivating/removing own membership
+-   [x] Protect System Admin from changing own system role
 -   [x] Test user with one school using local emulators
+-   [x] Test cross-school Admin access rejection
+-   [x] Regression-test Teacher access after Admin authorization changes
+-   [ ] Enforce `memberId == userUid` on membership creation
+-   [ ] Prevent membership `userUid` changes
+-   [ ] Finish role permissions for non-Admin domain operations
+-   [ ] Harden Firestore rules for students/buildings/rooms/courses/classes/enrollments/seatingPlans
 -   [ ] Test user with multiple schools
 -   [ ] Test user with no schools
 -   [ ] Test invalid/removed active school
--   [ ] Test cross-school access rejection
 
 ## Internationalization
 

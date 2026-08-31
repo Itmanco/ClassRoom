@@ -13,9 +13,12 @@ service cloud.firestore {
 
     function isSystemAdmin() {
       return signedIn()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        )
         && get(
           /databases/$(database)/documents/users/$(request.auth.uid)
-        ).data.systemRole == "system-admin";
+        ).data.get("systemRole", "") == "system-admin";
     }
 
     function isSchoolAdmin(schoolId) {
@@ -32,8 +35,18 @@ service cloud.firestore {
     }
 
     function canAdministerSchool(schoolId) {
-      return isSystemAdmin()
-        || isSchoolAdmin(schoolId);
+      return isSchoolAdmin(schoolId)
+        || isSystemAdmin();
+    }
+
+    function isActiveSchoolMember(schoolId) {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        ).data.active == true;
     }
 
     // ----------------------------------------
@@ -70,8 +83,11 @@ service cloud.firestore {
                           "activeSchool"
                         ])
                       ||
-                      request.resource.data.activeSchool
-                        in resource.data.schools
+                      isSystemAdmin()
+                      ||
+                      isActiveSchoolMember(
+                        request.resource.data.activeSchool
+                      )
                     );
 
       // System Admin may change system-level
@@ -94,12 +110,9 @@ service cloud.firestore {
     // ----------------------------------------
 
     match /schools/{schoolId} {
-
-      allow read: if signedIn()
-                  && (
-                    resource.data.userUid
-                      == request.auth.uid
-                    || isSystemAdmin()
+      allow read: if isSystemAdmin()
+                  || isActiveSchoolMember(
+                    schoolId
                   );
 
       allow create, update, delete:
@@ -168,10 +181,20 @@ service cloud.firestore {
                       )
                     );
 
-        allow create, update, delete:
+        allow create:
           if canAdministerSchool(
             schoolId
           );
+
+        allow update, delete:
+          if isSystemAdmin()
+            || (
+              canAdministerSchool(
+                schoolId
+              )
+              && request.auth.uid
+                != memberId
+            );
       }
 
       // --------------------------------------

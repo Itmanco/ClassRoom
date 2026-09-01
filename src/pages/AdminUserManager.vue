@@ -302,9 +302,13 @@
                       )
                     "
                     class="access-badge"
-                    :class="
-                      `access-${membership.role}`
-                    "
+                    :class="[
+                      `access-${membership.role}`,
+                      {
+                        'access-inactive':
+                          membership.active === false,
+                      },
+                    ]"
                   >
                     {{
                       schoolName(
@@ -319,6 +323,11 @@
                         )}`,
                       )
                     }}
+                    <template
+                      v-if="membership.active === false"
+                    >
+                      · Inactive
+                    </template>
                   </span>
                 </div>
               </div>
@@ -2006,6 +2015,11 @@ select {
 .access-student {
   background: #e4e7ec;
   color: #475467;
+}
+
+.access-badge.access-inactive {
+  opacity: 0.5;
+  filter: grayscale(0.7);
 }
 
 .membership-section {

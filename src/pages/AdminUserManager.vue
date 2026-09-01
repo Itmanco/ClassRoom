@@ -212,34 +212,52 @@
 
     <section class="panel">
       <div class="section-heading">
-        <div>
-          <h2>
-            {{ $t("adminUsers.list.title") }}
-          </h2>
+  <div>
+    <h2>
+      {{ $t("adminUsers.list.title") }}
+    </h2>
 
-          <p>
-            {{
-              $t(
-                "adminUsers.list.count",
-                {
-                  count: users.length,
-                },
-              )
-            }}
-          </p>
-        </div>
+    <p>
+      {{
+        $t(
+          "adminUsers.list.count",
+          {
+            count: filteredUsers.length,
+          },
+        )
+      }}
+    </p>
+  </div>
+      </div>
+
+      <div class="user-filters">
+        <label class="search-field">
+          Search
+
+          <input
+            v-model.trim="userSearch"
+            type="search"
+            placeholder="Name or email"
+          />
+        </label>
       </div>
 
       <p v-if="loading">
         {{ $t("adminUsers.list.loading") }}
       </p>
 
+      <p
+        v-else-if="filteredUsers.length === 0"
+        class="empty-state"
+      >
+        No users match the current search.
+      </p>
       <div
         v-else
         class="user-list"
       >
         <article
-          v-for="user in users"
+          v-for="user in filteredUsers"
           :key="user.id"
           class="user-card"
         >
@@ -254,19 +272,55 @@
                   }}
                 </h3>
 
-                <span
-                  v-if="
-                    user.systemRole ===
-                    'system-admin'
-                  "
-                  class="role-badge"
-                >
-                  {{
-                    $t(
-                      "adminUsers.roles.systemAdmin",
-                    )
-                  }}
-                </span>
+                <div class="access-badges">
+                  <span
+                    v-if="
+                      user.systemRole ===
+                      'system-admin'
+                    "
+                    class="
+                      access-badge
+                      access-system-admin
+                    "
+                  >
+                    {{
+                      $t(
+                        "adminUsers.roles.systemAdmin",
+                      )
+                    }}
+                  </span>
+
+                  <span
+                    v-for="
+                      membership in
+                      membershipsFor(user.id)
+                    "
+                    :key="
+                      membershipKey(
+                        membership.schoolId,
+                        user.id,
+                      )
+                    "
+                    class="access-badge"
+                    :class="
+                      `access-${membership.role}`
+                    "
+                  >
+                    {{
+                      schoolName(
+                        membership.schoolId,
+                      )
+                    }}
+                    ·
+                    {{
+                      $t(
+                        `adminUsers.memberships.roles.${membershipRoleKey(
+                          membership.role,
+                        )}`,
+                      )
+                    }}
+                  </span>
+                </div>
               </div>
 
               <p>
@@ -750,7 +804,10 @@ export default {
       membershipsByUser: {},
       membershipForms: {},
 
+      userSearch: "",
+
       loading: true,
+      loadingMemberships: false,
       expandedUserId: "",
       loadingMembershipUserId: "",
       savingUserId: "",
@@ -779,6 +836,35 @@ export default {
   },
 
   computed: {
+     filteredUsers() {
+      const search =
+        this.userSearch
+          .trim()
+          .toLowerCase();
+
+      if (!search) {
+        return this.users;
+      }
+
+      return this.users.filter(
+        (user) => {
+          const searchableValues = [
+            user.displayName,
+            user.firstName,
+            user.lastName,
+            user.email,
+          ];
+
+          return searchableValues.some(
+            (value) =>
+              String(value || "")
+                .toLowerCase()
+                .includes(search),
+          );
+        },
+      );
+    },
+    
     allowedSchools() {
       if (this.isSystemAdmin) {
         return this.schools;
@@ -801,9 +887,9 @@ export default {
     },
   },
 
-  mounted() {
+  async mounted() {
     if (this.isSystemAdmin) {
-      this.loadSchools();
+      await this.loadSchools();
     } else {
       this.schools = [
         {
@@ -812,6 +898,7 @@ export default {
       ];
     }
 
+    await this.loadAllMemberships();
     this.startListener();
   },
 
@@ -835,6 +922,66 @@ export default {
                 error.message,
             },
           );
+      }
+    },
+
+    async loadAllMemberships() {
+      this.loadingMemberships = true;
+
+      try {
+        const membershipsByUser = {};
+
+        for (
+          const school
+          of this.allowedSchools
+        ) {
+          const memberships =
+            await getSchoolMemberships(
+              school.id,
+            );
+
+          memberships.forEach(
+            (membership) => {
+              const userId =
+                String(
+                  membership.userUid ||
+                  membership.id,
+                );
+
+              if (
+                !membershipsByUser[
+                  userId
+                ]
+              ) {
+                membershipsByUser[
+                  userId
+                ] = [];
+              }
+
+              membershipsByUser[
+                userId
+              ].push({
+                ...membership,
+                schoolId:
+                  school.id,
+              });
+            },
+          );
+        }
+
+        this.membershipsByUser =
+          membershipsByUser;
+      } catch (error) {
+        this.errorMessage =
+          this.$t(
+            "adminUsers.memberships.loadError",
+            {
+              error:
+                error.message,
+            },
+          );
+      } finally {
+        this.loadingMemberships = false;
       }
     },
 
@@ -1016,10 +1163,19 @@ export default {
     membershipsFor(
       userId,
     ) {
-      return (
+      const memberships =
         this.membershipsByUser[
           userId
-        ] || []
+        ] || [];
+
+      if (this.isSystemAdmin) {
+        return memberships;
+      }
+
+      return memberships.filter(
+        (membership) =>
+          membership.schoolId ===
+          this.schoolId,
       );
     },
 
@@ -1058,6 +1214,16 @@ export default {
       );
     },
 
+    membershipRoleKey(
+      role,
+    ) {
+      if (role === "school-admin") {
+        return "schoolAdmin";
+      }
+
+      return role;
+    },
+
     membershipKey(
       schoolId,
       userId,
@@ -1070,8 +1236,12 @@ export default {
     canManageSchool(
       schoolId,
     ) {
+      if (this.isSystemAdmin) {
+        return true;
+      }
+
       return (
-        this.isSystemAdmin ||
+        Boolean(this.schoolId) &&
         schoolId === this.schoolId
       );
     },
@@ -1671,6 +1841,8 @@ export default {
           await this.startListener();
         }
 
+        await this.loadAllMemberships();
+
         this.message =
           this.$t(
             "adminUsers.create.created",
@@ -1746,6 +1918,25 @@ export default {
   border-radius: 12px;
 }
 
+.user-filters {
+  display: flex;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.search-field {
+  width: min(100%, 420px);
+}
+
+.search-field input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font: inherit;
+}
+
 .user-list {
   display: grid;
   gap: 14px;
@@ -1782,13 +1973,39 @@ select {
   font: inherit;
 }
 
-.role-badge {
+.access-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.access-badge {
   padding: 4px 8px;
   border-radius: 999px;
-  background: #e7f7ed;
-  color: #18794e;
   font-size: 0.8rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.access-system-admin {
+  background: #e7f7ed;
+  color: #18794e;
+}
+
+.access-school-admin {
+  background: #ffe8cc;
+  color: #b54708;
+}
+
+.access-teacher {
+  background: #e8f1ff;
+  color: #175cd3;
+}
+
+.access-student {
+  background: #e4e7ec;
+  color: #475467;
 }
 
 .membership-section {

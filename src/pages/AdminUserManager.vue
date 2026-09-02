@@ -232,12 +232,16 @@
 
       <div class="user-filters">
         <label class="search-field">
-          Search
+          {{ $t("adminUsers.filters.search") }}
 
           <input
             v-model.trim="userSearch"
             type="search"
-            placeholder="Name or email"
+            :placeholder="
+              $t(
+                'adminUsers.filters.searchPlaceholder',
+              )
+            "
           />
         </label>
       </div>
@@ -250,7 +254,11 @@
         v-else-if="filteredUsers.length === 0"
         class="empty-state"
       >
-        No users match the current search.
+        {{
+          $t(
+            "adminUsers.filters.noResults",
+          )
+        }}
       </p>
       <div
         v-else
@@ -326,7 +334,12 @@
                     <template
                       v-if="membership.active === false"
                     >
-                      · Inactive
+                      ·
+                      {{
+                        $t(
+                          "adminUsers.memberships.inactive",
+                        )
+                      }}
                     </template>
                   </span>
                 </div>
@@ -394,6 +407,155 @@
               </label>
             </div>
           </div>
+
+          <div class="user-actions">
+            <button
+              v-if="
+                editingUserId !== user.id
+              "
+              type="button"
+              class="secondary"
+              @click="startEditUser(user)"
+            >
+              {{
+                $t(
+                  "adminUsers.edit.action",
+                )
+              }}
+            </button>
+          </div>
+
+          <form
+            v-if="
+              editingUserId === user.id
+            "
+            class="edit-user-form"
+            @submit.prevent="
+              submitEditUser(user)
+            "
+          >
+            <h4>
+              {{
+                $t(
+                  "adminUsers.edit.title",
+                )
+              }}
+            </h4>
+
+            <div class="edit-user-grid">
+              <label>
+                {{
+                  $t(
+                    "adminUsers.edit.fields.firstName",
+                  )
+                }}
+
+                <input
+                  v-model.trim="
+                    editUserForm.firstName
+                  "
+                  type="text"
+                  required
+                />
+              </label>
+
+              <label>
+                {{
+                  $t(
+                    "adminUsers.edit.fields.lastName",
+                  )
+                }}
+
+                <input
+                  v-model.trim="
+                    editUserForm.lastName
+                  "
+                  type="text"
+                  required
+                />
+              </label>
+
+              <label>
+                {{
+                  $t(
+                    "adminUsers.edit.fields.displayName",
+                  )
+                }}
+
+                <input
+                  v-model.trim="
+                    editUserForm.displayName
+                  "
+                  type="text"
+                  :placeholder="
+                    $t(
+                      'adminUsers.edit.fields.displayNamePlaceholder',
+                    )
+                  "
+                />
+              </label>
+
+              <label>
+                {{
+                  $t(
+                    "adminUsers.edit.fields.language",
+                  )
+                }}
+
+                <select
+                  v-model="
+                    editUserForm.language
+                  "
+                >
+                  <option value="en">
+                    English
+                  </option>
+
+                  <option value="ja">
+                    日本語
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            <div class="edit-user-actions">
+              <button
+                type="submit"
+                class="primary"
+                :disabled="
+                  savingEditUserId ===
+                  user.id
+                "
+              >
+                {{
+                  savingEditUserId ===
+                  user.id
+                    ? $t(
+                        "adminUsers.edit.saving",
+                      )
+                    : $t(
+                        "adminUsers.edit.save",
+                      )
+                }}
+              </button>
+
+              <button
+                type="button"
+                class="secondary"
+                :disabled="
+                  savingEditUserId ===
+                  user.id
+                "
+                @click="cancelEditUser"
+              >
+                {{
+                  $t(
+                    "adminUsers.edit.cancel",
+                  )
+                }}
+              </button>
+            </div>
+          </form>
 
           <div class="membership-section">
             <div class="membership-heading">
@@ -780,6 +942,7 @@ import {
   createManagedUser,
   getManagedSchoolUsers,
   setManagedUserSystemRole,
+  updateManagedUser,
 } from "../services/adminUserService";
 
 export default {
@@ -814,6 +977,16 @@ export default {
       membershipForms: {},
 
       userSearch: "",
+
+      editingUserId: "",
+      savingEditUserId: "",
+
+      editUserForm: {
+        firstName: "",
+        lastName: "",
+        displayName: "",
+        language: "en",
+      },
 
       loading: true,
       loadingMemberships: false,
@@ -1692,6 +1865,115 @@ export default {
       }
     },
 
+    startEditUser(
+      user,
+    ) {
+      this.editingUserId =
+        user.id;
+
+      this.editUserForm = {
+        firstName:
+          user.firstName || "",
+
+        lastName:
+          user.lastName || "",
+
+        displayName:
+          user.displayName || "",
+
+        language:
+          user.language || "en",
+      };
+
+      this.message = "";
+      this.errorMessage = "";
+    },
+
+    cancelEditUser() {
+      this.editingUserId = "";
+
+      this.editUserForm = {
+        firstName: "",
+        lastName: "",
+        displayName: "",
+        language: "en",
+      };
+    },
+
+    async submitEditUser(
+      user,
+    ) {
+      this.savingEditUserId =
+        user.id;
+
+      this.message = "";
+      this.errorMessage = "";
+
+      try {
+        const payload = {
+          userId:
+            user.id,
+
+          firstName:
+            this.editUserForm.firstName,
+
+          lastName:
+            this.editUserForm.lastName,
+
+          displayName:
+            this.editUserForm.displayName,
+
+          language:
+            this.editUserForm.language,
+        };
+
+        if (!this.isSystemAdmin) {
+          payload.schoolId =
+            this.schoolId;
+        }
+
+        await updateManagedUser(
+          payload,
+        );
+
+        /*
+        * System Admin receives live updates
+        * through watchUsers().
+        *
+        * School Admin uses the callable
+        * getSchoolUsers(), so refresh the list.
+        */
+        if (!this.isSystemAdmin) {
+          await this.startListener();
+        }
+
+        this.message =
+          this.$t(
+            "adminUsers.edit.updated",
+            {
+              user:
+                this.editUserForm.displayName ||
+                `${this.editUserForm.firstName} ${this.editUserForm.lastName}`.trim() ||
+                user.email ||
+                user.id,
+            },
+          );
+
+        this.cancelEditUser();
+      } catch (error) {
+        this.errorMessage =
+          this.$t(
+            "adminUsers.edit.error",
+            {
+              error:
+                error.message,
+            },
+          );
+      } finally {
+        this.savingEditUserId = "";
+      }
+    },
+
     async changeSystemRole(
       user,
       event,
@@ -2022,6 +2304,49 @@ select {
   filter: grayscale(0.7);
 }
 
+.user-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.edit-user-form {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.edit-user-form h4 {
+  margin: 0 0 14px;
+}
+
+.edit-user-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+}
+
+.edit-user-grid input,
+.edit-user-grid select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.edit-user-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 .membership-section {
   margin-top: 18px;
   padding-top: 18px;
@@ -2167,12 +2492,18 @@ button:disabled {
 }
 
 @media (max-width: 800px) {
-  .create-user-form {
-    grid-template-columns: 1fr;
-  }
+  
 }
 
 @media (max-width: 800px) {
+  .create-user-form {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-user-grid {
+    grid-template-columns: 1fr;
+  }
+
   .user-manager {
     padding: 20px 14px;
   }

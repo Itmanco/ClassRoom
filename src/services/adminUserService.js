@@ -24,6 +24,12 @@ const getSchoolUsersCallable =
     "getSchoolUsers",
   );
 
+const updateManagedUserCallable =
+  httpsCallable(
+    functions,
+    "updateManagedUser",
+  );
+
 export async function createManagedUser(
   userData,
 ) {
@@ -61,4 +67,15 @@ export async function getManagedSchoolUsers(
   )
     ? result.data
     : [];
+}
+
+export async function updateManagedUser(
+  userData,
+) {
+  const result =
+    await updateManagedUserCallable(
+      userData,
+    );
+
+  return result.data;
 }

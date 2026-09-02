@@ -635,6 +635,169 @@ exports.getSchoolUsers =
       },
   );
 
+exports.updateManagedUser =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const userId =
+          String(
+              data.userId || "",
+          ).trim();
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        if (!userId) {
+          throw new HttpsError(
+              "invalid-argument",
+              "userId is required.",
+          );
+        }
+
+        /*
+         * Authorization
+         *
+         * A System Admin may update a user
+         * without a schoolId.
+         *
+         * A School Admin must provide the
+         * school they are administering.
+         */
+        let actor;
+
+        if (schoolId) {
+          actor =
+            await requireSchoolAdmin(
+                request,
+                schoolId,
+            );
+        } else {
+          actor =
+            await requireSystemAdmin(
+                request,
+            );
+        }
+
+        /*
+         * For a School Admin, verify that
+         * the target user actually belongs
+         * to the same school.
+         */
+        if (
+          actor.role ===
+            "school-admin"
+        ) {
+          const targetMembership =
+            await db
+                .collection("schools")
+                .doc(schoolId)
+                .collection("members")
+                .doc(userId)
+                .get();
+
+          if (
+            !targetMembership.exists ||
+            targetMembership
+                .data()
+                .active === false
+          ) {
+            throw new HttpsError(
+                "permission-denied",
+                "The user is not an active member of this school.",
+            );
+          }
+        }
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(userId);
+
+        const userDocument =
+          await userRef.get();
+
+        if (!userDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              "User profile not found.",
+          );
+        }
+
+        /*
+         * Explicit whitelist.
+         *
+         * Do NOT accept systemRole,
+         * active, email, role, schools,
+         * memberships, etc.
+         */
+        const firstName =
+          String(
+              data.firstName || "",
+          ).trim();
+
+        const lastName =
+          String(
+              data.lastName || "",
+          ).trim();
+
+        const displayName =
+          String(
+              data.displayName || "",
+          ).trim();
+
+        const language =
+          String(
+              data.language || "en",
+          ).trim();
+
+        if (!firstName) {
+          throw new HttpsError(
+              "invalid-argument",
+              "firstName is required.",
+          );
+        }
+
+        if (!lastName) {
+          throw new HttpsError(
+              "invalid-argument",
+              "lastName is required.",
+          );
+        }
+
+        if (
+          !["en", "ja"].includes(
+              language,
+          )
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "Invalid language.",
+          );
+        }
+
+        await userRef.update({
+          firstName,
+          lastName,
+          displayName,
+          language,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        return {
+          success: true,
+          userId,
+          firstName,
+          lastName,
+          displayName,
+          language,
+        };
+      },
+  );
+
 exports.setSystemRole =
   onCall(
       async (request) => {

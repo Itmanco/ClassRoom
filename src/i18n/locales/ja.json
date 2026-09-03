@@ -715,6 +715,11 @@
       "normalUser": "一般ユーザー",
       "systemAdmin": "システム管理者"
     },
+    "filters": {
+      "search": "検索",
+      "searchPlaceholder": "名前またはメールアドレス",
+      "noResults": "検索条件に一致するユーザーはいません。"
+    },
     "list": {
       "title": "登録済みユーザー",
       "count": "{count}人",
@@ -743,6 +748,7 @@
       "add": "アクセスを追加",
       "deactivate": "無効化",
       "reactivate": "再有効化",
+      "inactive": "無効",
       "remove": "削除",
       "roles": {
         "schoolAdmin": "学校管理者",
@@ -786,6 +792,22 @@
         "school": "初期所属学校",
         "noSchool": "学校なし",
         "schoolRole": "初期学校ロール"
+      }
+    },
+    "edit": {
+      "action": "ユーザーを編集",
+      "title": "ユーザーを編集",
+      "save": "変更を保存",
+      "saving": "保存中...",
+      "cancel": "キャンセル",
+      "updated": "{user}を更新しました。",
+      "error": "ユーザーを更新できませんでした: {error}",
+      "fields": {
+        "firstName": "名",
+        "lastName": "姓",
+        "displayName": "表示名",
+        "displayNamePlaceholder": "任意",
+        "language": "言語"
       }
     }
   },

@@ -714,6 +714,11 @@
       "normalUser": "Normal user",
       "systemAdmin": "System Admin"
     },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Name or email",
+      "noResults": "No users match the current search."
+    },
     "list": {
       "title": "Existing Users",
       "count": "{count} user(s)",
@@ -743,6 +748,7 @@
       "deactivate": "Deactivate",
       "reactivate": "Reactivate",
       "remove": "Remove",
+      "inactive": "Inactive",
       "roles": {
         "schoolAdmin": "School Admin",
         "teacher": "Teacher",
@@ -785,6 +791,22 @@
         "school": "Initial school",
         "noSchool": "No school",
         "schoolRole": "Initial school role"
+      }
+    },
+    "edit": {
+      "action": "Edit User",
+      "title": "Edit User",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "updated": "{user} was updated successfully.",
+      "error": "Unable to update user: {error}",
+      "fields": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "Optional",
+        "language": "Language"
       }
     }
   },

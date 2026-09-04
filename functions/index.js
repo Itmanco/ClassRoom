@@ -75,11 +75,12 @@ async function requireSystemAdmin(
 
   if (
     profile.systemRole !==
-    "system-admin"
+      "system-admin" ||
+    profile.active === false
   ) {
     throw new HttpsError(
         "permission-denied",
-        "System Admin access is required.",
+        "SYSTEM_ADMIN_REQUIRED",
     );
   }
 
@@ -130,6 +131,14 @@ async function requireSchoolAdmin(
   const profile =
     userDocument.data();
 
+  if (
+    profile.active === false
+  ) {
+    throw new HttpsError(
+        "permission-denied",
+        "ACCOUNT_INACTIVE",
+    );
+  }
   if (
     profile.systemRole ===
     "system-admin"
@@ -606,6 +615,9 @@ exports.getSchoolUsers =
 
                       language:
                         user.language || "en",
+
+                      active:
+                        user.active !== false,
                     };
                   },
               ),
@@ -794,6 +806,349 @@ exports.updateManagedUser =
           lastName,
           displayName,
           language,
+        };
+      },
+  );
+
+exports.setManagedUserActive =
+  onCall(
+      async (request) => {
+        const actor =
+          await requireSystemAdmin(
+              request,
+          );
+
+        const data =
+          request.data || {};
+
+        const userId =
+          String(
+              data.userId || "",
+          ).trim();
+
+        const active =
+          data.active;
+
+        if (!userId) {
+          throw new HttpsError(
+              "invalid-argument",
+              "USER_ID_REQUIRED",
+          );
+        }
+
+        if (
+          typeof active !==
+          "boolean"
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "ACTIVE_BOOLEAN_REQUIRED",
+          );
+        }
+
+        /*
+         * A System Admin must never
+         * archive their own account.
+         */
+        if (
+          userId === actor.uid &&
+          active === false
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "SELF_ARCHIVE_NOT_ALLOWED",
+          );
+        }
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(userId);
+
+        const userDocument =
+          await userRef.get();
+
+        if (!userDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              "USER_NOT_FOUND",
+          );
+        }
+
+        const targetProfile =
+          userDocument.data();
+
+        const previousActive =
+          targetProfile.active !== false;
+
+        /*
+         * If the requested state is already
+         * the current state, do nothing.
+         */
+        if (
+          previousActive === active
+        ) {
+          return {
+            success: true,
+            userId,
+            active,
+            changed: false,
+          };
+        }
+
+        /*
+         * Never allow the final active
+         * System Admin to be archived.
+         *
+         * Profiles without an active
+         * field are treated as active
+         * for backwards compatibility.
+         */
+        if (
+          active === false &&
+          targetProfile.systemRole ===
+            "system-admin"
+        ) {
+          const systemAdminSnapshot =
+            await db
+                .collection("users")
+                .where(
+                    "systemRole",
+                    "==",
+                    "system-admin",
+                )
+                .get();
+
+          const activeSystemAdmins =
+            systemAdminSnapshot.docs
+                .filter(
+                    (document) =>
+                      document
+                          .data()
+                          .active !==
+                        false,
+                );
+
+          if (
+            activeSystemAdmins.length <=
+            1
+          ) {
+            throw new HttpsError(
+                "failed-precondition",
+                "LAST_ACTIVE_SYSTEM_ADMIN",
+            );
+          }
+        }
+
+        /*
+         * Find every school membership
+         * belonging to the target user.
+         */
+        const membershipsSnapshot =
+          await db
+              .collectionGroup(
+                  "members",
+              )
+              .where(
+                  "userUid",
+                  "==",
+                  userId,
+              )
+              .get();
+
+        const schoolIds =
+          [
+            ...new Set(
+                membershipsSnapshot.docs
+                    .map(
+                        (document) =>
+                          document.ref
+                              .parent
+                              .parent
+                              ?.id,
+                    )
+                    .filter(Boolean),
+            ),
+          ];
+
+        const action =
+          active ?
+            "user.reactivated" :
+            "user.archived";
+
+        const entityName =
+          targetProfile.displayName ||
+          targetProfile.email ||
+          userId;
+
+        const actorEmail =
+          actor.profile.email ||
+          request.auth.token.email ||
+          "";
+
+        const actorRole =
+          actor.profile.systemRole ||
+          actor.role ||
+          "system-admin";
+
+        /*
+         * Update the user and create all
+         * audit records atomically.
+         */
+        const batch =
+          db.batch();
+
+        batch.update(
+            userRef,
+            {
+              active,
+              updatedAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        /*
+         * Global System Activity Log.
+         */
+        const systemAuditRef =
+          db
+              .collection(
+                  "systemAuditLogs",
+              )
+              .doc();
+
+        batch.set(
+            systemAuditRef,
+            {
+              action,
+
+              entityType:
+                "user",
+
+              entityId:
+                userId,
+
+              actorUid:
+                actor.uid,
+
+              actorEmail,
+
+              actorRole,
+
+              schoolId:
+                null,
+
+              changedFields: [
+                "active",
+              ],
+
+              details: {
+                entityName,
+
+                email:
+                  targetProfile.email ||
+                  "",
+
+                changes: {
+                  active: {
+                    before:
+                      previousActive,
+
+                    after:
+                      active,
+                  },
+                },
+
+                affectedSchools:
+                  schoolIds,
+              },
+
+              createdAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        /*
+         * Add the same event to every
+         * school where this user has a
+         * membership.
+         */
+        schoolIds.forEach(
+            (schoolId) => {
+              const schoolAuditRef =
+                db
+                    .collection(
+                        "schools",
+                    )
+                    .doc(
+                        schoolId,
+                    )
+                    .collection(
+                        "auditLogs",
+                    )
+                    .doc();
+
+              batch.set(
+                  schoolAuditRef,
+                  {
+                    action,
+
+                    entityType:
+                      "user",
+
+                    entityId:
+                      userId,
+
+                    actorUid:
+                      actor.uid,
+
+                    actorEmail,
+
+                    actorRole,
+
+                    schoolId,
+
+                    changedFields: [
+                      "active",
+                    ],
+
+                    details: {
+                      entityName,
+
+                      email:
+                        targetProfile.email ||
+                        "",
+
+                      changes: {
+                        active: {
+                          before:
+                            previousActive,
+
+                          after:
+                            active,
+                        },
+                      },
+                    },
+
+                    createdAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+              );
+            },
+        );
+
+        await batch.commit();
+
+        return {
+          success: true,
+          userId,
+          active,
+          changed: true,
+          affectedSchools:
+            schoolIds,
         };
       },
   );

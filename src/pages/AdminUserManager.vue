@@ -244,6 +244,41 @@
             "
           />
         </label>
+        <label>
+          {{
+            $t(
+              "adminUsers.filters.status",
+            )
+          }}
+
+          <select
+            v-model="userStatusFilter"
+          >
+            <option value="all">
+              {{
+                $t(
+                  "adminUsers.filters.all",
+                )
+              }}
+            </option>
+
+            <option value="active">
+              {{
+                $t(
+                  "adminUsers.filters.active",
+                )
+              }}
+            </option>
+
+            <option value="archived">
+              {{
+                $t(
+                  "adminUsers.filters.archived",
+                )
+              }}
+            </option>
+          </select>
+        </label>
       </div>
 
       <p v-if="loading">
@@ -267,7 +302,13 @@
         <article
           v-for="user in filteredUsers"
           :key="user.id"
-          class="user-card"
+          :class="[
+            'user-card',
+            {
+              'user-card-archived':
+                user.active === false,
+            },
+          ]"
         >
           <div class="user-top">
             <div class="user-info">
@@ -279,7 +320,16 @@
                     user.id
                   }}
                 </h3>
-
+                <span
+                  v-if="user.active === false"
+                  class="user-status-badge"
+                >
+                  {{
+                    $t(
+                      "adminUsers.filters.archived",
+                    )
+                  }}
+                </span>
                 <div class="access-badges">
                   <span
                     v-if="
@@ -421,6 +471,61 @@
                 $t(
                   "adminUsers.edit.action",
                 )
+              }}
+            </button>
+            <button
+              v-if="
+                isSystemAdmin &&
+                user.active !== false
+              "
+              type="button"
+              class="secondary-button"
+              :disabled="
+                savingUserStatusId === user.id
+              "
+              @click="
+                changeUserActiveStatus(
+                  user,
+                  false,
+                )
+              "
+            >
+              {{
+                savingUserStatusId === user.id
+                  ? $t(
+                    "adminUsers.status.archiving",
+                  )
+                  : $t(
+                    "adminUsers.status.archive",
+                  )
+              }}
+            </button>
+
+            <button
+              v-if="
+                isSystemAdmin &&
+                user.active === false
+              "
+              type="button"
+              class="secondary-button"
+              :disabled="
+                savingUserStatusId === user.id
+              "
+              @click="
+                changeUserActiveStatus(
+                  user,
+                  true,
+                )
+              "
+            >
+              {{
+                savingUserStatusId === user.id
+                  ? $t(
+                    "adminUsers.status.reactivating",
+                  )
+                  : $t(
+                    "adminUsers.status.reactivate",
+                  )
               }}
             </button>
           </div>
@@ -941,6 +1046,7 @@ import {
 import {
   createManagedUser,
   getManagedSchoolUsers,
+  setManagedUserActive,
   setManagedUserSystemRole,
   updateManagedUser,
 } from "../services/adminUserService";
@@ -977,8 +1083,10 @@ export default {
       membershipForms: {},
 
       userSearch: "",
+      userStatusFilter: "active",
 
       editingUserId: "",
+      savingUserStatusId: "",
       savingEditUserId: "",
 
       editUserForm: {
@@ -999,7 +1107,7 @@ export default {
       errorMessage: "",
       unsubscribe: null,
 
-      createUserForm: {
+        createUserForm: {
         email: "",
         password: "",
         firstName: "",
@@ -1018,18 +1126,33 @@ export default {
   },
 
   computed: {
-     filteredUsers() {
+    filteredUsers() {
       const search =
         this.userSearch
           .trim()
           .toLowerCase();
 
-      if (!search) {
-        return this.users;
-      }
-
       return this.users.filter(
         (user) => {
+          const matchesStatus =
+            this.userStatusFilter === "all" ||
+            (
+              this.userStatusFilter === "active" &&
+              user.active !== false
+            ) ||
+            (
+              this.userStatusFilter === "archived" &&
+              user.active === false
+            );
+
+          if (!matchesStatus) {
+            return false;
+          }
+
+          if (!search) {
+            return true;
+          }
+
           const searchableValues = [
             user.displayName,
             user.firstName,
@@ -1974,6 +2097,106 @@ export default {
       }
     },
 
+    managedUserErrorMessage(
+      error,
+    ) {
+      const errorCode =
+        String(
+          error?.message || "",
+        )
+          .replace(
+            /^.*?:\s*/,
+            "",
+          )
+          .trim();
+
+      const translations = {
+        SYSTEM_ADMIN_REQUIRED:
+          "adminUsers.errors.systemAdminRequired",
+
+        ACCOUNT_INACTIVE:
+          "adminUsers.errors.accountInactive",
+
+        SELF_ARCHIVE_NOT_ALLOWED:
+          "adminUsers.errors.selfArchive",
+
+        LAST_ACTIVE_SYSTEM_ADMIN:
+          "adminUsers.errors.lastActiveSystemAdmin",
+
+        USER_ID_REQUIRED:
+          "adminUsers.errors.userIdRequired",
+
+        ACTIVE_BOOLEAN_REQUIRED:
+          "adminUsers.errors.activeBooleanRequired",
+
+        USER_NOT_FOUND:
+          "adminUsers.errors.userNotFound",
+      };
+
+      const translationKey =
+        translations[errorCode];
+
+      if (!translationKey) {
+        return this.$t(
+          "adminUsers.errors.unknown",
+        );
+      }
+
+      return this.$t(
+        translationKey,
+      );
+    },
+
+    async changeUserActiveStatus(
+      user,
+      active,
+    ) {
+      this.savingUserStatusId =
+        user.id;
+
+      this.message = "";
+      this.errorMessage = "";
+
+      try {
+        await setManagedUserActive(
+          user.id,
+          active,
+        );
+
+        user.active =
+          active;
+
+        this.message =
+          active ?
+            this.$t(
+              "adminUsers.status.reactivated",
+              {
+                user:
+                  user.displayName ||
+                  user.email ||
+                  user.id,
+              },
+            ) :
+            this.$t(
+              "adminUsers.status.archived",
+              {
+                user:
+                  user.displayName ||
+                  user.email ||
+                  user.id,
+              },
+            );
+      } catch (error) {
+        this.errorMessage =
+          this.errorMessage =
+            this.managedUserErrorMessage(
+              error,
+            );
+      } finally {
+        this.savingUserStatusId = "";
+      }
+    },
+
     async changeSystemRole(
       user,
       event,
@@ -2239,6 +2462,12 @@ export default {
   border-radius: 10px;
 }
 
+.user-card-archived {
+  background: #f1f1f1;
+  border-color: #c7c7c7;
+  opacity: 0.72;
+}
+
 .user-heading h3 {
   margin: 0;
 }
@@ -2302,6 +2531,17 @@ select {
 .access-badge.access-inactive {
   opacity: 0.5;
   filter: grayscale(0.7);
+}
+
+.user-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid #b8b8b8;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e8e8e8;
 }
 
 .user-actions {

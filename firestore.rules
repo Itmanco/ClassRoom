@@ -11,18 +11,31 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isSystemAdmin() {
+    function isActiveUser() {
       return signedIn()
         && exists(
           /databases/$(database)/documents/users/$(request.auth.uid)
         )
         && get(
           /databases/$(database)/documents/users/$(request.auth.uid)
-        ).data.get("systemRole", "") == "system-admin";
+        ).data.get(
+          "active",
+          true
+        ) == true;
+    }
+
+    function isSystemAdmin() {
+      return isActiveUser()
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.get(
+          "systemRole",
+          ""
+        ) == "system-admin";
     }
 
     function isSchoolAdmin(schoolId) {
-      return signedIn()
+      return isActiveUser()
         && exists(
           /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
         )
@@ -40,7 +53,7 @@ service cloud.firestore {
     }
 
     function isActiveSchoolMember(schoolId) {
-      return signedIn()
+      return isActiveUser()
         && exists(
           /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
         )
@@ -110,6 +123,7 @@ service cloud.firestore {
     // ----------------------------------------
 
     match /schools/{schoolId} {
+
       allow read: if isSystemAdmin()
                   || isActiveSchoolMember(
                     schoolId
@@ -123,7 +137,8 @@ service cloud.firestore {
       // --------------------------------------
 
       match /students/{studentId} {
-        allow read, write: if signedIn();
+        allow read, write:
+          if isActiveUser();
       }
 
       // --------------------------------------
@@ -131,7 +146,8 @@ service cloud.firestore {
       // --------------------------------------
 
       match /buildings/{buildingId} {
-        allow read, write: if signedIn();
+        allow read, write:
+          if isActiveUser();
       }
 
       // --------------------------------------
@@ -139,7 +155,8 @@ service cloud.firestore {
       // --------------------------------------
 
       match /rooms/{roomId} {
-        allow read, write: if signedIn();
+        allow read, write:
+          if isActiveUser();
       }
 
       // --------------------------------------
@@ -147,7 +164,8 @@ service cloud.firestore {
       // --------------------------------------
 
       match /courses/{courseId} {
-        allow read, write: if signedIn();
+        allow read, write:
+          if isActiveUser();
       }
 
       // --------------------------------------
@@ -155,14 +173,18 @@ service cloud.firestore {
       // --------------------------------------
 
       match /classes/{classId} {
-        allow read, write: if signedIn();
+
+        allow read, write:
+          if isActiveUser();
 
         match /enrollments/{enrollmentId} {
-          allow read, write: if signedIn();
+          allow read, write:
+            if isActiveUser();
         }
 
         match /seatingPlans/{seatingPlanId} {
-          allow read, write: if signedIn();
+          allow read, write:
+            if isActiveUser();
         }
       }
 
@@ -228,7 +250,7 @@ service cloud.firestore {
 
     match /systemAuditLogs/{logId} {
 
-      // Only System Admins can see global
+      // Only active System Admins can see global
       // system-level audit history.
       allow read:
         if isSystemAdmin();
@@ -245,7 +267,7 @@ service cloud.firestore {
 
     match /{path=**}/members/{memberId} {
 
-      allow read: if signedIn()
+      allow read: if isActiveUser()
                   && (
                     resource.data.userUid
                       == request.auth.uid
@@ -259,12 +281,12 @@ service cloud.firestore {
 
     match /artifacts/{appId}/students/{studentId} {
       allow read, write:
-        if signedIn();
+        if isActiveUser();
     }
 
     match /artifacts/{appId}/classrooms/{classroomId} {
       allow read, write:
-        if signedIn();
+        if isActiveUser();
     }
   }
 }

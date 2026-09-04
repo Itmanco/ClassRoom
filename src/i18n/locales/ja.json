@@ -2,6 +2,12 @@
   "app": {
     "name": "教室管理"
   },
+  "accountInactive": {
+    "title": "アカウントは無効です",
+    "message": "このアカウントはアーカイブされているため、現在ClassRoomを利用できません。",
+    "contactAdmin": "アクセスの再開が必要な場合は、管理者にお問い合わせください。",
+    "signOut": "ログアウト"
+  },
   "common": {
     "save": "保存",
     "cancel": "キャンセル",
@@ -718,7 +724,19 @@
     "filters": {
       "search": "検索",
       "searchPlaceholder": "名前またはメールアドレス",
-      "noResults": "検索条件に一致するユーザーはいません。"
+      "status": "ステータス",
+      "all": "すべて",
+      "active": "有効",
+      "archived": "アーカイブ済み",
+      "noResults": "現在の検索条件に一致するユーザーはいません。"
+    },
+    "status": {
+      "archive": "ユーザーをアーカイブ",
+      "reactivate": "ユーザーを再有効化",
+      "archiving": "アーカイブ中...",
+      "reactivating": "再有効化中...",
+      "archived": "{user}をアーカイブしました。",
+      "reactivated": "{user}を再有効化しました。"
     },
     "list": {
       "title": "登録済みユーザー",
@@ -809,6 +827,16 @@
         "displayNamePlaceholder": "任意",
         "language": "言語"
       }
+    },
+    "errors": {
+      "systemAdminRequired": "システム管理者権限が必要です。",
+      "accountInactive": "このユーザーアカウントは無効です。",
+      "selfArchive": "自分自身のアカウントをアーカイブすることはできません。",
+      "lastActiveSystemAdmin": "最後の有効なシステム管理者をアーカイブすることはできません。",
+      "userIdRequired": "ユーザーIDが必要です。",
+      "activeBooleanRequired": "指定されたアカウントのステータスが無効です。",
+      "userNotFound": "ユーザーアカウントが見つかりません。",
+      "unknown": "予期しないエラーが発生しました。"
     }
   },
 
@@ -830,7 +858,9 @@
       },
       "user": {
         "created": "ユーザーを作成",
-        "systemRoleChanged": "システム権限を変更"
+        "systemRoleChanged": "システム権限を変更",
+        "archived": "ユーザーをアーカイブ",
+        "reactivated": "ユーザーを再有効化"
       },
       "membership": {
         "created": "学校アクセスを追加",

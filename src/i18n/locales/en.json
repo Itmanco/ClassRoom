@@ -2,6 +2,12 @@
   "app": {
     "name": "Classroom Manager"
   },
+  "accountInactive": {
+    "title": "Account Inactive",
+    "message": "Your account has been archived and cannot currently access ClassRoom.",
+    "contactAdmin": "Please contact your administrator if you need your access restored.",
+    "signOut": "Sign Out"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -717,7 +723,19 @@
     "filters": {
       "search": "Search",
       "searchPlaceholder": "Name or email",
-      "noResults": "No users match the current search."
+      "status": "Status",
+      "all": "All",
+      "active": "Active",
+      "archived": "Archived",
+      "noResults": "No users match the current filters."
+    },
+    "status": {
+      "archive": "Archive User",
+      "reactivate": "Reactivate User",
+      "archiving": "Archiving...",
+      "reactivating": "Reactivating...",
+      "archived": "{user} was archived successfully.",
+      "reactivated": "{user} was reactivated successfully."
     },
     "list": {
       "title": "Existing Users",
@@ -808,6 +826,16 @@
         "displayNamePlaceholder": "Optional",
         "language": "Language"
       }
+    },
+    "errors": {
+      "systemAdminRequired": "System Admin access is required.",
+      "accountInactive": "This user account is inactive.",
+      "selfArchive": "You cannot archive your own account.",
+      "lastActiveSystemAdmin": "The last active System Admin cannot be archived.",
+      "userIdRequired": "A user ID is required.",
+      "activeBooleanRequired": "The requested account status is invalid.",
+      "userNotFound": "The user account could not be found.",
+      "unknown": "An unexpected error occurred."
     }
   },
 
@@ -829,7 +857,9 @@
       },
       "user": {
         "created": "User created",
-        "systemRoleChanged": "System role changed"
+        "systemRoleChanged": "System role changed",
+        "archived": "User archived",
+        "reactivated": "User reactivated"
       },
       "membership": {
         "created": "Membership added",

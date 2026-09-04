@@ -12,6 +12,51 @@
     @login-success="onLoginSuccess"
   />
 
+  <div
+    v-else-if="
+      session.initialized &&
+      session.profile?.active === false
+    "
+    class="inactive-account-page"
+  >
+    <div class="inactive-account-card">
+      <h1>
+        {{
+          $t(
+            "accountInactive.title",
+          )
+        }}
+      </h1>
+
+      <p>
+        {{
+          $t(
+            "accountInactive.message",
+          )
+        }}
+      </p>
+
+      <p>
+        {{
+          $t(
+            "accountInactive.contactAdmin",
+          )
+        }}
+      </p>
+
+      <button
+        type="button"
+        @click="handleSignOut"
+      >
+        {{
+          $t(
+            "accountInactive.signOut",
+          )
+        }}
+      </button>
+    </div>
+  </div>
+
   <NoSchoolPage
     v-else-if="
       session.initialized &&
@@ -198,14 +243,16 @@ export default {
 
     isSystemAdmin() {
       const result =
+        this.session.profile?.active !== false &&
         this.session.profile?.systemRole ===
-        "system-admin";
+          "system-admin";
 
       return result;
     },
 
     isSchoolAdmin() {
       return (
+        this.session.profile?.active !== false &&
         this.session.membership?.active !== false &&
         this.session.membership?.role ===
           "school-admin"
@@ -245,6 +292,23 @@ export default {
           await getCurrentUserProfile(
             firebaseUser.uid,
           );
+
+        if (
+          profile?.active === false
+        ) {
+          this.session.firebaseUser =
+            firebaseUser;
+
+          this.session.profile =
+            profile;
+
+          this.session.schools = [];
+          this.session.activeSchool = null;
+          this.session.membership = null;
+          this.session.initialized = true;
+
+          return;
+        }
 
         const isSystemAdmin =
           profile?.systemRole ===
@@ -543,5 +607,36 @@ main {
   justify-content: center;
   align-items: center;
   height: 100vh;
+}
+
+.inactive-account-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #f5f5f5;
+}
+
+.inactive-account-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 32px;
+  box-sizing: border-box;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.inactive-account-card h1 {
+  margin-top: 0;
+}
+
+.inactive-account-card button {
+  margin-top: 16px;
+  padding: 10px 18px;
+  cursor: pointer;
 }
 </style>

@@ -30,6 +30,12 @@ const updateManagedUserCallable =
     "updateManagedUser",
   );
 
+const setManagedUserActiveCallable =
+  httpsCallable(
+    functions,
+    "setManagedUserActive",
+  );
+
 export async function createManagedUser(
   userData,
 ) {
@@ -76,6 +82,19 @@ export async function updateManagedUser(
     await updateManagedUserCallable(
       userData,
     );
+
+  return result.data;
+}
+
+export async function setManagedUserActive(
+  userId,
+  active,
+) {
+  const result =
+    await setManagedUserActiveCallable({
+      userId,
+      active,
+    });
 
   return result.data;
 }

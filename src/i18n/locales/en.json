@@ -859,7 +859,8 @@
         "created": "User created",
         "systemRoleChanged": "System role changed",
         "archived": "User archived",
-        "reactivated": "User reactivated"
+        "reactivated": "User reactivated",
+        "updated": "User updated"
       },
       "membership": {
         "created": "Membership added",
@@ -902,7 +903,11 @@
       "isActive": "Active status",
       "systemRole": "System role",
       "role": "Role",
-      "active": "Active"
+      "active": "Active",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "displayName": "Display name",
+      "language": "Language"
     },
     "filters": {
       "all": "All",

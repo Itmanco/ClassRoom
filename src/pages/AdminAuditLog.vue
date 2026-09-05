@@ -193,17 +193,16 @@
           >
             <strong>
               {{
-                $t(
-                  "adminAudit.changedFields",
-                )
-              }}:
+                log.changedFields
+                  .map(
+                    (field) =>
+                      $t(
+                        `adminAudit.fields.${field}`,
+                      ),
+                  )
+                  .join(", ")
+              }}
             </strong>
-
-            {{
-              log.changedFields.join(
-                ", ",
-              )
-            }}
           </div>
 
           <div
@@ -372,9 +371,14 @@
 
               <strong>
                 {{
-                  log.changedFields.join(
-                    ", ",
-                  )
+                  log.changedFields
+                    .map(
+                      (field) =>
+                        $t(
+                          `adminAudit.fields.${field}`,
+                        ),
+                    )
+                    .join(", ")
                 }}
               </strong>
             </div>

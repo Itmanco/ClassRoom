@@ -739,6 +739,9 @@ exports.updateManagedUser =
           );
         }
 
+        const currentProfile =
+          userDocument.data();
+
         /*
          * Explicit whitelist.
          *
@@ -791,13 +794,144 @@ exports.updateManagedUser =
           );
         }
 
-        await userRef.update({
+        const nextValues = {
           firstName,
           lastName,
           displayName,
           language,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+        };
+
+        const changedFields =
+          Object.keys(
+              nextValues,
+          ).filter(
+              (field) =>
+                String(
+                    currentProfile[field] || "",
+                ) !==
+                String(
+                    nextValues[field] || "",
+                ),
+          );
+
+        /*
+        * Do not create an audit event when
+        * nothing actually changed.
+        */
+        if (
+          changedFields.length === 0
+        ) {
+          return {
+            success: true,
+            userId,
+            firstName,
+            lastName,
+            displayName,
+            language,
+            changed: false,
+          };
+        }
+
+        const changes = {};
+
+        changedFields.forEach(
+            (field) => {
+              changes[field] = {
+                before:
+                  currentProfile[field] ||
+                  "",
+                after:
+                  nextValues[field] ||
+                  "",
+              };
+            },
+        );
+
+        const batch =
+          db.batch();
+
+        batch.update(
+            userRef,
+            {
+              firstName,
+              lastName,
+              displayName,
+              language,
+              updatedAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        /*
+        * System Admin edits are recorded in
+        * the global System Activity Log.
+        *
+        * School Admin edits are recorded in
+        * that school's Activity Log.
+        */
+        const auditRef =
+          schoolId ?
+            db
+                .collection("schools")
+                .doc(schoolId)
+                .collection("auditLogs")
+                .doc() :
+            db
+                .collection("systemAuditLogs")
+                .doc();
+
+        batch.set(
+            auditRef,
+            {
+              action:
+                "user.updated",
+
+              entityType:
+                "user",
+
+              entityId:
+                userId,
+
+              actorUid:
+                actor.uid,
+
+              actorEmail:
+                actor.profile.email ||
+                request.auth.token.email ||
+                "",
+
+              actorRole:
+                actor.profile.systemRole ||
+                actor.role ||
+                null,
+
+              schoolId:
+                schoolId || null,
+
+              changedFields,
+
+              details: {
+                entityName:
+                  displayName ||
+                  currentProfile.displayName ||
+                  currentProfile.email ||
+                  userId,
+
+                email:
+                  currentProfile.email ||
+                  "",
+
+                changes,
+              },
+
+              createdAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        await batch.commit();
 
         return {
           success: true,
@@ -806,6 +940,8 @@ exports.updateManagedUser =
           lastName,
           displayName,
           language,
+          changed: true,
+          changedFields,
         };
       },
   );
@@ -1238,7 +1374,7 @@ exports.setSystemRole =
           };
         }
 
-        // Protect the last System Admin.
+        // Protect the last active System Admin.
         if (
           previousRole ===
             "system-admin" &&
@@ -1255,12 +1391,19 @@ exports.setSystemRole =
                 )
                 .get();
 
+          const activeSystemAdmins =
+            adminsSnapshot.docs.filter(
+                (doc) =>
+                  doc.data().active !== false,
+            );
+
           if (
-            adminsSnapshot.size <= 1
+            user.active !== false &&
+            activeSystemAdmins.length <= 1
           ) {
             throw new HttpsError(
                 "failed-precondition",
-                "The last System Admin cannot be demoted.",
+                "LAST_ACTIVE_SYSTEM_ADMIN",
             );
           }
         }

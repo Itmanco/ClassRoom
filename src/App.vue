@@ -372,18 +372,6 @@ export default {
             ) || null;
         }
 
-        if (
-          !membership &&
-          !isSystemAdmin &&
-          profile?.role
-        ) {
-          membership = {
-            role: profile.role,
-            active: true,
-            legacyFallback: true,
-          };
-        }
-
         this.session.firebaseUser = firebaseUser;
         this.session.profile = profile;
         this.session.schools = schools;

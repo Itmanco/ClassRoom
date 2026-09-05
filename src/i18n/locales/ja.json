@@ -860,7 +860,8 @@
         "created": "ユーザーを作成",
         "systemRoleChanged": "システム権限を変更",
         "archived": "ユーザーをアーカイブ",
-        "reactivated": "ユーザーを再有効化"
+        "reactivated": "ユーザーを再有効化",
+        "updated": "ユーザー情報を更新"
       },
       "membership": {
         "created": "学校アクセスを追加",
@@ -903,7 +904,11 @@
       "isActive": "有効状態",
       "systemRole": "システム権限",
       "role": "役割",
-      "active": "有効"
+      "active": "有効",
+      "firstName": "名",
+      "lastName": "姓",
+      "displayName": "表示名",
+      "language": "言語"
     },
     "filters": {
       "all": "すべて",

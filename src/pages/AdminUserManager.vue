@@ -2188,8 +2188,7 @@ export default {
             );
       } catch (error) {
         this.errorMessage =
-          this.errorMessage =
-            this.managedUserErrorMessage(
+          this.managedUserErrorMessage(
               error,
             );
       } finally {
@@ -2263,28 +2262,12 @@ export default {
           );
       } catch (error) {
         event.target.value =
-          previousRole;
+        previousRole;
 
-        if (
-          error.message ===
-          "The last System Admin cannot be demoted."
-        ) {
-          this.errorMessage =
-            this.$t(
-              "adminUsers.messages.lastAdmin",
-            );
-
-          return;
-        }
-
-        this.errorMessage =
-          this.$t(
-            "adminUsers.messages.roleError",
-            {
-              error:
-                error.message,
-            },
-          );
+      this.errorMessage =
+        this.managedUserErrorMessage(
+          error,
+        );
       } finally {
         this.savingUserId =
           "";

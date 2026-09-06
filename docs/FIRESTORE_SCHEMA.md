@@ -1,15 +1,19 @@
 # Firestore Schema
 
+**Last verified against source:** 2026-09-06
+
 ## Overview
 
-School-owned data is stored below `schools/{schoolId}`. User
-identity/profile data is stored under `users/{uid}`.
+User identity/profile data is global under `users/{uid}`. School-owned domain data is stored below `schools/{schoolId}`. Global audit history is separated from school audit history.
 
-``` text
+```text
 users/{uid}
+
+systemAuditLogs/{logId}
 
 schools/{schoolId}
 ├── members/{uid}
+├── auditLogs/{logId}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -19,28 +23,44 @@ schools/{schoolId}
     └── seatingPlans/{seatingPlanId}
 ```
 
-The current schema favors stable IDs and archive flags so historical
-seating/enrollment references remain valid.
+The schema favors stable IDs and archive flags so historical references remain understandable.
+
+## Canonical identity
+
+Firebase Authentication UID is canonical:
+
+```text
+Auth uid == users/{uid}.documentId == schools/{schoolId}/members/{uid}.documentId
+```
+
+Membership documents also carry `userUid`. The target invariant is:
+
+```text
+member document ID == userUid
+```
+
+Current code follows this convention, but Firestore rules still need to explicitly enforce it on create and prevent later `userUid` mutation.
 
 ## Users
 
 Path:
 
-``` text
+```text
 users/{uid}
 ```
 
-Observed/current profile shape includes fields such as:
+Current/observed profile fields include:
 
-``` js
+```js
 {
-  displayName: "Motta Jaime",
   email: "user@example.com",
-  activeSchool: "school_japan",
-  systemRole: "system-admin", // or null
-  language: "en",
   firstName: "Jaime",
   lastName: "Motta",
+  displayName: "Jaime Motta",
+  language: "en",              // en | ja
+  activeSchool: "school_japan",
+  systemRole: "system-admin",  // or null
+  active: true,
   createdAt: Timestamp,
   updatedAt: Timestamp
 }
@@ -48,23 +68,36 @@ Observed/current profile shape includes fields such as:
 
 Notes:
 
-- `uid` comes from Firebase Authentication and is the canonical user identifier.
-- `systemRole` is for application-wide privileges; currently `system-admin` or `null`.
-- `activeSchool` identifies the current working school and must resolve to an available school.
-- School authorization is not derived from the system role. It is represented by membership documents.
-- Legacy `schools[]` and `role` profile fields can remain temporarily during migration but are not the target authorization model.
+- `systemRole` is application-wide privilege; current privileged value is `system-admin`.
+- `active` controls global account lifecycle. `active === false` blocks normal application access.
+- `activeSchool` is current working-school preference/session state, not authorization by itself.
+- School authorization comes from membership documents.
+- Legacy profile fields such as `role` or `schools[]` may exist in historical data but must not be used as authorization fallbacks.
+
+### Managed profile update whitelist
+
+`updateManagedUser` currently allows Admin-managed changes only to:
+
+```text
+firstName
+lastName
+displayName
+language
+```
+
+It does not accept `systemRole`, `active`, `email`, legacy `role`, or membership data.
 
 ## School memberships
 
 Path:
 
-``` text
+```text
 schools/{schoolId}/members/{uid}
 ```
 
-Current membership shape:
+Current shape:
 
-``` js
+```js
 {
   userUid: "firebase-auth-uid",
   role: "school-admin", // school-admin | teacher | student
@@ -74,98 +107,94 @@ Current membership shape:
 }
 ```
 
-The document ID and `userUid` must correspond to the same Firebase Authentication UID. Memberships are the target source of truth for school access and school-specific roles.
+Memberships are the school-access source of truth.
+
+Current membership lifecycle supports:
+
+- create
+- role change
+- deactivate
+- reactivate
+- remove
+
+School Admin self-role/status/removal changes are blocked. The remaining rule-hardening work is to enforce membership identity/immutability directly in Firestore rules and move privileged membership mutation behind server-side validation where appropriate.
 
 ## Schools
 
 Path:
 
-``` text
+```text
 schools/{schoolId}
 ```
 
-Example fields:
+Current service shape includes fields such as:
 
-``` js
+```js
 {
   name: "Japanese Language School",
   country: "Japan",
   city: "Sapporo",
   ownerUid: "",
-  createdAt: Timestamp
-}
-```
-
-## Students
-
-Path:
-
-``` text
-schools/{schoolId}/students/{studentId}
-```
-
-Student IDs are intended to remain stable. Students are archived rather
-than destructively deleted when historical references may exist.
-
-Student fields are defined by `studentService.js` and the current
-Student Management form.
-
-## Buildings
-
-Path:
-
-``` text
-schools/{schoolId}/buildings/{buildingId}
-```
-
-Buildings describe school facilities and floor count. Archived buildings
-remain available for historical references.
-
-## Rooms
-
-Path:
-
-``` text
-schools/{schoolId}/rooms/{roomId}
-```
-
-Current room model includes:
-
-``` js
-{
-  code: "A1F1C1",
-  name: "Building A1 - Floor 1 - Classroom 1",
-  buildingId: "A1",
-  floor: 1,
-  roomNumber: 1,
-  deskCount: 9,
-  seatsPerDesk: 2,
-  capacity: 18,
-  teacherPosition: "front-left",
   active: true,
   createdAt: Timestamp,
   updatedAt: Timestamp
 }
 ```
 
+School IDs are normalized/stable document IDs. Schools are archived/reactivated by changing `active` rather than changing IDs.
+
+## Students
+
+Path:
+
+```text
+schools/{schoolId}/students/{studentId}
+```
+
+Student IDs are stable. Student lifecycle uses active/archive semantics (`isActive` in the current student model). Student create/update/archive/reactivate events are already represented in school audit logs.
+
+Detailed student fields remain defined by `studentService.js` and the current UI; this document intentionally does not duplicate every presentation field.
+
+## Buildings
+
+Path:
+
+```text
+schools/{schoolId}/buildings/{buildingId}
+```
+
+Buildings describe school facilities and can be archived without breaking room references.
+
+## Rooms
+
+Path:
+
+```text
+schools/{schoolId}/rooms/{roomId}
+```
+
+Room configuration includes physical classroom properties used by preview, seating-plan visualization, and export. Important fields include desk count, seats per desk, capacity, building/floor/room information, active state, and:
+
+```js
+teacherPosition: "front-left"
+```
+
 Supported teacher positions:
 
-``` text
+```text
 front-left
 front-right
 back-left
 back-right
 ```
 
-Older room documents may not contain `teacherPosition`. UI/service
-fallback behavior should default them safely to `front-left` until
-saved.
+Older room documents without `teacherPosition` fall back to `front-left` in current application behavior.
 
 ## Courses
 
 Path:
 
-``` text
+```text
 schools/{schoolId}/courses/{courseId}
 ```
 
@@ -175,147 +204,154 @@ Courses use stable identifiers/codes and archive state.
 
 Path:
 
-``` text
+```text
 schools/{schoolId}/classes/{classId}
 ```
 
-A class connects course, room, and academic context.
-
-Typical relationships:
-
-``` text
-Class
-├── courseId
-├── roomId
-├── academic year
-├── semester
-└── active
-```
-
-Refer to `classService.js` for the exact current field names.
+Classes are school-owned and act as the parent context for enrollments and seating plans.
 
 ## Enrollments
 
 Path:
 
-``` text
+```text
 schools/{schoolId}/classes/{classId}/enrollments/{studentId}
 ```
 
-Enrollments connect a school student to a class.
-
-Behavior:
-
--   Prevent duplicate active enrollment
--   Archive instead of delete
--   Allow reactivation
--   Preserve the student ID relationship
+Enrollment is class-owned. The stable student ID connects class participation to school student records.
 
 ## Seating plans
 
 Path:
 
-``` text
+```text
 schools/{schoolId}/classes/{classId}/seatingPlans/{seatingPlanId}
 ```
 
-Normalized plan shape:
+Assignments preserve physical position information such as:
 
-``` js
+```js
 {
-  title: "Plan title",
-  planDate: "YYYY-MM-DD",
-  roomId: "A1F1C1",
-  deskCount: 9,
-  seatsPerDesk: 2,
-  capacity: 18,
-  assignments: [
-    {
-      studentId: "student-id",
-      deskNumber: 1,
-      seatNumber: 1
-    }
-  ],
-  active: true,
-  createdAt: Timestamp,
-  updatedAt: Timestamp
+  studentId,
+  deskNumber,
+  seatNumber
 }
 ```
 
-Validation ensures:
+Historical plans are used by the recommendation engine for previous-partner/desk/seat avoidance.
 
--   Desk numbers are in range
--   Seat numbers are in range
--   A student is not assigned twice
--   A physical seat is not assigned twice
+## Audit logs
 
-## School ownership
+### School audit
 
-Every school-domain service requires `schoolId`. Class-owned collections
-additionally require `classId`.
+Path:
 
-This is a key boundary:
-
-``` text
-schoolId = organization context
-classId  = selected class context
+```text
+schools/{schoolId}/auditLogs/{logId}
 ```
 
-They should never be conflated.
+Typical shape:
+
+```js
+{
+  action: "user.updated",
+  entityType: "user",
+  entityId: "uid",
+  actorUid: "admin-uid",
+  actorEmail: "admin@example.com",
+  actorRole: "system-admin",
+  schoolId: "school-a",
+  changedFields: ["displayName"],
+  details: {
+    entityName: "Target User",
+    email: "target@example.com",
+    changes: {
+      displayName: {
+        before: "Old",
+        after: "New"
+      }
+    }
+  },
+  createdAt: Timestamp
+}
+```
+
+School audit history is immutable after creation (`update`/`delete` denied). Some school audit events are still created by authorized clients in the same Firestore batch as the domain change; user lifecycle/profile events are created by callable Functions with Admin SDK.
+
+### System audit
+
+Path:
+
+```text
+systemAuditLogs/{logId}
+```
+
+System audit records use the same general event shape, normally with `schoolId: null`. Client create/update/delete is denied; trusted Functions create these records.
+
+### Audit destination rule
+
+Audit destination follows the affected resource.
+
+For `user.updated`, `user.archived`, and `user.reactivated`:
+
+```text
+memberships A/B/C → one event in A, B, C; no system duplicate
+zero memberships  → one system event
+```
+
+For `user.created`:
+
+```text
+initial school → school event
+no school      → system event
+```
 
 ## Archive policy
 
-Where historical references matter, use:
+Use archive/inactive state rather than destructive deletion for records that may be referenced historically.
 
-``` js
-active: false
-```
+Examples:
 
-instead of deleting the document.
+- users: `active`
+- schools/classes/rooms/courses: `active`
+- students: `isActive`
+- memberships: `active` for access suspension; removal is also supported for membership lifecycle
 
-This is particularly important for:
+## Current Firestore security status
 
--   Students
--   Courses
--   Buildings
--   Rooms
--   Classes
--   Enrollments
--   Seating plans
+Implemented/important rule behavior:
 
-## Security status
+- active-user helper for privileged authorization
+- System Admin from `users/{uid}.systemRole`
+- School Admin from active school membership
+- self profile updates limited to allowed profile fields
+- activeSchool changes require valid membership unless System Admin
+- System Admin system-role field update restriction
+- School membership reads scoped to self/Admin
+- School Admin self membership update/delete blocked
+- System audit logs readable only by System Admin and not writable by clients
+- School audit logs readable/creatable only by authorized school Admins; immutable after creation
+- membership collection-group reads scoped to own membership or System Admin
 
-Authentication, canonical UID-based memberships, and the core Admin authorization path are implemented.
+Known security gaps still present in `firestore.rules`:
 
-Current Admin enforcement includes:
+- `students`, `buildings`, `rooms`, `courses`, `classes`, enrollments, and seating plans currently use broad `isActiveUser()` read/write checks rather than school-membership/role checks.
+- membership create does not yet explicitly enforce `memberId == request.resource.data.userUid`.
+- membership update does not yet explicitly make `userUid` immutable.
+- authorized school Admin clients can still create school audit documents directly for client-side audited operations.
 
--   Active school membership checks for school access
--   School Admin authority restricted to the relevant school
--   System Admin global administration
--   Cross-school Admin access rejection
--   School Admin self-membership protection
--   System Admin self-role-change protection in the privileged backend
--   Scoped School Admin user discovery without broad `/users` client reads
--   Separate school and system audit scopes
-
-Security hardening is not complete. Remaining work includes:
-
--   Enforce `memberId == request.resource.data.userUid` on membership creation
--   Prevent `userUid` from changing after membership creation
--   Replace remaining broad signed-in rules on students, buildings, rooms, courses, classes, enrollments, and seating plans with school/role-aware authorization
--   Review remaining legacy/transitional rules
-
-Firestore rules must continue to be reviewed alongside the canonical membership model.
+These gaps are current roadmap items and must not be documented as already solved.
 
 ## Local schema inspection
 
-Development utilities:
+Use the Firebase Emulator Suite for development and security testing:
 
-``` text
-scripts/exportSchoolStructure.js
-scripts/createTestSchool.js
-scripts/migrateStudents.js
+```bash
+cd ~/Projects/ClassRoom
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
 ```
 
-Local exports such as `school-structure.json` and Firebase Admin
-credentials are ignored and must not be committed.
+`emulator-data/`, `emulator-data.zip`, `school-structure.json`, and local credentials are development artifacts and are excluded from version control.

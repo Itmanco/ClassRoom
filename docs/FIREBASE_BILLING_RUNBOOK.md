@@ -52,8 +52,8 @@ On Spark, these paid Google Cloud services are unavailable for deployment.
 
 The current ClassRoom backend use case is small:
 
-- callable `createUser` function
-- invoked only by authenticated `system-admin` users
+- callable privileged user-administration functions (`createUser`, `getSchoolUsers`, `updateManagedUser`, `setManagedUserActive`, `setSystemRole`)
+- server-side System Admin / School Admin authorization depending on the operation
 - low expected traffic
 - portfolio/demo workload
 
@@ -91,11 +91,17 @@ firebase use classroom-b81c6
 
 Do not enable Blaze just to debug application logic.
 
-Run Functions locally with the Emulator Suite:
+Run the same Auth + Firestore + Functions topology used by the development app, preserving the existing test dataset:
 
 ```bash
-firebase emulators:start --only functions
+cd ~/Projects/ClassRoom
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
 ```
+
+Do not use an empty emulator for normal ClassRoom Admin testing unless the test intentionally requires an empty dataset.
 
 Preferred workflow:
 
@@ -123,14 +129,20 @@ Both commands should complete without errors before production deployment.
 Before deploying:
 
 ```bash
-grep -n "exports\." functions/index.js
+grep -n "^exports\." functions/index.js
 ```
 
-For the current implementation, the expected privileged function is:
+Current callable exports:
 
 ```text
 createUser
+getSchoolUsers
+updateManagedUser
+setManagedUserActive
+setSystemRole
 ```
+
+Deploy only the function(s) required for the intended production/demo workflow. Do not assume `createUser` is the only backend function anymore.
 
 ### 3.4 Check Git safety
 
@@ -226,11 +238,13 @@ This is a safety control against unexpected traffic spikes. It is **not** a comp
 
 ## 5. Deploy carefully
 
-Prefer deploying a single function rather than all Functions:
+Prefer deploying only the function(s) required for the intended workflow. For example:
 
 ```bash
-firebase deploy --only functions:createUser
+firebase deploy --only functions:updateManagedUser
 ```
+
+For a small related set, use a comma-separated Firebase deploy target only after confirming the exact CLI syntax/version you are using.
 
 Do not use:
 
@@ -249,10 +263,10 @@ node --check index.js
 cd ..
 ```
 
-Then:
+Then deploy only the reviewed target. Example:
 
 ```bash
-firebase deploy --only functions:createUser
+firebase deploy --only functions:updateManagedUser
 ```
 
 Record the deployment date in the change log at the bottom of this file.
@@ -451,10 +465,10 @@ When Cloud Functions are needed again:
 9. Monitor usage
 ```
 
-Deploy:
+Deploy only the function(s) needed for the current demo/production workflow. Example:
 
 ```bash
-firebase deploy --only functions:createUser
+firebase deploy --only functions:updateManagedUser
 ```
 
 ## 12. Local-development fallback
@@ -464,10 +478,14 @@ When Blaze is disabled, continue backend development locally.
 Run:
 
 ```bash
-firebase emulators:start --only functions
+cd ~/Projects/ClassRoom
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
 ```
 
-The frontend can be configured during development to connect to the Functions emulator.
+In development mode the frontend is already configured to connect to the local Auth, Firestore, and Functions emulators.
 
 This allows continued development and testing without a production Cloud Functions deployment.
 
@@ -481,23 +499,20 @@ with Blaze used only for intentional production/demo periods.
 
 ## 13. Security rules for privileged functions
 
-A callable Cloud Function must enforce authorization on the server.
+Callable Functions must enforce authorization on the server. Never rely only on hidden Vue buttons, client-side role checks, or Firestore UI restrictions.
 
-Do not rely on:
-
-- hidden Vue buttons
-- client-side role checks
-- Firestore UI restrictions alone
-
-For `createUser`, the function must independently verify:
+Current privileged functions include both System-Admin-only operations and school-scoped School Admin operations. Authorization must use the canonical model:
 
 ```text
-request.auth exists
-AND
-users/{request.auth.uid}.systemRole == "system-admin"
+System: users/{request.auth.uid}.systemRole == "system-admin"
+School: schools/{schoolId}/members/{request.auth.uid}.role == "school-admin"
+        AND membership.active == true
+        AND user profile is active
 ```
 
-The function must create the Firebase Auth account first and then reuse the generated UID for Firestore profile and membership documents.
+`createUser` creates the Firebase Auth account first and reuses the generated UID for Firestore profile/membership documents. If later setup fails, rollback should remove the newly created Auth account.
+
+`updateManagedUser` must retain its explicit editable-field whitelist. `setManagedUserActive` and `setSystemRole` must retain self-lockout/last-active-System-Admin protections.
 
 Never expose Firebase Admin credentials or `serviceAccountKey.json` in the Vue client.
 
@@ -520,7 +535,7 @@ minInstances = 0
 maxInstances = 1 (or another deliberately small value)
 
 Deployment:
-single function only
+only the reviewed function(s)
 
 After demo:
 delete function
@@ -578,23 +593,6 @@ Because billing behavior can change, verify these pages before every significant
 
 Created the initial billing runbook for the ClassRoom portfolio project.
 
-Current state at creation:
+### 2026-09-06
 
-```text
-Firebase project: classroom-b81c6
-Firebase CLI configured
-Functions codebase configured
-Node runtime: 22
-createUser callable function prepared locally
-Cloud Function deployment blocked because project remains on Spark
-Blaze intentionally not enabled yet
-```
-
-Next planned step:
-
-```text
-Review billing controls
-→ decide whether to temporarily enable Blaze
-→ deploy createUser
-→ integrate AdminUserManager with callable function
-```
+Updated the runbook to reflect the current five callable Admin functions and the standard persisted Auth/Firestore/Functions emulator workflow. Production deployment remains intentionally separate from local development; review the complete function set and production Firestore rules before enabling Blaze.

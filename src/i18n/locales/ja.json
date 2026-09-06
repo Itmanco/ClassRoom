@@ -711,6 +711,7 @@
   },
 
   "adminUsers": {
+    "refresh": "更新",
     "eyebrow": "システム管理",
     "title": "ユーザー",
     "description": "プラットフォームのユーザーとシステム権限を管理します。",

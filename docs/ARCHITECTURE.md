@@ -1,148 +1,295 @@
 # Architecture
 
+**Last verified against source:** 2026-09-06
+
 ## Overview
 
-Classroom Manager uses a Vue 3 frontend, Firebase Authentication, Cloud
-Firestore, a service layer, Firebase callable Cloud Functions for privileged operations, a framework-independent seating engine, and a client-side Excel export service.
+Classroom Manager uses a Vue 3 frontend, Firebase Authentication, Cloud Firestore, callable Cloud Functions for privileged account operations, a domain service layer, a framework-independent seating engine, and a client-side Excel export service.
 
-``` text
+```text
 App.vue
-├── Authentication state
-├── User profile
-├── Available schools
-├── Active school
-├── Top-level navigation
-└── Selected class
-        │
-        ▼
-Pages / components
-        │
-        ├── Class Workspace
-        ├── Room preview
-        └── Seating Plan Manager
-        │
-        ▼
-Services                    Seating Engine
-        │                         │
-        ├── Firestore             └── Pure JS recommendation logic
-        └── XLSX export
+├── auth/session/account state
+├── available schools + active school
+├── top-level navigation
+├── selected class
+└── pages
+    ├── Dashboard
+    ├── domain managers
+    ├── Class Workspace
+    └── Admin
+         │
+         ├── client services ────── Firestore
+         ├── callable Functions ─── Admin SDK / privileged writes
+         ├── seating engine ─────── pure JS
+         └── XLSX export ────────── client-side workbook generation
 ```
 
 ## Application session
 
-`App.vue` owns application-level state.
+`App.vue` owns application-level session/navigation state. Conceptually:
 
-Conceptually:
-
-``` js
+```js
 session = {
   firebaseUser: null,
   profile: null,
   schools: [],
   activeSchool: null,
+  membership: null,
   initialized: false
 }
 ```
 
-The exact implementation should be treated as source-of-truth, but these
-concepts define the architecture.
+`currentPage` defaults to `dashboard`; `selectedClassId` is cleared when leaving class context or changing schools.
 
-## Authentication
+## Authentication and account state
 
-Firebase Authentication determines whether a user can enter the
-authenticated application.
+Firebase Authentication answers “who is signed in?”. Firestore profile/account state and memberships answer “what may this user access?”.
 
 On auth-state change:
 
-1.  Firebase user state is restored.
-2.  The Firestore user profile is loaded.
-3.  Available schools are resolved.
-4.  The active school is validated.
-5.  The application renders normal school content or the no-school
-    state.
+1. Load `users/{uid}`.
+2. If `profile.active === false`, stop normal initialization and show the inactive-account view.
+3. Determine System Admin status from `profile.systemRole`.
+4. Resolve available schools/memberships.
+5. Validate/fallback `activeSchool`.
+6. Resolve the active membership for non-System-Admin users.
+7. Render Dashboard/domain content, Admin content when authorized, or `NoSchoolPage` when appropriate.
 
-Authentication and school authorization are separate concerns.
+Authentication and authorization are intentionally separate.
+
+## Canonical identity
+
+Firebase Authentication UID is the canonical identity:
+
+```text
+Firebase Auth uid
+├── users/{uid}
+└── schools/{schoolId}/members/{uid}
+```
+
+Legacy `users/{uid}.role` and profile school-list fields must not be used as authorization fallbacks.
 
 ## Multi-school context
 
-A user profile can reference multiple school IDs and one active school.
+School access for normal users is membership-driven.
 
-``` text
-User
-├── schools[]
-└── activeSchool
+```text
+users/{uid}
+├── activeSchool
+├── systemRole
+└── active
+
+schools/{schoolId}/members/{uid}
+├── userUid
+├── role
+└── active
 ```
 
-`SchoolSelector.vue` changes the active school. Class-specific state
-must be cleared on school change.
+Membership roles:
 
-If an authenticated user has no assigned school, `NoSchoolPage.vue` is
-shown rather than rendering managers with a null school ID.
-
-School access is membership-driven. Firebase Authentication UID is the canonical user identifier. System-level authorization is stored on `users/{uid}.systemRole`, while school-level authorization is stored in `schools/{schoolId}/members/{uid}`.
-
-``` text
-Firebase Authentication uid
-├── users/{uid}
-│   └── systemRole: system-admin | null
-└── schools/{schoolId}/members/{uid}
-    ├── role: school-admin | teacher | student
-    └── active
+```text
+school-admin
+teacher
+student
 ```
 
-Legacy `users.schools[]` / `users.role` fields may still exist during migration, but membership documents are the target source of truth for school access.
+`SchoolSelector.vue` changes the active school. For a non-System-Admin user, the target school must have a corresponding active membership. Changing schools resets selected class state and returns to Dashboard.
 
-### Administrative authorization
+System Admin has global school administration and can observe active schools independently of a school membership. The implementation still contains limited legacy profile-school compatibility during initial loading; that compatibility is not an authorization model.
 
-System Admin has global administration. Active `school-admin` membership grants Admin access only for the relevant school.
+## Dashboard
 
-School Admin can create users in that school and manage other users' memberships there. School Admin user discovery is performed through the privileged `getSchoolUsers` backend so the client does not need broad read access to other `/users/{uid}` profiles.
+`DashboardPage.vue` is the default modern home page.
 
-School Admin cannot change, deactivate, or remove their own membership. System Admin cannot change their own system role.
+It subscribes to current-school students, classes, rooms, and courses and displays active counts. Recent Activity and Messages sections currently exist as placeholders and intentionally do not load real activity/message data yet.
 
-Audit scope follows the affected resource. School-affecting events are stored under `schools/{schoolId}/auditLogs/{logId}`; system-only events are stored under `systemAuditLogs/{logId}`. For System Admin, Activity Log intentionally combines the selected school's events with system events rather than aggregating every school's audit log.
+The former `ClassroomPage.vue`, `MyClassroom.vue`, `StudentDesk.vue`, and `classroomService.js` are no longer present in the source tree.
 
-## Class context
+## Administrative authorization
 
-`selectedClassId` is application/workspace state.
+### System Admin
 
-``` text
+A user is a System Admin when the profile is active and:
+
+```text
+users/{uid}.systemRole == "system-admin"
+```
+
+System Admin can access:
+
+```text
+Admin
+├── Schools
+├── Users
+└── Activity Log
+```
+
+System Admin-only account operations include system-role changes and global user archive/reactivate.
+
+### School Admin
+
+A user is a School Admin for the active school when the user profile is active and the active membership is active with:
+
+```text
+role == "school-admin"
+```
+
+School Admin can access:
+
+```text
+Admin
+├── Users (scoped)
+└── Activity Log (school scope)
+```
+
+School Admin cannot access global Schools administration or System Admin controls.
+
+`getSchoolUsers` is the scoped backend discovery path. Do not grant broad direct `/users` reads to make School Admin UI work.
+
+### Self-lockout protections
+
+Current protections include:
+
+- School Admin cannot change, deactivate, or remove their own membership.
+- System Admin cannot change their own system role.
+- System Admin cannot archive their own account.
+- The final active System Admin cannot be demoted or archived.
+
+UI checks improve UX, but trusted backend validation / Firestore rules are the security boundary.
+
+## Privileged callable Functions
+
+Current `functions/index.js` exports:
+
+```text
+createUser
+getSchoolUsers
+updateManagedUser
+setManagedUserActive
+setSystemRole
+```
+
+### `createUser`
+
+Creates a Firebase Auth account, then reuses the UID for `users/{uid}` and optional `schools/{schoolId}/members/{uid}`. If the later Firestore work fails after Auth creation, the function attempts to delete the Auth user as rollback cleanup.
+
+School Admin creation is restricted to an administered school; no-school/global creation requires System Admin.
+
+### `getSchoolUsers`
+
+Returns the user data needed by the School Admin interface for members of one authorized school without broad client reads of the global user collection.
+
+### `updateManagedUser`
+
+Allows only whitelisted profile fields:
+
+```text
+firstName
+lastName
+displayName
+language
+```
+
+A School Admin must identify and administer the school and the target must be an active member of that school. A System Admin may call without a school ID.
+
+### `setManagedUserActive`
+
+System-Admin-only global account archive/reactivate operation. It prevents self-archive and archiving the final active System Admin.
+
+### `setSystemRole`
+
+System-Admin-only system-role change with self-change and last-active-System-Admin protection.
+
+## Audit architecture
+
+Collections:
+
+```text
+schools/{schoolId}/auditLogs/{logId}
+systemAuditLogs/{logId}
+```
+
+Durable rule: **audit destination is determined by the affected resource, not the actor**.
+
+### User update/status distribution
+
+For `user.updated`, `user.archived`, and `user.reactivated`, the function discovers all current membership documents for the target user.
+
+```text
+Target memberships: School A, B, C
+├── School A / auditLogs / event
+├── School B / auditLogs / event
+├── School C / auditLogs / event
+└── no system duplicate
+```
+
+If the target has zero memberships:
+
+```text
+systemAuditLogs / event
+```
+
+`user.created` is school-scoped when an initial school is assigned and system-scoped when no school is assigned.
+
+### Activity Log read behavior
+
+School Admin sees the selected authorized school's audit history.
+
+System Admin Activity Log loads:
+
+- selected school's audit history
+- system audit history
+
+and merges/sorts those results. It intentionally does not aggregate all schools in one request/view.
+
+## Firestore rule boundary
+
+Current rules correctly enforce important identity/Admin behaviors such as:
+
+- active profile checks for admin helpers
+- System Admin global privilege
+- School Admin membership requirement for Admin membership paths
+- self-membership protection
+- System audit immutability/client-write denial
+- school audit immutability
+- scoped membership collection-group reads
+
+However, several school-owned domain collections (`students`, `buildings`, `rooms`, `courses`, `classes`, enrollments, seating plans) currently allow read/write to any active user. This is a known security gap. The target architecture requires appropriate active school membership/role.
+
+Membership creation/update rules also still need explicit identity invariants (`memberId == userUid`, immutable `userUid`).
+
+## Class context and Class Workspace
+
+```text
 Classes
 → Manage Class
 → selectedClassId
 → ClassWorkspace
 ```
 
-Leaving the class workspace or changing schools clears the selected
-class.
+`ClassWorkspace.vue` composes:
 
-## Class Workspace
-
-`ClassWorkspace.vue` composes class-owned functionality:
-
-``` text
+```text
 ClassWorkspace
 ├── Overview
 ├── EnrollmentManager
 └── SeatingPlanManager
 ```
 
-`EnrollmentManager` and `SeatingPlanManager` accept:
-
--   `schoolId`
--   optional `classId`
-
-With `classId`, the manager operates in embedded mode.
+Leaving the workspace or changing schools clears selected class state.
 
 ## Service layer
 
-Firestore access is separated into domain services:
+Domain Firestore access is separated into services:
 
-``` text
+```text
+adminUserService.js
+auditLogService.js
 buildingService.js
 classService.js
 courseService.js
 enrollmentService.js
+membershipService.js
 roomService.js
 schoolService.js
 seatingPlanService.js
@@ -150,47 +297,38 @@ studentService.js
 userService.js
 ```
 
-Typical service responsibilities:
+Typical responsibilities:
 
--   Validate required context
--   Build Firestore paths
--   Normalize input
--   Subscribe to real-time snapshots
--   Save documents
--   Archive documents
--   Preserve stable IDs
+- validate required context
+- build Firestore paths
+- normalize input
+- subscribe to snapshots
+- persist/archive/reactivate data
+- build client-side audit writes where currently authorized
+- preserve stable IDs
+
+Privileged cross-account operations that require Admin SDK authority belong in callable Functions rather than client services.
 
 ## Room model and physical layout
 
-Rooms describe the physical classroom:
-
-``` text
-building
-floor
-room number
-desk count
-seats per desk
-capacity
-teacher position
-```
+Rooms own physical classroom configuration including building/floor/room identity, desk count, seats per desk, capacity, and teacher position.
 
 Teacher position values:
 
-``` text
+```text
 front-left
 front-right
 back-left
 back-right
 ```
 
-The room preview and seating-plan visualization use this configuration
-to present a classroom-like layout.
+Older room data falls back to `front-left` in UI/service behavior.
 
-## Seating-plan model
+## Seating-plan and Planning Engine boundary
 
-A seating plan stores physical assignments:
+A seating plan stores physical assignments such as:
 
-``` js
+```js
 {
   studentId,
   deskNumber,
@@ -198,124 +336,68 @@ A seating plan stores physical assignments:
 }
 ```
 
-This keeps historical positions stable even when the UI layout changes.
+`src/engine/seating/` is framework-independent JavaScript. It does not read Firestore, depend on Vue, translate text, or export files.
 
-## Planning Engine boundary
+Current historical objectives are lexicographic:
 
-`src/engine/seating/` contains framework-independent JavaScript.
+1. avoid previous partners
+2. avoid previous desks
+3. avoid previous exact seats
 
-The engine does not:
-
--   Read Firestore
--   Know Vue components
--   Translate text
--   Download files
-
-It receives plain data and returns structured results.
-
-Current constraints:
-
--   Avoid previous partners
--   Avoid previous desks
--   Avoid previous exact seats
+The engine recommends; the teacher selects/adjusts the final plan.
 
 ## Excel export boundary
 
-`seatingPlanExportService.js` is separate from Firestore persistence and
-the planning algorithm.
-
-Input:
-
--   Saved seating plan
--   Selected class
--   Room
--   Student records
-
-Output:
-
--   Printable `.xlsx` workbook
-
-The export reflects classroom geometry: whiteboard, teacher position,
-desk groups, and student assignments.
+`seatingPlanExportService.js` receives saved plan/class/room/student data and creates a printable `.xlsx` workbook. It reflects current classroom geometry (whiteboard, teacher position, desk groups, student assignments) without mixing export formatting into Firestore or the recommendation engine.
 
 ## Internationalization
 
-Vue I18n is initialized under:
+Vue I18n lives under `src/i18n/`. New user-visible UI strings must be represented in aligned `en.json` and `ja.json` keys. Services/engine should return structured/domain errors rather than importing i18n.
 
-``` text
-src/i18n/
-├── index.js
-└── locales/
-    ├── en.json
-    └── ja.json
-```
-
-Locale selection uses persisted preference first, then browser language,
-then English fallback.
-
-Rules:
-
--   New UI text belongs in locale catalogs.
--   Engine output should remain structured.
--   Services should avoid translated prose.
--   Dynamic UI messages use interpolation.
-
-## Responsive navigation
-
-`NavigationMenu.vue` supports collapsed state and automatically adapts
-on smaller screens. The sidebar must not obscure primary application
-content.
-
-## Legacy boundary
-
-The following are transitional:
-
-``` text
-ClassroomPage.vue
-MyClassroom.vue
-StudentDesk.vue
-classroomService.js
-```
-
-New functionality should not be added there unless required for safe
-migration. The target is a new Dashboard/Home page.
-
-## Future architecture
-
-Likely future additions:
-
-``` text
-Dashboard
-├── Activity summary
-├── Recent class activity
-├── Messages
-└── Announcements
-
-Authorization
-├── School membership
-└── Roles / permissions
-
-Engineering
-├── Tests
-├── CI
-├── Lazy loading
-└── Possible Vue CLI → Vite migration
-```
-
-
-## Privileged user administration
-
-System administrators can manage users and school access from the Admin interface. Creating an Authentication account is a privileged server operation and is implemented through the callable `createUser` Cloud Function. The function creates the Firebase Auth account first, then reuses that UID for `users/{uid}` and any initial `schools/{schoolId}/members/{uid}` document.
+Current Admin/Dashboard UI, including user refresh and audit fields, has EN/JA coverage. Some Firebase/service/browser validation messages and Excel labels remain localization work.
 
 ## Local Firebase emulator workflow
 
-Privileged operations are developed and tested against the Firebase Authentication, Firestore, and Functions emulators before production deployment.
+Development mode connects the Vue app to:
 
-``` text
-Vue development app
-├── Authentication Emulator :9099
-├── Firestore Emulator      :8080
-└── Functions Emulator      :5001
+```text
+Authentication Emulator :9099
+Firestore Emulator      :8080
+Functions Emulator      :5001
+Emulator UI             :4000
 ```
 
-This isolates development data from the production Firebase project. Production Cloud Functions deployment requires Blaze; billing activation and shutdown procedures are documented in `FIREBASE_BILLING_RUNBOOK.md`.
+Preserve the existing dataset by default:
+
+```bash
+cd ~/Projects/ClassRoom
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
+```
+
+`emulator-data/` and `emulator-data.zip` are local ignored artifacts.
+
+## Future architecture
+
+Near-term direction:
+
+```text
+Security
+├── membership identity/immutability
+├── membership-aware domain rules
+├── trusted membership mutation boundary
+└── automated authorization/audit regression tests
+
+Teachers
+├── teacher directory/model
+├── class teacher assignments
+├── main teacher
+└── Class Workspace / export integration
+
+Engineering
+├── tests + CI
+├── lazy loading / bundle review
+└── possible Vue CLI → Vite migration
+```

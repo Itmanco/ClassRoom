@@ -710,6 +710,7 @@
   },
 
   "adminUsers": {
+    "refresh": "Refresh",
     "eyebrow": "System Administration",
     "title": "Users",
     "description": "Manage platform users and global system roles.",

@@ -864,72 +864,135 @@ exports.updateManagedUser =
         );
 
         /*
-        * System Admin edits are recorded in
-        * the global System Activity Log.
-        *
-        * School Admin edits are recorded in
-        * that school's Activity Log.
-        */
-        const auditRef =
-          schoolId ?
+         * Audit destination is determined by
+         * the target user's school memberships,
+         * not by the actor's role.
+         *
+         * If the target user belongs to one or
+         * more schools, write one audit event
+         * to each school and do not create a
+         * system audit event.
+         *
+         * If the target user has no school
+         * memberships, write one system audit
+         * event instead.
+         */
+        const membershipsSnapshot =
+          await db
+              .collectionGroup(
+                  "members",
+              )
+              .where(
+                  "userUid",
+                  "==",
+                  userId,
+              )
+              .get();
+
+        const schoolIds =
+          [
+            ...new Set(
+                membershipsSnapshot.docs
+                    .map(
+                        (document) =>
+                          document.ref
+                              .parent
+                              .parent
+                              ?.id,
+                    )
+                    .filter(Boolean),
+            ),
+          ];
+
+        const auditData = {
+          action:
+            "user.updated",
+
+          entityType:
+            "user",
+
+          entityId:
+            userId,
+
+          actorUid:
+            actor.uid,
+
+          actorEmail:
+            actor.profile.email ||
+            request.auth.token.email ||
+            "",
+
+          actorRole:
+            actor.profile.systemRole ||
+            actor.role ||
+            null,
+
+          changedFields,
+
+          details: {
+            entityName:
+              displayName ||
+              currentProfile.displayName ||
+              currentProfile.email ||
+              userId,
+
+            email:
+              currentProfile.email ||
+              "",
+
+            changes,
+          },
+
+          createdAt:
+            FieldValue
+                .serverTimestamp(),
+        };
+
+        if (schoolIds.length > 0) {
+          schoolIds.forEach(
+              (targetSchoolId) => {
+                const schoolAuditRef =
+                  db
+                      .collection(
+                          "schools",
+                      )
+                      .doc(
+                          targetSchoolId,
+                      )
+                      .collection(
+                          "auditLogs",
+                      )
+                      .doc();
+
+                batch.set(
+                    schoolAuditRef,
+                    {
+                      ...auditData,
+
+                      schoolId:
+                        targetSchoolId,
+                    },
+                );
+              },
+          );
+        } else {
+          const systemAuditRef =
             db
-                .collection("schools")
-                .doc(schoolId)
-                .collection("auditLogs")
-                .doc() :
-            db
-                .collection("systemAuditLogs")
+                .collection(
+                    "systemAuditLogs",
+                )
                 .doc();
 
-        batch.set(
-            auditRef,
-            {
-              action:
-                "user.updated",
+          batch.set(
+              systemAuditRef,
+              {
+                ...auditData,
 
-              entityType:
-                "user",
-
-              entityId:
-                userId,
-
-              actorUid:
-                actor.uid,
-
-              actorEmail:
-                actor.profile.email ||
-                request.auth.token.email ||
-                "",
-
-              actorRole:
-                actor.profile.systemRole ||
-                actor.role ||
-                null,
-
-              schoolId:
-                schoolId || null,
-
-              changedFields,
-
-              details: {
-                entityName:
-                  displayName ||
-                  currentProfile.displayName ||
-                  currentProfile.email ||
-                  userId,
-
-                email:
-                  currentProfile.email ||
-                  "",
-
-                changes,
+                schoolId:
+                  null,
               },
-
-              createdAt:
-                FieldValue
-                    .serverTimestamp(),
-            },
-        );
+          );
+        }
 
         await batch.commit();
 
@@ -1145,136 +1208,109 @@ exports.setManagedUserActive =
         );
 
         /*
-         * Global System Activity Log.
+         * Audit destination is determined by
+         * the target user's school memberships.
+         *
+         * If memberships exist, write one
+         * audit event to each school only.
+         *
+         * If no memberships exist, write one
+         * System Activity Log event.
          */
-        const systemAuditRef =
-          db
-              .collection(
-                  "systemAuditLogs",
-              )
-              .doc();
+        const auditData = {
+          action,
 
-        batch.set(
-            systemAuditRef,
-            {
-              action,
+          entityType:
+            "user",
 
-              entityType:
-                "user",
+          entityId:
+            userId,
 
-              entityId:
-                userId,
+          actorUid:
+            actor.uid,
 
-              actorUid:
-                actor.uid,
+          actorEmail,
 
-              actorEmail,
+          actorRole,
 
-              actorRole,
+          changedFields: [
+            "active",
+          ],
 
-              schoolId:
-                null,
+          details: {
+            entityName,
 
-              changedFields: [
-                "active",
-              ],
+            email:
+              targetProfile.email ||
+              "",
 
-              details: {
-                entityName,
+            changes: {
+              active: {
+                before:
+                  previousActive,
 
-                email:
-                  targetProfile.email ||
-                  "",
-
-                changes: {
-                  active: {
-                    before:
-                      previousActive,
-
-                    after:
-                      active,
-                  },
-                },
-
-                affectedSchools:
-                  schoolIds,
+                after:
+                  active,
               },
-
-              createdAt:
-                FieldValue
-                    .serverTimestamp(),
             },
-        );
+          },
 
-        /*
-         * Add the same event to every
-         * school where this user has a
-         * membership.
-         */
-        schoolIds.forEach(
-            (schoolId) => {
-              const schoolAuditRef =
-                db
-                    .collection(
-                        "schools",
-                    )
-                    .doc(
-                        schoolId,
-                    )
-                    .collection(
-                        "auditLogs",
-                    )
-                    .doc();
+          createdAt:
+            FieldValue
+                .serverTimestamp(),
+        };
 
-              batch.set(
-                  schoolAuditRef,
-                  {
-                    action,
+        if (schoolIds.length > 0) {
+          schoolIds.forEach(
+              (targetSchoolId) => {
+                const schoolAuditRef =
+                  db
+                      .collection(
+                          "schools",
+                      )
+                      .doc(
+                          targetSchoolId,
+                      )
+                      .collection(
+                          "auditLogs",
+                      )
+                      .doc();
 
-                    entityType:
-                      "user",
+                batch.set(
+                    schoolAuditRef,
+                    {
+                      ...auditData,
 
-                    entityId:
-                      userId,
-
-                    actorUid:
-                      actor.uid,
-
-                    actorEmail,
-
-                    actorRole,
-
-                    schoolId,
-
-                    changedFields: [
-                      "active",
-                    ],
-
-                    details: {
-                      entityName,
-
-                      email:
-                        targetProfile.email ||
-                        "",
-
-                      changes: {
-                        active: {
-                          before:
-                            previousActive,
-
-                          after:
-                            active,
-                        },
-                      },
+                      schoolId:
+                        targetSchoolId,
                     },
+                );
+              },
+          );
+        } else {
+          const systemAuditRef =
+            db
+                .collection(
+                    "systemAuditLogs",
+                )
+                .doc();
 
-                    createdAt:
-                      FieldValue
-                          .serverTimestamp(),
-                  },
-              );
-            },
-        );
+          batch.set(
+              systemAuditRef,
+              {
+                ...auditData,
+
+                schoolId:
+                  null,
+
+                details: {
+                  ...auditData.details,
+
+                  affectedSchools: [],
+                },
+              },
+          );
+        }
 
         await batch.commit();
 

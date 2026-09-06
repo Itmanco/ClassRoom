@@ -1,176 +1,167 @@
 # Architecture and Product Decisions
 
-## D001 --- School-scoped domain data
+This file records durable decisions. Completed implementation history belongs in `CHANGELOG.md`; temporary work items belong in `TODO.md`.
 
-**Decision:** Store school-owned data under `schools/{schoolId}`.
+## D001 — School-scoped domain data
 
-**Reason:** Prevent ambiguous ownership and prepare the application for
-users who can access more than one school.
+**Decision:** School-owned data lives below `schools/{schoolId}`.
 
-## D002 --- Keep school and class context separate
+**Reason:** Prevent accidental cross-school mixing and keep ownership explicit.
 
-**Decision:** `schoolId` identifies organization context; `classId`
-identifies the selected class workflow.
+## D002 — Keep school and class context separate
 
-**Reason:** A class selection must never replace or imply school
-authorization.
+**Decision:** `schoolId` identifies organization context; `classId` identifies the selected class workspace.
 
-## D003 --- Membership-based school access
+**Reason:** Class workflows should not leak across school changes.
 
-**Decision:** Firebase Authentication UID is the canonical identity. `users/{uid}.systemRole` controls system-wide privileges, while `schools/{schoolId}/members/{uid}` controls school access and the school-specific role. `activeSchool` remains user session/profile state.
+## D003 — Membership-based school access
 
-**Status:** Implemented for UI/application context.
+**Decision:** Firebase Auth UID is canonical. `users/{uid}.systemRole` controls system-wide privilege; `schools/{schoolId}/members/{uid}` controls school access/role. `activeSchool` is preference/session state, not authorization.
 
-**Caveat:** This is not the final server-side authorization model.
+**Reason:** System privilege and school membership are different concerns.
 
-## D004 --- Dedicated no-school state
+## D004 — Dedicated no-school state
 
-**Decision:** An authenticated user with no assigned school sees
-`NoSchoolPage.vue`.
+**Decision:** An authenticated, active non-System-Admin user with no available school sees `NoSchoolPage.vue`.
 
-**Reason:** Rendering school managers with a null/invalid school ID
-creates confusing failures and accidental assumptions.
+**Reason:** Rendering school managers with null/invalid context is unsafe and confusing.
 
-## D005 --- Class-owned enrollments and seating plans
+## D005 — Class-owned enrollments and seating plans
 
-**Decision:** Enrollments and seating plans live inside Class Workspace
-rather than as primary top-level workflows.
+**Decision:** Enrollments and seating plans live inside Class Workspace rather than primary top-level navigation.
 
-**Reason:** Both require a selected class to be meaningful.
+**Reason:** Both require selected class context.
 
-## D006 --- Archive instead of destructive deletion
+## D006 — Archive instead of destructive deletion
 
-**Decision:** Preserve referenced records using active/archive state.
+**Decision:** Preserve historically referenced records using active/archive state where appropriate.
 
-**Reason:** Historical enrollment and seating-plan data must remain
-understandable.
+**Reason:** Historical enrollment/seating/audit context must remain understandable.
 
-## D007 --- Framework-independent seating engine
+## D007 — Framework-independent seating engine
 
-**Decision:** Keep the recommendation algorithm under
-`src/engine/seating/` independent from Vue/Firebase.
+**Decision:** Keep recommendation logic under `src/engine/seating/` independent from Vue/Firebase.
 
-**Reason:** Improves testability, reuse, and separation of concerns.
+**Reason:** Testability, reuse, and separation of concerns.
 
-## D008 --- Lexicographic seating objectives
+## D008 — Lexicographic seating objectives
 
-**Decision:** Prioritize repeated partners, then repeated desks, then
-repeated exact seats.
+**Decision:** Prioritize repeated partners, then repeated desks, then repeated exact seats.
 
-**Reason:** Higher-priority fairness goals should not be traded away by
-a weighted aggregate score.
+**Reason:** Higher-priority fairness goals should not be traded away by a weighted aggregate.
 
-## D009 --- Recommend, don't decide
+## D009 — Recommend, don't decide
 
-**Decision:** Generated seating arrangements remain teacher
-recommendations.
+**Decision:** Generated seating arrangements are recommendations; teachers retain final control.
 
-**Reason:** Classroom context contains human factors that the current
-data model cannot fully represent.
+**Reason:** Classroom context contains human factors outside the current model.
 
-## D010 --- Internationalization at the presentation layer
+## D010 — Internationalization at the presentation layer
 
-**Decision:** Engine/services return structured/domain information;
-components translate it.
+**Decision:** Engine/services return structured/domain information; components translate it through Vue I18n.
 
-**Reason:** Prevent language concerns from contaminating domain logic.
+**Reason:** Keep language concerns out of domain logic.
 
-## D011 --- Browser language with persisted override
+## D011 — Browser language with persisted override
 
-**Decision:** Use saved language first, otherwise browser language,
-otherwise English.
+**Decision:** Saved language first, browser language second, English fallback.
 
-**Reason:** Gives sensible first-load behavior while respecting explicit
-user choice.
+**Reason:** Sensible first load plus respect for explicit choice.
 
-## D012 --- Room owns teacher position
+## D012 — Room owns teacher position
 
-**Decision:** Store teacher position on the room.
+**Decision:** Store teacher position on the room using `front-left`, `front-right`, `back-left`, or `back-right`.
 
-Supported values:
+**Reason:** Teacher-desk placement is a reusable physical room property.
 
-``` text
-front-left
-front-right
-back-left
-back-right
-```
+## D013 — Classroom-style seating visualization
 
-**Reason:** Teacher-desk placement is a physical room property and
-should be reused by room preview, seating-plan display, and export.
+**Decision:** Display seats grouped by physical desks with whiteboard/front-of-room context.
 
-## D013 --- Classroom-style seating visualization
+**Reason:** Seating is spatial information.
 
-**Decision:** Display seats grouped by physical desks, with a
-whiteboard/front-of-room reference.
+## D014 — Excel export as a separate service
 
-**Reason:** A seating plan is spatial information; a generic card/list
-layout is less useful to teachers.
+**Decision:** Generate `.xlsx` seating plans in `seatingPlanExportService.js`.
 
-## D014 --- Excel export as a separate service
+**Reason:** Keep export formatting outside Firestore persistence and recommendation logic.
 
-**Decision:** Generate `.xlsx` seating plans in
-`seatingPlanExportService.js`.
+## D015 — Responsive sidebar
 
-**Reason:** Keeps print/export concerns out of Firestore persistence and
-the recommendation engine.
-
-## D015 --- Responsive sidebar
-
-**Decision:** Navigation can collapse and should adapt automatically on
-smaller screens.
+**Decision:** Navigation can collapse and adapt on smaller screens.
 
 **Reason:** Preserve usable classroom/seating workspace width.
 
-## D016 --- Retire legacy Classroom page
+## D016 — Replace legacy Classroom page with Dashboard
 
-**Decision:** Do not continue expanding `ClassroomPage.vue`.
+**Decision:** Retire the original Classroom/Home implementation and use `DashboardPage.vue` as the default home page.
 
-**Target:** Replace it with a Dashboard/Home page containing useful
-summaries and, later, messages/activity.
+**Status:** Implemented; the old Classroom page/components/service are removed.
 
-**Reason:** Modern domain workflows have superseded the original page
-architecture.
+**Reason:** Modern domain workflows superseded the original mixed-concern page.
 
-## D017 --- Controlled modernization
+## D017 — Controlled modernization
 
 **Decision:** Avoid forced dependency upgrades during feature work.
 
-**Reason:** Vue CLI and older dependency chains can produce breaking
-changes. Modernization should occur on a dedicated branch with
-regression testing.
+**Reason:** Toolchain modernization should be isolated and regression-tested.
 
+## D018 — Privileged account creation uses Cloud Functions
 
-## D014 --- Privileged account creation uses Cloud Functions
+**Decision:** Creating another Firebase Authentication user is a callable Cloud Function operation, not a Vue-client Admin SDK operation.
 
-**Decision:** Firebase Authentication users are created by a callable Cloud Function, not directly by the Vue client.
+**Reason:** Cross-account Auth administration requires trusted server privileges. The generated Auth UID is reused for the profile/membership documents.
 
-**Reason:** Creating and administering other Auth users requires trusted server-side Firebase Admin SDK privileges. The generated Auth UID is reused for the profile and membership documents.
+## D019 — Emulator-first privileged development
 
-## D015 --- Emulator-first privileged development
+**Decision:** Privileged Firebase operations are tested with Auth/Firestore/Functions emulators before production deployment, preserving the existing emulator dataset by default.
 
-**Decision:** User administration and other privileged Firebase operations are tested with the Authentication, Firestore, and Functions emulators before production deployment.
+**Reason:** Protect production identities/data and allow backend development without enabling Blaze.
 
-**Reason:** This prevents development mistakes from corrupting production identities or Firestore data and allows Cloud Functions work before Blaze is intentionally enabled.
+## D020 — Audit scope follows the affected resource
 
-## 2026-09-01 — Audit scope follows the affected resource
+**Decision:** Audit destination is determined by affected resource scope, not by the actor role.
 
-**Decision:** Audit scope is determined by the affected resource, not by the actor's privilege level.
+Examples:
 
-A user created with a school membership produces one school-scoped `user.created` event under `schools/{schoolId}/auditLogs/{logId}`. A user created without a school produces one system-scoped event under `systemAuditLogs/{logId}`.
+- school resource → that school's audit log
+- no-school/system-only user resource → system audit log
+- user update/archive/reactivate with memberships A/B/C → one event in A, B, C and no system duplicate
 
-For System Admin, Activity Log remains selected-school aware: **All** combines the selected school's events with system events, **School** shows only the selected school's events, and **System** shows only system events.
+**Reason:** Relevant School Admins need local history, while duplicate System copies make scope ambiguous and noisy.
 
-**Reason:** This keeps school history visible to the relevant School Admin without duplicating the same event into multiple audit scopes.
+## D021 — System Admin Activity Log is selected-school aware
 
-## 2026-09-01 — Protect administrators from self-removing critical access
+**Decision:** System Admin “All” combines system events with the currently selected school's events; it does not aggregate every school's audit history.
 
-**Decision:** School Admin cannot change, deactivate, or remove their own school membership. System Admin cannot change their own `systemRole`.
+**Reason:** Preserve active-school context and avoid unbounded cross-school aggregation.
 
-**Reason:** Prevent accidental administrative lockout. UI protection improves usability, while Firestore rules/backend validation remain the security boundary.
+## D022 — Protect administrators from self-removing critical access
 
-## 2026-09-01 — School Admin user discovery remains scoped
+**Decision:** School Admin cannot change/deactivate/remove their own membership. System Admin cannot change their own system role or archive their own account. The last active System Admin cannot be demoted or archived.
 
-**Decision:** Do not grant School Admin broad direct-read access to other `/users/{uid}` documents. Use the privileged school-scoped backend to return only the user fields needed by Admin Users.
+**Reason:** Prevent accidental administrative lockout. Backend/rule enforcement is required in addition to UI affordances.
 
-**Reason:** School administration requires identity information without granting client-side access to the global user collection.
+## D023 — School Admin user discovery remains scoped
+
+**Decision:** Do not grant School Admin broad direct read access to other `/users/{uid}` documents. Use the privileged `getSchoolUsers` backend for the authorized school.
+
+**Reason:** School administration needs selected identity fields without exposing the global user collection.
+
+## D024 — Managed user profile edits use an explicit whitelist
+
+**Decision:** `updateManagedUser` accepts only `firstName`, `lastName`, `displayName`, and `language`.
+
+**Reason:** Profile editing must not become a path for changing email, system role, account status, legacy roles, or membership authorization.
+
+## D025 — Global user archive is separate from school membership status
+
+**Decision:** `users/{uid}.active` controls global account access; `members/{uid}.active` controls access to a specific school. Archiving the user is System-Admin-only and does not replace membership lifecycle management.
+
+**Reason:** Account lifecycle and school membership lifecycle have different scopes and consequences.
+
+## D026 — Do not claim school-domain authorization is complete until rules are membership-aware
+
+**Decision:** The project explicitly treats broad `isActiveUser()` rules on school-owned collections as unfinished security work.
+
+**Reason:** Admin UI checks and canonical memberships do not by themselves prevent cross-school domain reads/writes.

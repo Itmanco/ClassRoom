@@ -15,13 +15,27 @@
         </p>
       </div>
 
-      <button
-        type="button"
-        class="secondary"
-        @click="$emit('back')"
-      >
-        ← {{ $t("common.back") }}
-      </button>
+      <div class="page-header-actions">
+        <button
+          type="button"
+          class="secondary"
+          :disabled="
+            loading ||
+            loadingMemberships
+          "
+          @click="refreshUsers"
+        >
+          {{ $t("adminUsers.refresh") }}
+        </button>
+
+        <button
+          type="button"
+          class="secondary"
+          @click="$emit('back')"
+        >
+          ← {{ $t("common.back") }}
+        </button>
+      </div>
     </header>
 
     <p
@@ -1214,6 +1228,14 @@ export default {
   },
 
   methods: {
+    async refreshUsers() {
+      this.message = "";
+      this.errorMessage = "";
+
+      await this.startListener();
+      await this.loadAllMemberships();
+    },
+
     async loadSchools() {
       try {
         this.schools =
@@ -2388,6 +2410,12 @@ export default {
 
 .page-header {
   margin-bottom: 24px;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .page-header h1 {

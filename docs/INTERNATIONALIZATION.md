@@ -1,10 +1,12 @@
 # Internationalization
 
+**Last verified against source:** 2026-09-06
+
 ## Overview
 
-Classroom Manager uses Vue I18n with English and Japanese catalogs.
+Classroom Manager uses Vue I18n with aligned English and Japanese catalogs:
 
-``` text
+```text
 src/i18n/
 ├── index.js
 └── locales/
@@ -12,74 +14,47 @@ src/i18n/
     └── ja.json
 ```
 
-## Supported locales
-
-``` text
-en
-ja
-```
-
-English is the fallback locale.
+Supported locales are `en` and `ja`; English is the fallback.
 
 ## Initial locale selection
 
-The application uses this priority:
+Priority:
 
-1.  Previously saved application locale
-2.  Browser default language
-3.  English fallback
+1. previously saved application locale
+2. browser default language
+3. English fallback
 
-Browser locale is normalized to its base language. Examples:
+Browser locale is normalized to its base language:
 
-``` text
+```text
 ja-JP → ja
 en-US → en
 es-CO → en
 ```
 
-Only supported locales are selected.
-
 ## Persistence
 
-The selected locale is stored in local storage using the application
-language key.
+Changing language updates the Vue I18n locale, persists the preference in local storage, and updates `document.documentElement.lang`.
 
-Changing the language:
+## Current UI coverage
 
--   Updates `i18n.global.locale`
--   Persists the locale
--   Updates `document.documentElement.lang`
+Current catalogs cover the modern application including:
 
-This means a user choice takes precedence over browser language on later
-visits.
+- login/profile/settings and navigation
+- Dashboard
+- school/no-school flows
+- Students, Courses, Buildings, Rooms, Classes
+- Class Workspace, enrollments, seating plans, planning UI
+- Admin Console
+- Admin Schools/Users
+- user create/edit/archive/reactivate UI
+- membership management and status/error messages
+- Activity Log filters/details/actions
+- translated audit changed-field labels
+- Admin Users Refresh (`Refresh` / `更新`)
+- inactive-account screen
 
-## UI coverage
-
-The current localization system covers the modern management
-application, including:
-
--   Navigation
--   Settings
--   Student Management
--   Course Management
--   Building Management
--   Room Management
--   Class Management
--   Class Workspace
--   Enrollment Management
--   Seating Plan Management
--   Planning Engine UI
--   Profile
--   School/no-school flows
-
-The legacy Classroom page is transitional and should be removed rather
-than used as the standard for new localization work.
-
-## Login/authentication
-
-Login UI and authentication error presentation should be reviewed as
-part of the final localization/UX pass. Raw Firebase error messages
-should not be the long-term user-facing experience.
+The old Classroom/Home UI has been removed and is no longer a localization concern.
 
 ## Translation architecture
 
@@ -87,73 +62,50 @@ should not be the long-term user-facing experience.
 
 Components translate display text:
 
-``` vue
+```vue
 {{ $t("navigation.students") }}
 ```
 
 Dynamic messages use interpolation:
 
-``` js
-this.$t("example.key", {
-  value
-})
+```js
+this.$t("example.key", { value })
 ```
 
-### Services
+### Services and Functions
 
-Services should:
-
--   Validate data
--   Throw meaningful technical/domain errors
--   Avoid importing Vue I18n
--   Avoid deciding display language
+Services/Functions should validate and return stable technical/domain errors. They should not import Vue I18n or decide display language. UI surfaces translate known error codes/messages when appropriate.
 
 ### Seating Engine
 
-The engine returns structured data:
+The engine returns structured information rather than prose so the UI can render explanations in the selected language.
 
-``` js
-{
-  type: "previous-partner",
-  studentA,
-  studentB
-}
-```
+## Adding or changing user-visible text
 
-The UI converts that into English or Japanese.
-
-## Adding a translation
-
-1.  Add the key to `en.json`.
-2.  Add the equivalent key to `ja.json`.
-3.  Replace hardcoded UI text with `$t(...)`.
-4.  Run lint/build.
-5.  Test both languages.
-6.  Test interpolation and narrow/mobile layouts.
+1. Add/update the key in `en.json`.
+2. Add/update the equivalent key in `ja.json`.
+3. Use `$t(...)` rather than hardcoded bilingual text.
+4. Run lint/build.
+5. Test both languages, interpolation, and narrow layouts.
 
 ## Rules
 
--   Do not add new hardcoded user-facing English/Japanese text when a
-    translation key is appropriate.
--   Keep locale key structures aligned between `en.json` and `ja.json`.
--   Do not translate IDs or stored domain identifiers.
--   Do not store translated engine violations.
--   Prefer neutral domain terminology that works consistently across
-    languages.
+- Keep EN/JA key structures aligned.
+- Do not translate stored IDs or domain identifiers.
+- Do not store translated planning violations.
+- Do not add one-language Admin/security text.
+- Prefer stable error codes for privileged backend errors that the UI can map to localized messages.
 
 ## Remaining work
 
--   Review raw Firebase authentication errors
--   Review browser-native validation
--   Review service/domain error presentation
--   Final Japanese terminology pass
--   Check Excel export labels for localization
--   Add representative English/Japanese screenshots
--   Test long translations on small screens
+- friendly localized Firebase Authentication errors
+- review raw service/domain error presentation
+- review browser-native validation
+- localized Excel export labels
+- final Japanese terminology pass
+- representative bilingual screenshots
+- long-string/narrow-screen testing
 
 ## Excel export
 
-The current Excel export contains print-oriented labels such as
-teacher/whiteboard/desk. These should eventually use localized export
-labels based on the selected application language rather than remain
-hardcoded in the export service.
+The current Excel export contains print-oriented labels such as teacher/whiteboard/desk. These should eventually resolve from the selected application locale rather than remain hardcoded in the export service.

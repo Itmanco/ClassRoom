@@ -1,161 +1,170 @@
 # Classroom Manager Roadmap
 
+**Last reviewed:** 2026-09-06
+
 ## Vision
 
-Build a bilingual, explainable school/classroom management platform that
-keeps organization context explicit and teachers in control of classroom
-decisions.
+Build a bilingual, explainable school/classroom management platform that keeps organization context explicit, protects multi-school data boundaries, and keeps teachers in control of classroom decisions.
 
 ## Completed foundation
 
-### Authentication and domain structure
+### Authentication, identity, and multi-school context
 
--   [x] Firebase Authentication
--   [x] Firestore user profiles
--   [x] School-scoped collections
--   [x] Student Management
--   [x] Course Management
--   [x] Building Management
--   [x] Room Management
--   [x] Class Management
--   [x] Enrollment Management
--   [x] Seating Plan Management
+- [x] Firebase Authentication
+- [x] Firestore user profiles
+- [x] Canonical Auth UID identity
+- [x] Active/inactive account state
+- [x] School membership documents
+- [x] `system-admin` global role
+- [x] `school-admin`, `teacher`, `student` school roles
+- [x] Membership-based available schools
+- [x] Active-school selector
+- [x] No-school state
 
-### Class Workspace
+### School domain
 
--   [x] Manage Class action
--   [x] Selected class context
--   [x] Overview
--   [x] Embedded EnrollmentManager
--   [x] Embedded SeatingPlanManager
--   [x] Remove enrollments/seating plans from primary navigation
--   [x] Preserve school/class context boundaries
+- [x] Student Management
+- [x] Course Management
+- [x] Building Management
+- [x] Room Management
+- [x] Class Management
+- [x] Enrollment Management
+- [x] Seating Plan Management
+
+### Dashboard and Class Workspace
+
+- [x] Dashboard as default page
+- [x] Student/class/room/course summary cards
+- [x] Remove legacy Classroom/Home code
+- [x] Selected class context
+- [x] Overview
+- [x] Embedded EnrollmentManager
+- [x] Embedded SeatingPlanManager
+- [x] Preserve school/class context boundaries
 
 ### Planning Engine v1
 
--   [x] Framework-independent engine
--   [x] Previous-partner avoidance
--   [x] Previous-desk avoidance
--   [x] Previous-seat avoidance
--   [x] Multiple recommendations
--   [x] Structured violations
--   [x] Teacher selection/manual override
+- [x] Framework-independent engine
+- [x] Previous-partner avoidance
+- [x] Previous-desk avoidance
+- [x] Previous-seat avoidance
+- [x] Multiple recommendations
+- [x] Structured violations
+- [x] Teacher selection/manual override
 
-### Internationalization foundation
+### Physical classroom and export
 
--   [x] Vue I18n
--   [x] English/Japanese catalogs
--   [x] Browser-language initialization
--   [x] Persisted language selection
--   [x] Modern management pages localized
--   [x] Responsive navigation
+- [x] Desk count / seats per desk / capacity
+- [x] Teacher position
+- [x] Room preview
+- [x] Classroom-style seating-plan view
+- [x] Saved seating-plan `.xlsx` export
+- [x] Teacher/whiteboard representation
+- [x] Print-oriented page setup and filename
 
-### Multi-school UI
+### Internationalization
 
--   [x] Membership-based available schools
--   [x] Available-school loading
--   [x] Active-school selector
--   [x] School-change reset behavior
--   [x] No-school state
+- [x] Vue I18n
+- [x] English/Japanese catalogs
+- [x] Browser-language initialization
+- [x] Persisted language selection
+- [x] Modern management/Admin/Dashboard coverage
+- [x] Responsive navigation
 
-### Physical classroom model
+### Admin and audit foundation
 
--   [x] Desk count
--   [x] Seats per desk
--   [x] Capacity
--   [x] Teacher position
--   [x] Room preview
--   [x] Classroom-style seating-plan view
+- [x] System Admin Schools/Users/Activity Log
+- [x] School Admin scoped Users/Activity Log
+- [x] Callable `createUser`, `getSchoolUsers`, `updateManagedUser`, `setManagedUserActive`, `setSystemRole`
+- [x] User profile editing
+- [x] User archive/reactivate and inactive-account blocking
+- [x] Last-active-System-Admin and self-access protections
+- [x] Membership management and audit events
+- [x] System/school audit scopes and UI filters
+- [x] Multi-school distribution for user update/archive/reactivate
+- [x] Zero-membership system audit fallback
+- [x] Firebase Auth / Firestore / Functions emulator workflow
 
-### Excel export
+## Current milestone — authorization boundary hardening
 
--   [x] Saved seating-plan `.xlsx` export
--   [x] Classroom-oriented layout
--   [x] Teacher/whiteboard representation
--   [x] Compact desk spacing
--   [x] Print-oriented page setup
--   [x] Class/date-time filename
+Before expanding the next domain, complete the security invariants around school membership:
 
-## Immediate milestone
+- [ ] Enforce membership document ID == `userUid`
+- [ ] Make membership `userUid` immutable
+- [ ] Replace broad active-user rules on school-domain collections with active membership/role-aware rules
+- [ ] Move remaining privileged membership writes behind trusted backend authorization where appropriate
+- [ ] Add automated regression tests for cross-school, multi-school, no-school, inactive-account, and role transitions
+- [ ] Add CI for lint/build/tests
 
-### Documentation and public deployment
+## Next product milestone — Teachers
 
--   [x] Refresh documentation pack
--   [ ] Run final lint/build
--   [ ] Review repository diff
--   [ ] Commit documentation/export milestone
--   [ ] Deploy current build to GitHub Pages
--   [ ] Verify live demo
+- [ ] Define teacher Firestore model
+- [ ] Add teacher directory/management
+- [ ] Assign one or more teachers to a class
+- [ ] Designate a main teacher
+- [ ] Display teachers in Class Workspace/class details
+- [ ] Use teacher information in Dashboard/class workflows
+- [ ] Resolve the main teacher in Excel export
 
-## Next product milestone --- Dashboard
+## Dashboard follow-up
 
--   [ ] Remove `ClassroomPage.vue`
--   [ ] Remove obsolete legacy classroom components/services when safe
--   [ ] Add Dashboard/Home page
--   [ ] School summary cards
--   [ ] Recent class/seating activity
--   [ ] Empty-state design
--   [ ] Future messages/announcements area
+The first Dashboard exists. Future work is intentionally incremental:
 
-## Authorization
+- [ ] Connect recent class/seating/audit activity when the desired source/scope is defined
+- [ ] Add messages/announcements only with a concrete workflow
+- [ ] Add teacher-related summary information after the Teachers domain exists
 
--   [x] Define school membership model
--   [x] Add system-admin user/school administration foundation
--   [x] Add school-admin scoped administration
--   [x] Add school-admin user creation and membership management
--   [x] Add administrator self-access protection
--   [x] Test cross-school Admin access rejection
--   [ ] Complete role capability matrix outside the Admin surface
--   [ ] Enforce membership identity/immutability invariants
--   [ ] Complete membership-aware Firestore rule enforcement for domain collections
+## Audit expansion
+
+- [ ] School lifecycle audit events
+- [ ] Course/building/room/class lifecycle audit events
+- [ ] Pagination and richer actor/action/entity/date filters
+- [ ] Retention/export policy
+- [ ] Security-event logging only after normal audit integrity is server-hardened
 
 ## Internationalization hardening
 
--   [ ] Localize friendly Firebase auth errors
--   [ ] Replace/review browser-native validation
--   [ ] Localize export labels
--   [ ] Final Japanese terminology review
--   [ ] English/Japanese screenshots
+- [ ] Friendly Firebase auth errors
+- [ ] Review browser/service validation
+- [ ] Localize export labels
+- [ ] Final Japanese terminology review
+- [ ] Bilingual screenshots and narrow-layout checks
 
 ## Planning Engine v2
 
--   [ ] Automated tests
--   [ ] Classroom zones
--   [ ] Support-seat preferences
--   [ ] Pinned students
--   [ ] Accessibility constraints
--   [ ] Candidate comparison improvements
+Only after automated v1 tests:
+
+- [ ] Classroom zones
+- [ ] Support-seat preferences
+- [ ] Pinned students
+- [ ] Accessibility constraints
+- [ ] Candidate comparison improvements
 
 ## Engineering improvements
 
--   [ ] Unit tests
--   [ ] Component tests
--   [ ] End-to-end tests
--   [ ] GitHub Actions CI
--   [ ] Lazy-load major pages
--   [ ] Reduce vendor bundle size
--   [ ] Remove unnecessary console logging
--   [ ] Review dependency vulnerabilities safely
--   [ ] Evaluate Vue CLI → Vite migration
+- [ ] Unit/component/E2E test strategy
+- [ ] GitHub Actions CI
+- [ ] Lazy-load major pages
+- [ ] Reduce vendor bundle size
+- [ ] Reduce unnecessary console logging
+- [ ] Safe dependency vulnerability review
+- [ ] Evaluate Vue CLI → Vite migration
 
 ## v1.0 definition
 
 A reasonable v1.0 should include:
 
--   Stable multi-school/class workflows
--   Strong authorization rules
--   Complete English/Japanese primary flow
--   Tested Planning Engine
--   Dashboard replacing legacy Classroom page
--   Repeatable deployment
--   Automated coverage for critical workflows
--   Current public documentation
+- Stable multi-school/class workflows
+- Membership-aware authorization for school-owned data
+- Complete English/Japanese primary flow
+- Tested Admin/account lifecycle and audit invariants
+- Tested Planning Engine
+- Useful Dashboard foundation
+- Teacher domain sufficient for class ownership/export needs
+- Repeatable deployment
+- Automated coverage for critical workflows
+- Current public documentation
 
-### Admin / identity foundation completed
+## Production Functions
 
--   [x] Separate system and school roles
--   [x] Add `schools/{schoolId}/members/{uid}`
--   [x] Add Admin Users and Admin Schools management
--   [x] Add callable `createUser` function
--   [x] Add isolated Auth + Firestore + Functions emulator workflow
--   [ ] Deploy callable Functions when Blaze is intentionally enabled
+Local development remains emulator-first. Deploy callable Functions only when Blaze is intentionally enabled and the production rules/function set have been reviewed using `FIREBASE_BILLING_RUNBOOK.md`.

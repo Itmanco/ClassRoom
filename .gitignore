@@ -34,3 +34,4 @@ firestore-debug.log
 # Firebase Emulator local data
 emulator-data/
 firebase-debug.log
+emulator-data.zip

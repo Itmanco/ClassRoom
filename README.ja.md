@@ -22,18 +22,20 @@ GitHub Pages を使用してアプリケーションを公開しています。
 
 ## 🚀 現在の開発状況
 
-Classroom Manager では現在、学校管理から座席表出力までの主要なワークフローを一通り実行できます。
+Classroom Manager では現在、学校管理・管理者操作・座席表作成までの主要なワークフローを一通り実行できます。
 
 ```text
-学校
+認証済みユーザー
   ↓
-クラス
+Dashboard / 使用中学校
   ↓
-在籍登録
+学校ドメイン管理
   ↓
-座席表
+Class Workspace
   ↓
-座席推薦
+在籍登録 + 座席表
+  ↓
+推薦 / 手動調整
   ↓
 教室プレビュー
   ↓
@@ -42,40 +44,32 @@ Classroom Manager では現在、学校管理から座席表出力までの主�
 
 現在実装されている主な機能：
 
-- Firebase Authentication
-- システム管理者と学校単位のロール認可
-- システム管理者による学校・ユーザー管理
-- 学校管理者による学校単位のユーザー・メンバーシップ管理
-- 管理操作の Activity / Audit Log
-- 特権ユーザー管理用 callable Cloud Functions
-- Firebase Authentication / Firestore / Functions のローカル Emulator 開発環境
-- ログイン状態の保持
-- Firestore によるユーザープロフィール管理
-- 複数学校への対応
-- 使用中学校の選択
-- 学校未所属ユーザー専用画面
-- 生徒管理
-- コース管理
-- 建物管理
-- 教室管理
-- クラス管理
-- Class Workspace
-- 生徒のクラス登録
-- 座席表作成・履歴管理
-- 手動座席割り当て
-- 説明可能な座席推薦
-- 教室形式の座席表表示
-- 教室レイアウト設定
-- 1列あたりの机数設定
-- 教師用机位置の設定
-- 教室レイアウトプレビュー
-- 印刷向け Excel 座席表出力
-- A4 横向き印刷設定
-- 英語・日本語 UI
-- レスポンシブナビゲーション
-- GitHub Pages デプロイ
+- Firebase Authentication とログイン状態の保持
+- Firestore ユーザープロフィールと有効 / 無効アカウント状態
+- Firebase Authentication UID を正規ユーザー ID として使用
+- `users/{uid}.systemRole` によるグローバル `system-admin` 権限
+- `schools/{schoolId}/members/{uid}` による学校単位の権限
+- System Admin による学校・ユーザー管理
+- School Admin による対象学校のユーザー・メンバーシップ管理
+- Admin Users からのユーザープロフィール編集
+- ユーザーのアーカイブ / 再有効化と、無効アカウントのアプリ利用ブロック
+- 自分自身の重要権限削除と最後の有効 System Admin のアーカイブ防止
+- System / School スコープ、フィルター、変更詳細を備えた Activity Log
+- 対象ユーザーの全学校メンバーシップへ分配されるユーザー監査イベント（学校未所属時のみ System Log）
+- 特権ユーザー操作用 callable Cloud Functions
+- 既存 Emulator データを import/export して再利用する Authentication / Firestore / Functions ローカル開発環境
+- 複数学校コンテキスト、使用中学校の選択、学校未所属状態
+- 有効な生徒・クラス・教室・コース件数を表示する Dashboard
+- 生徒、コース、建物、教室、クラス管理
+- Class Workspace、在籍登録、座席表管理
+- 手動座席割り当てと説明可能な座席推薦
+- 教室形式の座席表表示、教室レイアウトプレビュー
+- 教室形状、机グループ、教師用机位置の設定
+- A4 横向き設定を含む印刷向け Excel 座席表出力
+- 英語 / 日本語 UI とレスポンシブナビゲーション
+- GitHub Pages デプロイ設定
 
-現在のセキュリティ上の次のマイルストーンは、メンバーシップ不変条件と残りの学校ドメイン Firestore 権限を強化することです。
+現在のセキュリティ上の重点は、メンバーシップ ID / `userUid` の不変条件を強化し、残っている学校ドメイン Firestore ルールをメンバーシップ / ロール基準にすることです。このセキュリティ・ドキュメント整理の後、教師管理を次の主要ドメインとして進めます。
 
 ---
 
@@ -158,6 +152,9 @@ Firebase Authentication と Firestore のユーザープロフィールを使用
 - アプリ起動時の認証状態復元
 - Firestore からのプロフィール取得
 - プロフィール編集
+- Admin からの許可済みプロフィール項目編集
+- グローバルアカウントのアーカイブ / 再有効化
+- 無効アカウントのアプリ利用ブロック
 - ログアウト
 - 学校所属情報
 - 使用中学校の保存
@@ -174,19 +171,21 @@ Firebase Authentication の UID をユーザーの正式な識別子として使
 ```text
 Firebase Authentication uid
 ├── users/{uid}
-│   └── systemRole: system-admin | null
+│   ├── systemRole: system-admin | null
+│   └── active: true | false
 └── schools/{schoolId}/members/{uid}
+    ├── userUid: uid
     ├── role: school-admin | teacher | student
-    └── active
+    └── active: true | false
 ```
 
 `activeSchool` は現在使用している学校を表します。利用可能な学校は学校メンバーシップから解決し、学校を変更した場合は学校・クラス固有の UI 状態をリセットしてデータの混在を防ぎます。
 
-旧 `users.schools[]` / `users.role` は移行互換のため残る場合がありますが、学校アクセスの認可はメンバーシップドキュメントを基準とします。
+旧 `users.schools[]` / `users.role` が履歴データに残る場合がありますが、学校アクセスの認可はメンバーシップドキュメントを基準とし、旧 role フィールドは認可フォールバックとして使用しません。
 
 System Admin はシステム全体を管理し、有効な `school-admin` メンバーシップを持つ School Admin は対象学校のみ Admin 機能を利用できます。School Admin は対象学校のユーザー作成と、他ユーザーのメンバーシップ管理を行えます。
 
-School Admin のユーザー取得は、他ユーザーの `/users/{uid}` をクライアントから広く読み取れるようにするのではなく、学校権限を検証する callable backend を使用します。
+School Admin のユーザー取得は、他ユーザーの `/users/{uid}` をクライアントから広く読み取れるようにするのではなく、学校権限を検証する callable backend を使用します。グローバルアカウントのアーカイブ / 再有効化は System Admin のみが実行でき、無効アカウントは通常アプリを利用できません。自分自身の重要権限削除や、最後の有効 System Admin の無効化を防ぐ保護も実装しています。
 
 ---
 
@@ -472,9 +471,11 @@ docs/INTERNATIONALIZATION.md
 
 ```text
 users/{uid}
+systemAuditLogs/{logId}
 
 schools/{schoolId}
 ├── members/{uid}
+├── auditLogs/{logId}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -513,16 +514,18 @@ App.vue
         ▼
 Vue pages / components
         │
-        ├── 各管理ページ
+        ├── Dashboard / 各管理ページ
+        ├── Admin Console
         ├── Class Workspace
         ├── 教室プレビュー
         └── 座席表 UI
         │
-        ▼
-Service layer
-        │
-        ├── Firestore services
-        └── Excel export service
+        ├───────────────┐
+        ▼               ▼
+Service layer      Callable Functions
+        │               │
+        ├── Firestore    └── 特権 Admin SDK 操作
+        └── XLSX export
                 │
                 └── ExcelJS
         │
@@ -565,13 +568,13 @@ docs/ARCHITECTURE.md
 
 - Firebase Authentication
 - Cloud Firestore
-- Cloud Functions for Firebase（特権ユーザー作成）
+- Cloud Functions for Firebase（特権ユーザー管理）
 - Firebase Emulator Suite（Auth / Firestore / Functions）
-- ローカル管理・移行スクリプト用 Firebase Admin SDK
+- callable Functions およびローカル管理・移行スクリプト用 Firebase Admin SDK
 
 ## 座席表 Excel 出力
 
-- ExcelJS
+- `ExcelJS`
 
 ## 開発・デプロイ
 
@@ -590,33 +593,34 @@ docs/ARCHITECTURE.md
 ```text
 src/
 ├── App.vue
-├── assets/
-│   └── logo.png
 ├── components/
 │   ├── LanguageSelector.vue
 │   ├── LoginModal.vue
 │   ├── NavigationMenu.vue
 │   ├── SchoolSelector.vue
 │   └── UserProfileCard.vue
-├── engine/
-│   └── seating/
-│       ├── SeatingEngine.js
-│       └── constraints/
-│           ├── AvoidPreviousDesks.js
-│           ├── AvoidPreviousPartners.js
-│           ├── AvoidPreviousSeat.js
-│           └── history.js
+├── engine/seating/
+│   ├── SeatingEngine.js
+│   └── constraints/
+│       ├── AvoidPreviousDesks.js
+│       ├── AvoidPreviousPartners.js
+│       ├── AvoidPreviousSeat.js
+│       └── history.js
 ├── i18n/
 │   ├── index.js
 │   └── locales/
 │       ├── en.json
 │       └── ja.json
 ├── pages/
+│   ├── AdminAuditLog.vue
+│   ├── AdminPage.vue
+│   ├── AdminSchoolManager.vue
+│   ├── AdminUserManager.vue
 │   ├── BuildingManager.vue
 │   ├── ClassManager.vue
-│   ├── ClassroomPage.vue
 │   ├── ClassWorkspace.vue
 │   ├── CourseManager.vue
+│   ├── DashboardPage.vue
 │   ├── EnrollmentManager.vue
 │   ├── NoSchoolPage.vue
 │   ├── ProfilePage.vue
@@ -625,17 +629,22 @@ src/
 │   ├── SettingsPage.vue
 │   └── StudentManager.vue
 └── services/
+    ├── adminUserService.js
+    ├── auditLogService.js
     ├── buildingService.js
-    ├── classroomService.js
     ├── classService.js
     ├── courseService.js
     ├── enrollmentService.js
+    ├── membershipService.js
     ├── roomService.js
     ├── schoolService.js
     ├── seatingPlanExportService.js
     ├── seatingPlanService.js
     ├── studentService.js
     └── userService.js
+
+functions/
+└── index.js
 
 scripts/
 ├── createTestSchool.js
@@ -645,11 +654,13 @@ scripts/
 docs/
 ├── AI_CONTEXT.md
 ├── ARCHITECTURE.md
+├── AUDIT_ROADMAP.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── DECISIONS.md
 ├── DEVELOPER_PROFILE.md
 ├── DOCUMENTATION_INDEX.md
+├── FIREBASE_BILLING_RUNBOOK.md
 ├── FIRESTORE_SCHEMA.md
 ├── INTERNATIONALIZATION.md
 ├── MIGRATION_PROGRESS.md
@@ -662,16 +673,7 @@ docs/
 └── TODO.md
 ```
 
-以下は新しいアーキテクチャへの移行中に残っている旧コードです。
-
-```text
-src/pages/ClassroomPage.vue
-src/components/MyClassroom.vue
-src/components/StudentDesk.vue
-src/services/classroomService.js
-```
-
-Dashboard が旧ホーム画面を置き換えた後に、確認の上で整理・削除する予定です。
+旧 Classroom/Home コンポーネントと `classroomService.js` は削除済みです。現在のデフォルト画面は `DashboardPage.vue` です。
 
 ---
 
@@ -697,13 +699,16 @@ npm install
 npm run serve
 ```
 
-特権操作を安全にテストする場合は、別ターミナルでローカル Emulator を起動します。
+特権操作を安全にテストする場合は、別ターミナルで既存データを読み込んでローカル Emulator を起動します。
 
 ```bash
-firebase emulators:start --only functions,auth,firestore
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
 ```
 
-開発時の Vue アプリは Authentication、Firestore、Functions のローカル Emulator に接続し、本番データを変更せずにユーザー作成・ロール・学校アクセスを検証します。
+開発時の Vue アプリは Authentication (`:9099`)、Firestore (`:8080`)、Functions (`:5001`) のローカル Emulator に接続します。意図的に空データで検証する場合を除き、`--import=./emulator-data` を外さないでください。
 
 ESLint：
 
@@ -740,6 +745,8 @@ serviceAccountKey.json
 ```text
 serviceAccountKey.json
 school-structure.json
+emulator-data/
+emulator-data.zip
 ```
 
 管理スクリプトをコミットする前に、認証情報が無視対象のローカルファイルから読み込まれており、ソースコードへ直接記述されていないことを確認してください。
@@ -834,60 +841,50 @@ npm run deploy
 
 # ⚠️ 現在の技術的課題
 
-このプロジェクトは現在も継続して改善しています。
+旧 Classroom/Home 実装はすでに削除され、Dashboard が現在のデフォルト画面です。
 
 主な今後の改善点：
 
-- 旧 `ClassroomPage.vue` と関連コンポーネント / service
-- Dashboard/Home への置き換え
-- 残りのドメインコレクションに対する学校・ロール単位の Firestore 権限強化
-- メンバーシップ ID / `userUid` 不変条件の強化
-- 自動テスト
+- メンバーシップの ID / `userUid` 不変条件の強制
+- 生徒・建物・教室・コース・クラス・在籍・座席表に対するメンバーシップ / ロール基準の Firestore 権限
+- 残っている特権メンバーシップ更新処理の Cloud Functions 移行
+- 重要な Admin / セキュリティフローの自動テストと CI
 - 本番向けログ / エラーハンドリングの見直し
-- 一部の service / ブラウザ検証メッセージの国際化
-- Vue CLI の vendor bundle サイズ
-- 将来的な Vite など新しいツールチェーンへの移行
+- Firebase / service / ブラウザ検証エラーのユーザーフレンドリーな国際化
+- Excel 出力ラベルの国際化
+- Vue CLI vendor bundle サイズと将来的な Vue CLI → Vite 移行検討
 
-これらは隠れた問題としてではなく、プロジェクトドキュメント内で継続的に管理します。
+これらはプロジェクトドキュメント内で継続的に管理します。
 
 ---
 
 # 🗺️ ロードマップ
 
-## 次のマイルストーン — Dashboard
+## 現在のチェックポイント — Admin / セキュリティ強化
 
-次の構造的マイルストーンは学校 Dashboard です。
+Dashboard への移行は完了しています。次の大きなドメインを追加する前に、正規メンバーシップモデル周辺の認可境界を完成させます。
 
-最初のバージョンで予定している内容：
+現在の優先事項：
 
-- 旧 Classroom/Home ページの置き換え
-- 使用中学校の表示
-- 有効な生徒数
-- クラス数
-- 教室数
-- コース数
-- 最近のクラス / 座席表アクティビティ領域
-- 将来のメッセージ / お知らせ領域
-
-最初の Dashboard は意図的にシンプルにします。
-
-アクティビティ履歴やメッセージ機能は、Dashboard の基本構造を作成した後に段階的に追加します。
+- メンバーシップ document ID と `userUid` の一致・不変性を強制
+- 学校ドメイン Firestore ルールを、有効アカウントだけでなく有効メンバーシップ / ロール基準に変更
+- 残っている特権メンバーシップ操作を信頼できるバックエンド検証へ移行
+- 重要な Admin / セキュリティフローの自動回帰テストを追加
+- 新しいドメイン操作を追加する際に Activity Log のカバレッジを維持
 
 ---
 
 ## 教師管理
 
-教師情報は Excel 専用の文字列ではなく、正式なドメインデータとして実装する予定です。
+教師情報は Excel 専用の文字列ではなく、次の主要ドメインとして実装する予定です。
 
 予定している機能：
 
-- 教師一覧
-- 教師レコード管理
+- 教師一覧・教師レコード管理
 - 1つのクラスに複数教師を割り当て
 - メイン教師の指定
-- Class Workspace で担当教師を表示
-- クラス詳細でメイン教師を表示
-- 将来の Dashboard で教師情報を利用
+- Class Workspace / クラス詳細で担当教師を表示
+- Dashboard やクラス運用で教師情報を利用
 - Excel 座席表にメイン教師名を出力
 
 想定しているクラスとの関連：
@@ -973,8 +970,12 @@ README は GitHub 上でプロジェクト全体を理解するための概要�
 
 Classroom Manager は、実用的な学校・クラス管理と教室プランニングのためのアプリケーションを目指して、継続的に開発しています。
 
-## 🔐 管理ユーザー作成と Firebase Emulator
+## 🔐 管理ユーザー、アカウント状態、監査スコープ、Firebase Emulator
 
-システム管理者による新規ユーザー作成は、Vue クライアントから Firebase Admin SDK を直接使用せず、callable Cloud Function `createUser` を経由します。Function は Firebase Authentication アカウントを作成し、その UID を `users/{uid}` と初期学校メンバーシップに共通して使用します。
+Firebase Authentication UID を `users/{uid}` と `schools/{schoolId}/members/{uid}` の正規 ID として使用します。システム全体の権限は `users/{uid}.systemRole`、学校単位の権限は membership document に保存します。旧 profile の role フィールドは認可フォールバックとして使用しません。
 
-開発中は Authentication / Firestore / Functions Emulator を同時に使用し、本番 Firebase データを変更しない構成を標準とします。Cloud Functions の本番デプロイには Blaze プランが必要なため、有効化・監視・停止・Spark への戻し方は `docs/FIREBASE_BILLING_RUNBOOK.md` にまとめています。
+特権アカウント操作には callable Cloud Functions `createUser`、`getSchoolUsers`、`updateManagedUser`、`setManagedUserActive`、`setSystemRole` を使用します。`users/{uid}.active === false` のユーザーは、認証状態が残っていても通常アプリを利用できません。
+
+監査ログの保存先は実行者ではなく「影響を受けるリソース」で決まります。`user.updated`、`user.archived`、`user.reactivated` は、対象ユーザーが所属するすべての学校に 1 件ずつ School Audit を作成し、重複する System Audit は作成しません。学校未所属の場合のみ `systemAuditLogs` に 1 件作成します。
+
+開発中は Authentication / Firestore / Functions Emulator を同時に起動し、`./emulator-data` を import/export して既存のテストデータを維持します。本番 Cloud Functions のデプロイには Blaze プランが必要なため、`docs/FIREBASE_BILLING_RUNBOOK.md` の手順に従います。

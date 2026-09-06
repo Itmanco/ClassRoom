@@ -1,9 +1,25 @@
 # Changelog
 
+This changelog records major project milestones rather than every individual commit.
+
+## 2026-09-06 — User lifecycle, audit distribution, Dashboard/documentation checkpoint
+
+- Added Admin user profile editing through callable `updateManagedUser` with an explicit field whitelist.
+- Added `user.updated` Activity Log events with changed fields and before/after values.
+- Added translated EN/JA audit field labels for editable user profile fields.
+- Added global user archive/reactivate through callable `setManagedUserActive`.
+- Added application-level blocking for `users/{uid}.active === false` accounts.
+- Added protection against self-archive and against archiving/demoting the final active System Admin.
+- Corrected `user.updated`, `user.archived`, and `user.reactivated` audit distribution: one event per target-user school membership, no duplicate system event when memberships exist, and one system fallback when none exist.
+- Added an explicit Refresh action to Admin Users in English/Japanese.
+- Verified the membership and zero-membership audit paths in the local Firebase emulators; lint passed after the changes.
+- Confirmed Dashboard is the default page and the old Classroom/Home implementation has been removed.
+- Refreshed the complete documentation set against the current source tree.
+
 ## 2026-09-01 — School Admin authorization and membership management
 
 - Added school-scoped Admin access for active `school-admin` memberships.
-- Added School Admin user creation restricted to the active school.
+- Added School Admin user creation restricted to the administered school.
 - Added School Admin membership role changes, deactivation, reactivation, and removal.
 - Added UI and Firestore-rule protection preventing School Admins from changing, deactivating, or removing their own school membership.
 - Added backend protection preventing a System Admin from changing their own system role.
@@ -11,7 +27,6 @@
 - Scoped `user.created` audit events to the affected school when a school is assigned; no-school user creation remains system-scoped.
 - Added membership deactivation/reactivation audit coverage.
 - Completed emulator E2E regression coverage through cross-school isolation and Teacher regression.
-
 
 ## 2026-08-23 — Admin identity, memberships, and local Firebase emulators
 
@@ -23,78 +38,51 @@
 - Added local Authentication, Firestore, and Functions emulator workflow for isolated privileged development.
 - Added Firebase billing runbook; production Functions deployment remains intentionally separate from local development.
 
-
-This changelog records major project milestones rather than every
-individual commit.
-
-## Unreleased --- August 2026 milestone
+## August 2026 — School/classroom foundation
 
 ### Added
 
--   Multi-school application context
--   Available-school loading
--   School selector
--   Dedicated no-school state
--   Responsive/auto-collapsing navigation behavior
--   User profile improvements
--   Room teacher-position configuration
--   Room layout preview
--   Classroom-style seating-plan visualization
--   Physical desk grouping by seats-per-desk
--   Whiteboard/front-of-room representation
--   Teacher placement in seating-plan layout
--   Excel (`.xlsx`) seating-plan export
--   Print-oriented Excel layout and filename generation
+- Multi-school application context and school selector
+- Dedicated no-school state
+- Responsive/collapsible navigation
+- User profile improvements
+- Room teacher-position configuration and room preview
+- Classroom-style seating-plan visualization
+- Physical desk grouping by seats-per-desk
+- Whiteboard/front-of-room representation
+- Excel (`.xlsx`) seating-plan export
+- Print-oriented Excel layout and filename generation
+- Dashboard with school summary cards
 
 ### Changed
 
--   Browser language now initializes Japanese for Japanese browser
-    locale and English otherwise, unless a saved locale exists.
--   School context and class context are reset more safely when
-    navigation context changes.
--   Seating-plan presentation is more spatial and classroom-oriented.
--   Documentation has been rewritten to reflect the current
-    architecture.
+- Browser language initializes Japanese for Japanese browser locale and English otherwise unless a saved locale exists.
+- School/class context resets more safely when navigation context changes.
+- Seating-plan presentation became spatial/classroom-oriented.
+- Legacy Classroom/Home components/services were removed after Dashboard replacement.
 
-### Transitional
+## Previous milestone — Class Workspace
 
--   Legacy `ClassroomPage.vue` remains temporarily.
--   Dashboard/Home replacement is the next structural UI milestone.
+- Added `ClassWorkspace.vue` with Overview, EnrollmentManager, and SeatingPlanManager.
+- Moved enrollment and seating-plan workflows under selected class context.
+- Preserved Classes as the navigation context while the workspace is open.
 
-## Previous milestone --- Class Workspace
+## Previous milestone — Internationalization
 
-### Added
+- Added Vue I18n
+- Added English/Japanese catalogs
+- Added language selector/settings and locale persistence
+- Localized modern management workflows
 
--   `ClassWorkspace.vue`
--   Manage Class action
--   Overview tab
--   Embedded EnrollmentManager
--   Embedded SeatingPlanManager
+## Previous milestone — Planning Engine v1
 
-### Changed
+- Added framework-independent seating engine
+- Added historical partner/desk/seat constraints
+- Added multiple candidate generation
+- Added structured violations and candidate selection
 
--   Enrollment and seating-plan workflows moved under selected class
-    context.
--   Classes remain the navigation context while the workspace is open.
+## Previous milestone — School domain migration
 
-## Previous milestone --- Internationalization
-
--   Added Vue I18n
--   Added English/Japanese catalogs
--   Added language selector/settings
--   Localized modern management workflows
--   Added locale persistence
-
-## Previous milestone --- Planning Engine v1
-
--   Added framework-independent seating engine
--   Added historical partner/desk/seat constraints
--   Added multiple candidate generation
--   Added structured violations and candidate selection
-
-## Previous milestone --- School domain migration
-
--   Introduced school-scoped Firestore structure
--   Added buildings, rooms, courses, classes, enrollments, and seating
-    plans
--   Migrated student data toward school ownership
+- Introduced school-scoped Firestore structure
+- Added buildings, rooms, courses, classes, enrollments, and seating plans
+- Migrated student data toward school ownership

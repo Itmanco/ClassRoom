@@ -1,4 +1,4 @@
- 📚 Classroom Manager
+#📚 Classroom Manager
 
 **English** | [日本語](README.ja.md)
 
@@ -22,18 +22,20 @@ Deployment is handled through the project's `gh-pages` configuration.
 
 ## 🚀 Current Status
 
-Classroom Manager currently supports the core school-management and seating-plan workflow end to end:
+Classroom Manager currently supports the core school-management, administration, and seating-plan workflows end to end:
 
 ```text
-School
+Authenticated User
   ↓
-Class
+Dashboard / Active School
   ↓
-Enrollment
+School domain management
   ↓
-Seating Plan
+Class Workspace
   ↓
-Recommendation
+Enrollment + Seating Plans
+  ↓
+Recommendation / Manual Adjustment
   ↓
 Classroom Preview
   ↓
@@ -42,40 +44,33 @@ Print-ready Excel Export
 
 The application currently includes:
 
-- Firebase Authentication
-- System Admin and school-scoped role authorization
+- Firebase Authentication with persistent sessions
+- Firestore-backed user profiles with active/inactive account state
+- Firebase Authentication UID as the canonical user identifier
+- Global `system-admin` authorization via `users/{uid}.systemRole`
+- School authorization via `schools/{schoolId}/members/{uid}`
 - System Admin school/user administration
 - School Admin scoped user and membership management
-- Administrative activity/audit log
-- Callable Cloud Functions for privileged user administration
-- Local Firebase Auth / Firestore / Functions emulator workflow
-- Persistent authenticated sessions
-- Firestore-backed user profiles
-- Multi-school user context
-- Active-school selection
+- User profile editing from Admin Users
+- User archive/reactivate with inactive-account access blocking
+- Protection against self-archive/self-role removal and archiving the last active System Admin
+- Administrative Activity Log with system/school scope filters and expandable change details
+- Resource-scoped user audit distribution across every affected school membership, with system fallback only for users with no memberships
+- Callable Cloud Functions for privileged account/user administration
+- Local Firebase Authentication / Firestore / Functions emulator workflow with reusable imported emulator data
+- Multi-school context and active-school selection
 - Dedicated no-school state
-- Student management
-- Course management
-- Building management
-- Room management
-- Class management
-- Class Workspace
-- Student enrollment
-- Seating-plan creation and history
-- Manual seat assignment
-- Explainable seating-plan recommendations
-- Classroom-style seating visualization
-- Configurable room geometry
-- Configurable desks per row
-- Configurable teacher position
-- Room-layout preview
-- Print-ready Excel seating-plan export
-- A4 landscape print configuration
-- English/Japanese interface
-- Responsive navigation
-- GitHub Pages deployment
+- Dashboard with active student, class, room, and course summaries
+- Student, course, building, room, and class management
+- Class Workspace with enrollments and seating plans
+- Manual seat assignment and explainable seating recommendations
+- Classroom-style seating visualization and room-layout preview
+- Configurable room geometry, desk grouping, and teacher position
+- Print-ready Excel seating-plan export with A4 landscape setup
+- English/Japanese interface and responsive navigation
+- GitHub Pages deployment tooling
 
-The current security milestone is hardening membership invariants and the remaining school-domain Firestore authorization rules.
+The current security milestone is hardening membership identity/immutability and replacing the remaining broad school-domain Firestore rules with membership/role-aware authorization. Teacher management is the next major product-domain module after this security/documentation checkpoint.
 
 ---
 
@@ -158,6 +153,9 @@ Current functionality includes:
 - Auth-state restoration when the application starts
 - User profile loading from Firestore
 - Profile editing
+- Admin-managed profile editing for approved fields
+- Global account archive/reactivate state
+- Inactive-account access blocking
 - Sign out
 - School membership information
 - Active-school preference
@@ -174,10 +172,12 @@ Firebase Authentication UID is the canonical user identifier. System-wide privil
 ```text
 Firebase Authentication uid
 ├── users/{uid}
-│   └── systemRole: system-admin | null
+│   ├── systemRole: system-admin | null
+│   └── active: true | false
 └── schools/{schoolId}/members/{uid}
+    ├── userUid: uid
     ├── role: school-admin | teacher | student
-    └── active
+    └── active: true | false
 ```
 
 The application resolves available schools from active membership documents and stores an `activeSchool` preference.
@@ -186,9 +186,9 @@ Changing schools resets school/class-specific UI state so that data from differe
 
 System Admin has global administration. An active `school-admin` membership grants Admin access only for that school. School Admin can create users for the active school and manage other users' memberships there.
 
-School Admin user discovery is performed through a scoped callable backend rather than broad direct client reads of other `/users/{uid}` profiles.
+School Admin user discovery is performed through a scoped callable backend rather than broad direct client reads of other `/users/{uid}` profiles. Global account archive/reactivate is System-Admin-only; inactive accounts are blocked from normal application access. Critical protections prevent self-archive/self-role removal and protect the final active System Admin.
 
-Legacy `users.schools[]` / `users.role` fields may remain during migration, but membership documents are the authorization source of truth for school access.
+Legacy `users.schools[]` / `users.role` fields may remain in historical data, but membership documents are the authorization source of truth for school access and legacy role fields are not authorization fallbacks.
 
 ---
 
@@ -472,9 +472,11 @@ The primary Firestore structure is:
 
 ```text
 users/{uid}
+systemAuditLogs/{logId}
 
 schools/{schoolId}
 ├── members/{uid}
+├── auditLogs/{logId}
 ├── students/{studentId}
 ├── buildings/{buildingId}
 ├── rooms/{roomId}
@@ -513,16 +515,18 @@ App.vue
         ▼
 Vue pages / components
         │
-        ├── Management pages
+        ├── Dashboard / Management pages
+        ├── Admin Console
         ├── Class Workspace
         ├── Room preview
         └── Seating-plan UI
         │
-        ▼
-Service layer
-        │
-        ├── Firestore services
-        └── Excel export service
+        ├───────────────┐
+        ▼               ▼
+Service layer      Callable Functions
+        │               │
+        ├── Firestore    └── privileged Admin SDK operations
+        └── XLSX export
                 │
                 └── ExcelJS
         │
@@ -565,11 +569,13 @@ docs/ARCHITECTURE.md
 
 - Firebase Authentication
 - Cloud Firestore
-- Firebase Admin SDK for local administrative and migration scripts
+- Cloud Functions for Firebase
+- Firebase Emulator Suite (Auth / Firestore / Functions)
+- Firebase Admin SDK for callable Functions and local administrative/migration scripts
 
 ## Seating-plan Export
 
-- ExcelJS
+- `ExcelJS`
 
 ## Tooling and Deployment
 
@@ -588,33 +594,34 @@ docs/ARCHITECTURE.md
 ```text
 src/
 ├── App.vue
-├── assets/
-│   └── logo.png
 ├── components/
 │   ├── LanguageSelector.vue
 │   ├── LoginModal.vue
 │   ├── NavigationMenu.vue
 │   ├── SchoolSelector.vue
 │   └── UserProfileCard.vue
-├── engine/
-│   └── seating/
-│       ├── SeatingEngine.js
-│       └── constraints/
-│           ├── AvoidPreviousDesks.js
-│           ├── AvoidPreviousPartners.js
-│           ├── AvoidPreviousSeat.js
-│           └── history.js
+├── engine/seating/
+│   ├── SeatingEngine.js
+│   └── constraints/
+│       ├── AvoidPreviousDesks.js
+│       ├── AvoidPreviousPartners.js
+│       ├── AvoidPreviousSeat.js
+│       └── history.js
 ├── i18n/
 │   ├── index.js
 │   └── locales/
 │       ├── en.json
 │       └── ja.json
 ├── pages/
+│   ├── AdminAuditLog.vue
+│   ├── AdminPage.vue
+│   ├── AdminSchoolManager.vue
+│   ├── AdminUserManager.vue
 │   ├── BuildingManager.vue
 │   ├── ClassManager.vue
-│   ├── ClassroomPage.vue
 │   ├── ClassWorkspace.vue
 │   ├── CourseManager.vue
+│   ├── DashboardPage.vue
 │   ├── EnrollmentManager.vue
 │   ├── NoSchoolPage.vue
 │   ├── ProfilePage.vue
@@ -623,17 +630,22 @@ src/
 │   ├── SettingsPage.vue
 │   └── StudentManager.vue
 └── services/
+    ├── adminUserService.js
+    ├── auditLogService.js
     ├── buildingService.js
-    ├── classroomService.js
     ├── classService.js
     ├── courseService.js
     ├── enrollmentService.js
+    ├── membershipService.js
     ├── roomService.js
     ├── schoolService.js
     ├── seatingPlanExportService.js
     ├── seatingPlanService.js
     ├── studentService.js
     └── userService.js
+
+functions/
+└── index.js
 
 scripts/
 ├── createTestSchool.js
@@ -643,11 +655,13 @@ scripts/
 docs/
 ├── AI_CONTEXT.md
 ├── ARCHITECTURE.md
+├── AUDIT_ROADMAP.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── DECISIONS.md
 ├── DEVELOPER_PROFILE.md
 ├── DOCUMENTATION_INDEX.md
+├── FIREBASE_BILLING_RUNBOOK.md
 ├── FIRESTORE_SCHEMA.md
 ├── INTERNATIONALIZATION.md
 ├── MIGRATION_PROGRESS.md
@@ -660,16 +674,7 @@ docs/
 └── TODO.md
 ```
 
-The following files are currently legacy code during the transition to the newer architecture:
-
-```text
-src/pages/ClassroomPage.vue
-src/components/MyClassroom.vue
-src/components/StudentDesk.vue
-src/services/classroomService.js
-```
-
-They are scheduled for review/removal as the Dashboard replaces the legacy home workflow.
+The legacy Classroom/Home components and `classroomService.js` have been removed. `DashboardPage.vue` is the current default home page.
 
 ---
 
@@ -696,6 +701,17 @@ Start the development server:
 ```bash
 npm run serve
 ```
+
+For Admin/auth/security work, run the full Firebase emulator set with the existing dataset in another terminal:
+
+```bash
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
+```
+
+Development mode connects the frontend to Auth `:9099`, Firestore `:8080`, and Functions `:5001`. Do not start an empty emulator unless that is intentional.
 
 Run ESLint:
 
@@ -732,6 +748,8 @@ The repository `.gitignore` also excludes generated/local administrative data in
 ```text
 serviceAccountKey.json
 school-structure.json
+emulator-data/
+emulator-data.zip
 ```
 
 Before committing administrative scripts, verify that credentials are referenced from ignored local files and are not embedded directly in source code.
@@ -745,7 +763,7 @@ git status
 and, when necessary:
 
 ```bash
-git check-ignore -v serviceAccountKey.json school-structure.json
+git check-ignore -v serviceAccountKey.json school-structure.json emulator-data/ emulator-data.zip
 ```
 
 ---
@@ -832,19 +850,18 @@ After deployment, verify:
 
 # ⚠️ Current Technical Debt
 
-The project is actively evolving.
+The project is actively evolving. The legacy Classroom/Home implementation has already been removed and the Dashboard is now the default application page.
 
 Known areas for future improvement include:
 
-- Legacy `ClassroomPage.vue` and related classroom components/services
-- Dashboard/Home replacement
-- Complete school/role-aware Firestore hardening for the remaining domain collections
-- Membership identity and immutability rule hardening
-- Automated test coverage
+- Membership identity/immutability enforcement (`memberId == userUid`, immutable `userUid`)
+- Membership/role-aware Firestore authorization for students, buildings, rooms, courses, classes, enrollments, and seating plans
+- Moving remaining privileged membership mutations from direct client writes to trusted Cloud Functions
+- Broader automated test coverage and CI
 - Production logging/error handling review
-- Some service/browser validation messages are not yet fully localized
-- Vue CLI vendor bundle size
-- Future migration from Vue CLI to a more modern toolchain such as Vite
+- Friendly localization of remaining Firebase/service/browser validation errors
+- Localized Excel export labels
+- Vue CLI vendor bundle size and a future Vue CLI → Vite migration review
 
 These are tracked in the project documentation rather than hidden as implementation details.
 
@@ -852,40 +869,31 @@ These are tracked in the project documentation rather than hidden as implementat
 
 # 🗺️ Roadmap
 
-## Next — Dashboard
+## Current checkpoint — Admin/security hardening
 
-The immediate structural milestone is a new school Dashboard.
+The Dashboard migration is complete. The current engineering checkpoint is to finish the authorization boundary around the canonical membership model before expanding the next major domain module.
 
-Planned first version:
+Current priorities:
 
-- Replace the legacy Classroom/Home page
-- Show the active school
-- Show active student count
-- Show class count
-- Show room count
-- Show course count
-- Provide an area for recent class/seating activity
-- Provide an area for future messages and announcements
-
-The first Dashboard should remain intentionally simple.
-
-Activity tracking and messaging can be introduced incrementally after the Dashboard structure exists.
+- Enforce membership document identity and `userUid` immutability
+- Harden school-domain Firestore rules so access depends on active membership/role rather than only an active account
+- Continue moving privileged membership operations behind trusted backend validation
+- Add automated regression coverage for critical Admin/security flows
+- Keep Activity Log coverage consistent as additional domain operations are added
 
 ---
 
 ## Teacher Management
 
-Teacher management is planned as a proper domain feature rather than an Excel-only field.
+Teacher management is planned as the next major product-domain module rather than an Excel-only field.
 
 Planned functionality includes:
 
-- Teacher directory
-- Teacher records
+- Teacher directory and teacher records
 - Assign one or more teachers to a class
 - Designate one teacher as the main teacher
-- Display assigned teachers in Class Workspace
-- Display the main teacher in class details
-- Use teacher information in future Dashboard features
+- Display assigned teachers in Class Workspace and class details
+- Use teacher information in Dashboard/class workflows
 - Print the main teacher's name on Excel seating plans
 
 A likely class relationship is:
@@ -970,8 +978,12 @@ Key areas demonstrated by the project include:
 
 Classroom Manager continues to evolve toward a practical school/class management and classroom-planning application.
 
-## Admin identity and local Firebase development
+## Admin identity, account lifecycle, audit scope, and local Firebase development
 
-Firebase Authentication UID is the canonical identity used by `users/{uid}` and school membership documents. System-wide privilege is stored as `users/{uid}.systemRole`; school-specific access is stored under `schools/{schoolId}/members/{uid}`. Privileged account creation is handled by the callable `createUser` Cloud Function.
+Firebase Authentication UID is the canonical identity used by `users/{uid}` and `schools/{schoolId}/members/{uid}`. System-wide privilege is stored as `users/{uid}.systemRole`; school-specific access is stored in the membership document. Legacy profile role fields are not authorization fallbacks.
 
-For development, Authentication, Firestore, and Functions run together in the Firebase Emulator Suite so user/role changes do not modify production data. Production Cloud Functions deployment requires Blaze; see `docs/FIREBASE_BILLING_RUNBOOK.md` before enabling billing.
+Privileged account operations are implemented with callable Cloud Functions: `createUser`, `getSchoolUsers`, `updateManagedUser`, `setManagedUserActive`, and `setSystemRole`. Archived users have `users/{uid}.active === false`; the application blocks normal authenticated access for those accounts.
+
+Audit scope is based on the affected resource, not the actor. For `user.updated`, `user.archived`, and `user.reactivated`, a target user with memberships receives one school audit event in every affected school and no duplicate system event. A target with zero memberships receives one `systemAuditLogs` event.
+
+For development, Authentication, Firestore, and Functions run together in the Firebase Emulator Suite using the persisted `./emulator-data` import/export workflow so privileged changes do not modify production data. Production Cloud Functions deployment requires Blaze; see `docs/FIREBASE_BILLING_RUNBOOK.md` before enabling billing.

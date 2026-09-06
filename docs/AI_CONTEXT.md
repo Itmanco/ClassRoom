@@ -1,159 +1,241 @@
 # AI Context
 
+**Last verified against source:** 2026-09-06
+
 ## Project
 
-Classroom Manager is a Vue 3 + Firebase school/classroom management
-application with multi-school context, bilingual UI, an explainable
-seating engine, classroom-style seating visualization, and Excel
-seating-plan export.
+Classroom Manager is a Vue 3 + Firebase school/classroom management application with multi-school context, English/Japanese UI, an explainable seating engine, classroom-style seating visualization, Excel export, and an increasingly strict Admin/security model.
 
 Repository:
 
-``` text
+```text
 Itmanco/ClassRoom
 ```
 
 ## Current architecture
 
-``` text
+```text
 Authenticated User
-└── Available Schools
-    └── Active School
-        ├── Students
-        ├── Courses
-        ├── Buildings
-        ├── Rooms
-        └── Classes
-            └── Class Workspace
-                ├── Overview
-                ├── Students / Enrollments
-                └── Seating Plans
+├── users/{uid}
+├── available school memberships
+└── Active School
+    ├── Dashboard
+    ├── Students
+    ├── Courses
+    ├── Buildings
+    ├── Rooms
+    ├── Classes
+    │   └── Class Workspace
+    │       ├── Overview
+    │       ├── Students / Enrollments
+    │       └── Seating Plans
+    └── Admin (authorized roles only)
 ```
 
-## Important current features
+## Canonical identity and authorization
 
--   Firebase Authentication
--   User profiles
--   `schools[]` + `activeSchool`
--   School selector
--   No-school state
--   Responsive sidebar
--   Room teacher position
--   Room preview
--   Seating recommendation engine
--   Classroom-style seating layout
--   `.xlsx` seating-plan export
--   English/Japanese locale system
--   Browser-language initialization
+Firebase Authentication UID is canonical:
+
+```text
+users/{uid}
+schools/{schoolId}/members/{uid}
+```
+
+Global authorization:
+
+```text
+users/{uid}.systemRole === "system-admin"
+```
+
+School authorization:
+
+```text
+schools/{schoolId}/members/{uid}.role
+```
+
+Membership roles:
+
+```text
+school-admin
+teacher
+student
+```
+
+`users/{uid}.role` is legacy and must not be used for authorization. Archived users have `users/{uid}.active === false` and are blocked from normal application access.
+
+## Admin architecture
+
+System Admin:
+
+- Schools
+- Users
+- Activity Log
+- System-role changes
+- Global account archive/reactivate
+
+School Admin:
+
+- Users for the administered school
+- Membership management for other users in that school
+- Activity Log for the selected/authorized school
+- No global Schools administration
+- No System Admin role controls
+
+School Admin user discovery uses callable `getSchoolUsers`; do not weaken `/users/{uid}` read rules to make the UI work.
+
+## Privileged callable functions
+
+Current exports in `functions/index.js`:
+
+```text
+createUser
+getSchoolUsers
+updateManagedUser
+setManagedUserActive
+setSystemRole
+```
+
+Important protections:
+
+- inactive actor accounts are rejected
+- School Admin scope is verified server-side for applicable calls
+- School Admin cannot administer a target outside the requested school
+- System Admin cannot change their own system role
+- a System Admin cannot archive their own account
+- the last active System Admin cannot be demoted or archived
+- `createUser` rolls back the Auth account if later profile/membership creation fails
+
+## Audit architecture
+
+Collections:
+
+```text
+schools/{schoolId}/auditLogs/{logId}
+systemAuditLogs/{logId}
+```
+
+Rule: **affected resource determines audit destination, not actor role**.
+
+For a target user with memberships in School A/B/C:
+
+```text
+School A → user.updated / user.archived / user.reactivated
+School B → same action
+School C → same action
+System  → no duplicate event
+```
+
+For a target user with zero memberships:
+
+```text
+systemAuditLogs → one event
+```
+
+`user.created` is school-scoped when a school is assigned and system-scoped when there is no school.
+
+System Admin Activity Log combines only the selected school's events with system events. It intentionally does not load every school's log.
+
+## Current Admin UX
+
+`AdminUserManager.vue` currently supports:
+
+- search/status filtering
+- explicit Refresh action (EN `Refresh`, JA `更新`)
+- profile editing (`firstName`, `lastName`, `displayName`, `language`)
+- school membership badges and active/inactive membership state
+- membership create/role/status/remove operations within authorization scope
+- global account archive/reactivate for System Admin
+- system-role management for System Admin
+
+## Dashboard
+
+`DashboardPage.vue` is the default page. It shows active counts for:
+
+- students
+- classes
+- rooms
+- courses
+
+Recent Activity and Messages are placeholders only.
+
+The old Classroom/Home components/services have been removed. Do not plan new work around `ClassroomPage.vue`, `MyClassroom.vue`, `StudentDesk.vue`, or `classroomService.js`.
 
 ## Teacher position values
 
-``` text
+```text
 front-left
 front-right
 back-left
 back-right
 ```
 
-Default/fallback for older rooms:
-
-``` text
-front-left
-```
+Older rooms fall back to `front-left`.
 
 ## Planning Engine
 
 Location:
 
-``` text
+```text
 src/engine/seating/
 ```
 
 Priority:
 
-1.  Previous partners
-2.  Previous desks
-3.  Previous exact seats
+1. Previous partners
+2. Previous desks
+3. Previous exact seats
 
-Principle:
-
-> Recommend, don't decide.
+Principle: **Recommend, don't decide.**
 
 ## Excel export
 
 Location:
 
-``` text
+```text
 src/services/seatingPlanExportService.js
 ```
 
-Uses:
+Uses `ExcelJS` and exports saved plans with classroom geometry and print-oriented setup.
 
-``` text
-xlsx-js-style
+## Current security gap
+
+Do not overstate Firestore authorization. Admin paths are role-aware, but several school-domain collections still allow read/write to any active user. Current next security work:
+
+1. enforce `memberId == userUid` on membership creation
+2. prevent membership `userUid` mutation
+3. harden domain collection rules around active school membership/role
+4. move remaining privileged membership mutation to trusted callable functions where appropriate
+5. add automated regression tests/CI
+
+## Emulator workflow
+
+Always preserve the existing emulator dataset unless an empty emulator is explicitly intended:
+
+```bash
+cd ~/Projects/ClassRoom
+firebase emulators:start \
+  --only functions,auth,firestore \
+  --import=./emulator-data \
+  --export-on-exit=./emulator-data
 ```
 
-Exports saved plans using classroom geometry.
-
-## Legacy code
-
-Still present temporarily:
-
-``` text
-ClassroomPage.vue
-MyClassroom.vue
-StudentDesk.vue
-classroomService.js
-```
-
-Do not expand the legacy page. Next structural work is Dashboard/Home
-replacement and safe legacy removal.
+`emulator-data/` and `emulator-data.zip` are ignored local artifacts and must not be committed.
 
 ## Development rules
 
--   Explain architecture changes before large edits.
--   Prefer small commits.
--   Run lint/build at checkpoints.
--   Preserve historical references.
--   Keep school/class context separate.
--   Do not hardcode new user-facing strings unnecessarily.
--   Keep engine independent from Vue/Firebase/i18n.
--   Never commit `serviceAccountKey.json`.
--   Never commit `school-structure.json`.
--   Avoid `npm audit fix --force` during normal feature work.
--   Treat current source code as the final authority when docs disagree.
+- Work incrementally; avoid speculative rewrites.
+- Do not weaken Firestore rules to solve UI access problems.
+- Keep Firebase Auth UID canonical.
+- Never use legacy `users/{uid}.role` for authorization.
+- All new user-visible strings must have aligned EN/JA i18n keys.
+- Do not claim a security/audit change is complete until it has been tested.
+- Prefer exact file/function/current-code/replacement/test guidance when making code changes.
+- Keep documentation synchronized as a full project state, not as disconnected update fragments.
 
 ## Immediate sequence
 
-1.  Finish documentation checkpoint.
-2.  Run lint/build.
-3.  Commit and push.
-4.  Deploy to GitHub Pages.
-5.  Verify live build.
-6.  Create Dashboard.
-7.  Remove legacy Classroom code safely.
-
-
-## 2026-08-23 admin/auth update
-
-- Firebase Auth UID is the canonical user ID.
-- `users/{uid}.systemRole` represents system-wide privilege (`system-admin` or null).
-- `schools/{schoolId}/members/{uid}` represents school access and role (`school-admin`, `teacher`, `student`) plus `active`.
-- Admin user creation is implemented through callable Cloud Function `createUser`.
-- Local development uses Authentication, Firestore, and Functions emulators together to avoid modifying production data.
-- Production Functions deployment requires Blaze and must follow `FIREBASE_BILLING_RUNBOOK.md`.
-- Next authorization work: complete role capability enforcement and account deactivate/reactivate behavior.
-
-## Admin authorization checkpoint — 2026-09-01
-
-- Firebase Auth UID is canonical across Auth, `users/{uid}`, and `schools/{schoolId}/members/{uid}`.
-- `users/{uid}.systemRole == "system-admin"` grants global administration.
-- Active `school-admin` membership grants Admin access only for that school.
-- School Admin can create users in the school and manage other memberships there.
-- School Admin cannot change, deactivate, or remove their own membership.
-- System Admin cannot change their own system role.
-- School Admin user loading must not be solved by weakening `/users` reads; use the scoped privileged backend.
-- Audit scope follows the affected resource: school user creation is school-scoped; no-school creation is system-scoped.
-- System Admin Activity Log intentionally uses selected school + system logs, not every school's logs.
-- Emulator E2E regression coverage passed through cross-school isolation and Teacher regression.
-- Next security work: membership identity/immutability invariants, broader domain Firestore rules, and `createUser` rollback robustness.
+1. Finish the current Admin/security documentation checkpoint and commit the tested audit/account-lifecycle changes.
+2. Enforce membership identity/immutability invariants.
+3. Harden remaining school-domain Firestore rules.
+4. Add automated regression coverage for critical authorization/audit flows.
+5. Begin the Teachers module after the security boundary is stable.

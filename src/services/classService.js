@@ -8,6 +8,8 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
+  query
 } from "firebase/firestore";
 
 function requireSchoolId(schoolId) {
@@ -46,7 +48,27 @@ function validateClass(classItem) {
     throw new Error("Semester must be between 1 and 4.");
   }
 
-  return { code, name, courseId, roomId, academicYear, semester, active: classItem.active !== false };
+  const teacherUids = Array.isArray(classItem.teacherUids)
+  ? [
+      ...new Set(
+        classItem.teacherUids
+          .filter((uid) => typeof uid === "string")
+          .map((uid) => uid.trim())
+          .filter(Boolean)
+      ),
+    ]
+  : [];
+
+  return {
+    code,
+    name,
+    courseId,
+    roomId,
+    academicYear,
+    semester,
+    active: classItem.active !== false,
+    teacherUids,
+  };
 }
 
 function getClassesRef(schoolId) {
@@ -66,6 +88,41 @@ export async function getClasses(schoolId) {
 
 export function watchClasses(schoolId, onChange, onError) {
   return onSnapshot(getClassesRef(schoolId), (snapshot) => onChange(sortClasses(snapshot.docs.map(mapClass))), onError);
+}
+
+export function watchTeacherClasses(
+  schoolId,
+  teacherUid,
+  onChange,
+  onError
+) {
+  requireSchoolId(schoolId);
+
+  if (!teacherUid || typeof teacherUid !== "string") {
+    throw new Error(
+      "A teacherUid is required to access assigned classes."
+    );
+  }
+
+  const classesQuery = query(
+    getClassesRef(schoolId),
+    where(
+      "teacherUids",
+      "array-contains",
+      teacherUid
+    )
+  );
+
+  return onSnapshot(
+    classesQuery,
+    (snapshot) =>
+      onChange(
+        sortClasses(
+          snapshot.docs.map(mapClass)
+        )
+      ),
+    onError
+  );
 }
 
 export async function saveClass(schoolId, classItem) {

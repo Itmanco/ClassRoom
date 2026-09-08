@@ -62,6 +62,23 @@ service cloud.firestore {
         ).data.active == true;
     }
 
+    function isTeacher(schoolId) {
+      return isActiveSchoolMember(schoolId)
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        ).data.role == "teacher";
+    }
+
+    function isAssignedTeacher(schoolId, classId) {
+      return isTeacher(schoolId)
+        && exists(
+          /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
+        )
+        && request.auth.uid in get(
+          /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
+        ).data.get("teacherUids", []);
+    }
+
     // ----------------------------------------
     // Users
     // ----------------------------------------
@@ -137,8 +154,26 @@ service cloud.firestore {
       // --------------------------------------
 
       match /students/{studentId} {
-        allow read, write:
-          if isActiveUser();
+        allow read:
+          if canAdministerSchool(schoolId)
+            || (
+              isActiveSchoolMember(schoolId)
+              && get(
+                /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+              ).data.role == "teacher"
+            );
+
+        allow create, delete:
+          if canAdministerSchool(schoolId);
+
+        allow update:
+          if canAdministerSchool(schoolId)
+            || (
+              isActiveSchoolMember(schoolId)
+              && get(
+                /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+              ).data.role == "teacher"
+            );
       }
 
       // --------------------------------------
@@ -147,7 +182,7 @@ service cloud.firestore {
 
       match /buildings/{buildingId} {
         allow read, write:
-          if isActiveUser();
+          if canAdministerSchool(schoolId);
       }
 
       // --------------------------------------
@@ -156,7 +191,7 @@ service cloud.firestore {
 
       match /rooms/{roomId} {
         allow read, write:
-          if isActiveUser();
+          if canAdministerSchool(schoolId);
       }
 
       // --------------------------------------
@@ -165,7 +200,7 @@ service cloud.firestore {
 
       match /courses/{courseId} {
         allow read, write:
-          if isActiveUser();
+          if canAdministerSchool(schoolId);
       }
 
       // --------------------------------------
@@ -173,18 +208,42 @@ service cloud.firestore {
       // --------------------------------------
 
       match /classes/{classId} {
+        allow read:
+          if canAdministerSchool(schoolId)
+            || isAssignedTeacher(schoolId, classId);
 
-        allow read, write:
-          if isActiveUser();
+        allow create, delete:
+          if canAdministerSchool(schoolId);
+
+        allow update:
+          if canAdministerSchool(schoolId)
+            || (
+              isAssignedTeacher(schoolId, classId)
+
+              // Teachers cannot assign/remove teachers.
+              && request.resource.data.get("teacherUids", [])
+                == resource.data.get("teacherUids", [])
+
+              // Teachers cannot archive/reactivate classes.
+              && request.resource.data.get("active", true)
+                == resource.data.get("active", true)
+            );
 
         match /enrollments/{enrollmentId} {
-          allow read, write:
-            if isActiveUser();
+
+          allow read:
+            if canAdministerSchool(schoolId)
+              || isAssignedTeacher(schoolId, classId);
+
+          allow create, update, delete:
+            if canAdministerSchool(schoolId);
         }
 
         match /seatingPlans/{seatingPlanId} {
+
           allow read, write:
-            if isActiveUser();
+            if canAdministerSchool(schoolId)
+              || isAssignedTeacher(schoolId, classId);
         }
       }
 
@@ -206,9 +265,27 @@ service cloud.firestore {
         allow create:
           if canAdministerSchool(
             schoolId
-          );
+          )
+          && request.resource.data.userUid
+            == memberId;
 
-        allow update, delete:
+        allow update:
+          if (
+            isSystemAdmin()
+            || (
+              canAdministerSchool(
+                schoolId
+              )
+              && request.auth.uid
+                != memberId
+            )
+          )
+          && request.resource.data.userUid
+            == resource.data.userUid
+          && request.resource.data.userUid
+            == memberId;
+
+        allow delete:
           if isSystemAdmin()
             || (
               canAdministerSchool(

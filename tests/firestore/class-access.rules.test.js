@@ -1,0 +1,441 @@
+const fs = require("fs");
+const path = require("path");
+
+const {
+  initializeTestEnvironment,
+  assertSucceeds,
+  assertFails,
+} = require("@firebase/rules-unit-testing");
+
+const {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+} = require("firebase/firestore");
+
+const PROJECT_ID = "classroom-class-access-test";
+
+let testEnv;
+
+async function seedUser(uid, data = {}) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+
+    await setDoc(doc(db, "users", uid), {
+      active: true,
+      systemRole: null,
+      displayName: uid,
+      ...data,
+    });
+  });
+}
+
+async function seedMembership(
+  schoolId,
+  uid,
+  role,
+  data = {}
+) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+
+    await setDoc(
+      doc(db, "schools", schoolId, "members", uid),
+      {
+        userUid: uid,
+        role,
+        active: true,
+        ...data,
+      }
+    );
+  });
+}
+
+async function seedClass(
+  schoolId,
+  classId,
+  teacherUids
+) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+
+    await setDoc(
+      doc(db, "schools", schoolId, "classes", classId),
+      {
+        code: classId,
+        name: `Class ${classId}`,
+        courseId: "course-1",
+        roomId: "room-1",
+        academicYear: 2026,
+        semester: 1,
+        active: true,
+        teacherUids,
+      }
+    );
+  });
+}
+
+async function seedEnrollment(
+  schoolId,
+  classId,
+  studentId
+) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+
+    await setDoc(
+      doc(
+        db,
+        "schools",
+        schoolId,
+        "classes",
+        classId,
+        "enrollments",
+        studentId
+      ),
+      {
+        studentId,
+        active: true,
+      }
+    );
+  });
+}
+
+async function run() {
+  testEnv = await initializeTestEnvironment({
+    projectId: PROJECT_ID,
+    firestore: {
+      rules: fs.readFileSync(
+        path.resolve(__dirname, "../../firestore.rules"),
+        "utf8"
+      ),
+    },
+  });
+
+  try {
+    await testEnv.clearFirestore();
+
+    const schoolId = "school-a";
+
+    const assignedTeacherUid = "teacher-assigned";
+    const otherTeacherUid = "teacher-other";
+    const adminUid = "school-admin";
+    const studentId = "student-1";
+
+    await seedUser(assignedTeacherUid);
+    await seedUser(otherTeacherUid);
+    await seedUser(adminUid);
+
+    await seedMembership(
+      schoolId,
+      assignedTeacherUid,
+      "teacher"
+    );
+
+    await seedMembership(
+      schoolId,
+      otherTeacherUid,
+      "teacher"
+    );
+
+    await seedMembership(
+      schoolId,
+      adminUid,
+      "school-admin"
+    );
+
+    await seedClass(
+      schoolId,
+      "CLASS_A",
+      [assignedTeacherUid]
+    );
+
+    await seedClass(
+      schoolId,
+      "CLASS_B",
+      [otherTeacherUid]
+    );
+
+    await seedEnrollment(
+      schoolId,
+      "CLASS_A",
+      studentId
+    );
+
+    const teacherDb =
+      testEnv
+        .authenticatedContext(assignedTeacherUid)
+        .firestore();
+
+    const adminDb =
+      testEnv
+        .authenticatedContext(adminUid)
+        .firestore();
+
+    console.log(
+      "Assigned teacher: class read allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can read class"
+    );
+
+    console.log(
+      "Assigned teacher: class update allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        ),
+        {
+          name: "Updated Class Name",
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can update class"
+    );
+
+    console.log(
+      "Assigned teacher: teacherUids mutation denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        ),
+        {
+          teacherUids: [
+            assignedTeacherUid,
+            otherTeacherUid,
+          ],
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot change class assignments"
+    );
+
+    console.log(
+  "Assigned teacher: class archive denied"
+);
+
+await assertFails(
+  updateDoc(
+    doc(
+      teacherDb,
+      "schools",
+      schoolId,
+      "classes",
+      "CLASS_A"
+    ),
+    {
+      active: false,
+    }
+  )
+);
+
+console.log(
+  "✓ teacher cannot archive assigned class"
+);
+
+    console.log(
+      "Unassigned teacher: class read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B"
+        )
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot read unassigned class"
+    );
+
+    console.log(
+      "Unassigned teacher: class update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B"
+        ),
+        {
+          name: "Forbidden Update",
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot update unassigned class"
+    );
+
+    console.log(
+      "Assigned teacher: enrollment read allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          studentId
+        )
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can read enrollment"
+    );
+
+    console.log(
+      "Assigned teacher: enrollment create denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          "student-2"
+        ),
+        {
+          studentId: "student-2",
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot create enrollment"
+    );
+
+    console.log(
+      "Assigned teacher: enrollment update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          studentId
+        ),
+        {
+          active: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot modify enrollment"
+    );
+
+    console.log(
+      "School Admin: class access allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B"
+        )
+      )
+    );
+
+    console.log(
+      "✓ school admin can read classes"
+    );
+
+    console.log(
+      "School Admin: enrollment write allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          "student-admin-added"
+        ),
+        {
+          studentId: "student-admin-added",
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can manage enrollments"
+    );
+
+    console.log(
+      "\nAll class access rules tests passed."
+    );
+  } finally {
+    await testEnv.cleanup();
+  }
+}
+
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

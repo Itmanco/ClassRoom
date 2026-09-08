@@ -7,7 +7,8 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "deploy": "npm run build && gh-pages -d dist",
-    "migrate:students": "node scripts/migrateStudents.js"
+    "migrate:students": "node scripts/migrateStudents.js",
+    "test:rules": "firebase emulators:exec --only firestore \"node tests/firestore/membership.rules.test.js && node tests/firestore/school-access.rules.test.js && node tests/firestore/role-access.rules.test.js && node tests/firestore/class-access.rules.test.js\""
   },
   "dependencies": {
     "core-js": "^3.8.3",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@babel/core": "^7.12.16",
     "@babel/eslint-parser": "^7.12.16",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-plugin-eslint": "~5.0.0",
     "@vue/cli-service": "~5.0.0",

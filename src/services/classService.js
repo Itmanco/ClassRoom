@@ -59,6 +59,20 @@ function validateClass(classItem) {
     ]
   : [];
 
+  const mainTeacherUid =
+    typeof classItem.mainTeacherUid === "string"
+      ? classItem.mainTeacherUid.trim()
+      : "";
+
+  if (
+    mainTeacherUid &&
+    !teacherUids.includes(mainTeacherUid)
+  ) {
+    throw new Error(
+      "The main teacher must be one of the assigned teachers."
+    );
+  }
+
   return {
     code,
     name,
@@ -68,6 +82,7 @@ function validateClass(classItem) {
     semester,
     active: classItem.active !== false,
     teacherUids,
+    mainTeacherUid,
   };
 }
 

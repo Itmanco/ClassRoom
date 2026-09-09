@@ -347,7 +347,9 @@
       "course": "Course",
       "room": "Room",
       "academicYear": "Academic year",
-      "semester": "Semester"
+      "semester": "Semester",
+      "teachers": "Assigned Teachers",
+      "mainTeacher": "Main Teacher"
     },
     "form": {
       "addTitle": "Add class",
@@ -358,12 +360,17 @@
       "code": "ENG2026-AM",
       "name": "English - Morning",
       "course": "Select a course",
-      "room": "Select a room"
+      "room": "Select a room",
+      "searchTeachers": "Search teachers..."
     },
     "actions": {
       "add": "Add class",
       "update": "Update class",
-      "manage": "Manage class"
+      "manage": "Manage class",
+      "addTeacher": "Add Teacher",
+      "addSelectedTeachers": "Add Selected",
+      "setMainTeacher": "Set as Main",
+      "removeTeacher": "Remove"
     },
     "list": {
       "title": "Classes",
@@ -384,7 +391,14 @@
       "saveError": "Unable to save class: {error}",
       "archiveConfirm": "Archive {code} — {name}?",
       "archived": "Class {code} was archived.",
-      "archiveError": "Unable to archive class: {error}"
+      "archiveError": "Unable to archive class: {error}",
+      "teachersLoadError": "Unable to load teachers: {error}",
+      "noAssignedTeachers": "No teachers are assigned to this class.",
+      "noAvailableTeachers": "All available teachers are already assigned.",
+      "mainTeacherNotAssigned": "The main teacher must be one of the assigned teachers.",
+      "addTeacherDescription": "Select one or more teachers to add to this class.",
+      "noMatchingTeachers": "No teachers match your search.",
+      "teachersSelected": "{count} selected"
     }
   },
   "enrollments": {

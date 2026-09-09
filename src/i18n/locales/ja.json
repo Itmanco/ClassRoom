@@ -347,7 +347,9 @@
       "course": "科目",
       "room": "教室",
       "academicYear": "年度",
-      "semester": "学期"
+      "semester": "学期",
+      "teachers": "担当教師",
+      "mainTeacher": "主担当"
     },
     "form": {
       "addTitle": "クラスを追加",
@@ -358,12 +360,17 @@
       "code": "ENG2026-AM",
       "name": "英語・午前クラス",
       "course": "科目を選択",
-      "room": "教室を選択"
+      "room": "教室を選択",
+      "searchTeachers": "教師を検索..."
     },
     "actions": {
       "add": "クラスを追加",
       "update": "クラスを更新",
-      "manage": "クラスを管理"
+      "manage": "クラスを管理",
+      "addTeacher": "教師を追加",
+      "addSelectedTeachers": "選択した教師を追加",
+      "setMainTeacher": "主担当に設定",
+      "removeTeacher": "削除"
     },
     "list": {
       "title": "クラス一覧",
@@ -384,7 +391,14 @@
       "saveError": "クラスを保存できませんでした：{error}",
       "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
       "archived": "クラス「{code}」をアーカイブしました。",
-      "archiveError": "クラスをアーカイブできませんでした：{error}"
+      "archiveError": "クラスをアーカイブできませんでした：{error}",
+      "teachersLoadError": "担当教師を読み込めませんでした：{error}",
+      "noAssignedTeachers": "このクラスには担当教師が割り当てられていません。",
+      "noAvailableTeachers": "追加できる教師はすべて割り当て済みです。",
+      "mainTeacherNotAssigned": "主担当教師は、このクラスに割り当てられている教師から選択してください。",
+      "addTeacherDescription": "このクラスに追加する教師を選択してください。",
+      "noMatchingTeachers": "検索条件に一致する教師はいません。",
+      "teachersSelected": "{count}名選択中"
     }
   },
   "enrollments": {

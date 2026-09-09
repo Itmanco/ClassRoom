@@ -55,7 +55,8 @@ async function seedMembership(
 async function seedClass(
   schoolId,
   classId,
-  teacherUids
+  teacherUids,
+  mainTeacherUid = ""
 ) {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -71,6 +72,7 @@ async function seedClass(
         semester: 1,
         active: true,
         teacherUids,
+        mainTeacherUid,
       }
     );
   });
@@ -148,13 +150,15 @@ async function run() {
     await seedClass(
       schoolId,
       "CLASS_A",
-      [assignedTeacherUid]
+      [assignedTeacherUid],
+      assignedTeacherUid
     );
 
     await seedClass(
       schoolId,
       "CLASS_B",
-      [otherTeacherUid]
+      [otherTeacherUid],
+      otherTeacherUid
     );
 
     await seedEnrollment(
@@ -240,6 +244,29 @@ async function run() {
 
     console.log(
       "✓ teacher cannot change class assignments"
+    );
+
+    console.log(
+      "Assigned teacher: mainTeacherUid mutation denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        ),
+        {
+          mainTeacherUid: otherTeacherUid,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot change main teacher"
     );
 
     console.log(
@@ -399,6 +426,33 @@ console.log(
 
     console.log(
       "✓ school admin can read classes"
+    );
+
+    console.log(
+      "School Admin: mainTeacherUid update allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        ),
+        {
+          teacherUids: [
+            assignedTeacherUid,
+            otherTeacherUid,
+          ],
+          mainTeacherUid: otherTeacherUid,
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can change main teacher"
     );
 
     console.log(

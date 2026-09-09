@@ -68,9 +68,14 @@ function validateClass(classItem) {
     mainTeacherUid &&
     !teacherUids.includes(mainTeacherUid)
   ) {
-    throw new Error(
-      "The main teacher must be one of the assigned teachers."
+    const error = new Error(
+      "MAIN_TEACHER_NOT_ASSIGNED"
     );
+
+    error.code =
+      "MAIN_TEACHER_NOT_ASSIGNED";
+
+    throw error;
   }
 
   return {

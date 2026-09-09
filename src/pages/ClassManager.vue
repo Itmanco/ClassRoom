@@ -956,12 +956,21 @@ export default {
         this.form = emptyForm();
         this.editingClassId = null;
       } catch (error) {
-        this.errorMessage = this.$t(
-          "classes.messages.saveError",
-          {
-            error: error.message,
-          },
-        );
+        if (
+          error.code ===
+          "MAIN_TEACHER_NOT_ASSIGNED"
+        ) {
+          this.errorMessage = this.$t(
+            "classes.messages.mainTeacherNotAssigned",
+          );
+        } else {
+          this.errorMessage = this.$t(
+            "classes.messages.saveError",
+            {
+              error: error.message,
+            },
+          );
+        }
       } finally {
         this.saving = false;
       }

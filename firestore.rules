@@ -79,6 +79,12 @@ service cloud.firestore {
         ).data.get("teacherUids", []);
     }
 
+    function isAssignedTeacherToClass(schoolId) {
+      return isTeacher(schoolId)
+        && request.auth.uid in
+          resource.data.get("teacherUids", []);
+    }
+
     // ----------------------------------------
     // Users
     // ----------------------------------------
@@ -210,7 +216,7 @@ service cloud.firestore {
       match /classes/{classId} {
         allow read:
           if canAdministerSchool(schoolId)
-            || isAssignedTeacher(schoolId, classId);
+            || isAssignedTeacherToClass(schoolId);
 
         allow create, delete:
           if canAdministerSchool(schoolId);
@@ -218,7 +224,7 @@ service cloud.firestore {
         allow update:
           if canAdministerSchool(schoolId)
             || (
-              isAssignedTeacher(schoolId, classId)
+              isAssignedTeacherToClass(schoolId)
 
               // Teachers cannot assign/remove teachers.
               && request.resource.data.get("teacherUids", [])

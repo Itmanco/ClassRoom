@@ -8,10 +8,14 @@ const {
 } = require("@firebase/rules-unit-testing");
 
 const {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
 } = require("firebase/firestore");
 
 const PROJECT_ID = "classroom-class-access-test";
@@ -104,6 +108,35 @@ async function seedEnrollment(
   });
 }
 
+async function seedSeatingPlan(
+  schoolId,
+  classId,
+  seatingPlanId
+) {
+  await testEnv.withSecurityRulesDisabled(
+    async (context) => {
+      const db = context.firestore();
+
+      await setDoc(
+        doc(
+          db,
+          "schools",
+          schoolId,
+          "classes",
+          classId,
+          "seatingPlans",
+          seatingPlanId
+        ),
+        {
+          name: `Seating Plan ${seatingPlanId}`,
+          seats: [],
+          active: true,
+        }
+      );
+    }
+  );
+}
+
 async function run() {
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
@@ -167,6 +200,18 @@ async function run() {
       studentId
     );
 
+    await seedSeatingPlan(
+      schoolId,
+      "CLASS_A",
+      "PLAN_A"
+    );
+
+    await seedSeatingPlan(
+      schoolId,
+      "CLASS_B",
+      "PLAN_B"
+    );
+
     const teacherDb =
       testEnv
         .authenticatedContext(assignedTeacherUid)
@@ -195,6 +240,66 @@ async function run() {
 
     console.log(
       "✓ assigned teacher can read class"
+    );
+
+    console.log(
+      "Assigned teacher: assigned-classes query allowed"
+    );
+
+    const assignedClassesQuery = query(
+      collection(
+        teacherDb,
+        "schools",
+        schoolId,
+        "classes"
+      ),
+      where(
+        "teacherUids",
+        "array-contains",
+        assignedTeacherUid
+      )
+    );
+
+    const assignedClassesSnapshot =
+      await assertSucceeds(
+        getDocs(assignedClassesQuery)
+      );
+
+    const assignedClassIds =
+      assignedClassesSnapshot.docs
+        .map((classDoc) => classDoc.id)
+        .sort();
+
+    if (
+      assignedClassIds.length !== 1 ||
+      assignedClassIds[0] !== "CLASS_A"
+    ) {
+      throw new Error(
+        `Expected teacher query to return only CLASS_A, received: ${assignedClassIds.join(", ")}`
+      );
+    }
+
+    console.log(
+      "✓ teacher query returns only assigned classes"
+    );
+
+    console.log(
+      "Assigned teacher: unrestricted classes query denied"
+    );
+
+    await assertFails(
+      getDocs(
+        collection(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes"
+        )
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot query all classes"
     );
 
     console.log(
@@ -409,6 +514,100 @@ console.log(
     );
 
     console.log(
+      "Assigned teacher: seating plan read allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can read seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating plan write allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        ),
+        {
+          name: "Updated Seating Plan",
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can update seating plan"
+    );
+
+    console.log(
+      "Unassigned teacher: seating plan read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        )
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot read unassigned seating plan"
+    );
+
+    console.log(
+      "Unassigned teacher: seating plan write denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        ),
+        {
+          name: "Forbidden Seating Plan Update",
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot update unassigned seating plan"
+    );
+
+    console.log(
       "School Admin: class access allowed"
     );
 
@@ -479,6 +678,45 @@ console.log(
 
     console.log(
       "✓ school admin can manage enrollments"
+    );
+
+    console.log(
+      "School Admin: seating plan access allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        )
+      )
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        ),
+        {
+          name: "Admin Updated Seating Plan",
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can read and update seating plans"
     );
 
     console.log(

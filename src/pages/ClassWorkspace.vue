@@ -175,6 +175,8 @@
         <EnrollmentManager
           :school-id="schoolId"
           :class-id="classId"
+          :actor-role="actorRole"
+          :actor-uid="actorUid"
         />
       </section>
 
@@ -194,6 +196,7 @@
 <script>
 import {
   watchClasses,
+  watchTeacherClasses,
 } from "../services/classService";
 import {
   watchCourses,
@@ -221,6 +224,16 @@ export default {
       type: String,
       required: true,
     },
+
+    actorRole: {
+      type: String,
+      default: "",
+    },
+
+    actorUid: {
+      type: String,
+      default: "",
+    },
   },
 
   emits: ["back"],
@@ -238,6 +251,10 @@ export default {
   },
 
   computed: {
+    isTeacher() {
+      return this.actorRole === "teacher";
+    },
+
     selectedClass() {
       return (
         this.classes.find(
@@ -328,6 +345,14 @@ export default {
     classId() {
       this.activeTab = "overview";
     },
+
+    actorRole() {
+      this.startListeners();
+    },
+
+    actorUid() {
+      this.startListeners();
+    },
   },
 
   mounted() {
@@ -343,6 +368,10 @@ export default {
       this.stopListeners();
       this.loading = true;
       this.errorMessage = "";
+      if (this.isTeacher && !this.actorUid) {
+        this.loading = false;
+        return;
+      }
 
       let classesLoaded = false;
       let coursesLoaded = false;
@@ -357,25 +386,62 @@ export default {
       };
 
       try {
-        this.unsubscribers = [
-          watchClasses(
-            this.schoolId,
-            (items) => {
-              this.classes = items;
-              classesLoaded = true;
-              updateLoading();
-            },
-            (error) => {
-              this.loading = false;
+        const classListener = this.isTeacher
+          ? watchTeacherClasses(
+              this.schoolId,
+              this.actorUid,
+              (items) => {
+                this.classes = items;
+                classesLoaded = true;
+                updateLoading();
+              },
+              (error) => {
+                this.loading = false;
 
-              this.errorMessage = this.$t(
-                "classWorkspace.messages.classesLoadError",
-                {
-                  error: error.message,
-                },
-              );
-            },
-          ),
+                this.errorMessage = this.$t(
+                  "classWorkspace.messages.classesLoadError",
+                  {
+                    error: error.message,
+                  },
+                );
+              },
+            )
+          : watchClasses(
+              this.schoolId,
+              (items) => {
+                this.classes = items;
+                classesLoaded = true;
+                updateLoading();
+              },
+              (error) => {
+                this.loading = false;
+
+                this.errorMessage = this.$t(
+                  "classWorkspace.messages.classesLoadError",
+                  {
+                    error: error.message,
+                  },
+                );
+              },
+            );
+
+        if (this.isTeacher) {
+          this.courses = [];
+          this.rooms = [];
+
+          coursesLoaded = true;
+          roomsLoaded = true;
+
+          this.unsubscribers = [
+            classListener,
+          ];
+
+          updateLoading();
+          return;
+        }
+
+        this.unsubscribers = [
+          classListener,
 
           watchCourses(
             this.schoolId,

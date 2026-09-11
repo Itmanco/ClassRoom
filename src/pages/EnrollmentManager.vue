@@ -195,6 +195,7 @@
 <script>
 import {
   watchClasses,
+  watchTeacherClasses,
 } from "../services/classService";
 import {
   watchStudents,
@@ -215,6 +216,16 @@ export default {
     },
 
     classId: {
+      type: String,
+      default: "",
+    },
+
+    actorRole: {
+      type: String,
+      default: "",
+    },
+
+    actorUid: {
       type: String,
       default: "",
     },
@@ -240,6 +251,10 @@ export default {
   },
 
   computed: {
+    isTeacher() {
+      return this.actorRole === "teacher";
+    },
+
     isEmbedded() {
       return Boolean(this.classId);
     },
@@ -337,6 +352,14 @@ export default {
       this.message = "";
       this.errorMessage = "";
     },
+
+    actorRole() {
+      this.startBaseListeners();
+    },
+
+    actorUid() {
+      this.startBaseListeners();
+    },
   },
 
   mounted() {
@@ -359,33 +382,66 @@ export default {
       this.loadingStudents = true;
       this.errorMessage = "";
 
-      try {
-        this.unsubscribeClasses = watchClasses(
-          this.schoolId,
-          (items) => {
-            this.classes = items;
+      if (this.isTeacher && !this.actorUid) {
+        this.loadingStudents = false;
+        return;
+      }
 
-            if (
-              !this.isEmbedded &&
-              this.selectedClassId &&
-              !items.some(
-                (item) =>
-                  item.id === this.selectedClassId &&
-                  item.active !== false,
-              )
-            ) {
-              this.selectedClassId = "";
-            }
-          },
-          (error) => {
-            this.errorMessage = this.$t(
-              "enrollments.messages.classesLoadError",
-              {
-                error: error.message,
+      try {
+        this.unsubscribeClasses = this.isTeacher
+          ? watchTeacherClasses(
+              this.schoolId,
+              this.actorUid,
+              (items) => {
+                this.classes = items;
+
+                if (
+                  !this.isEmbedded &&
+                  this.selectedClassId &&
+                  !items.some(
+                    (item) =>
+                      item.id === this.selectedClassId &&
+                      item.active !== false,
+                  )
+                ) {
+                  this.selectedClassId = "";
+                }
+              },
+              (error) => {
+                this.errorMessage = this.$t(
+                  "enrollments.messages.classesLoadError",
+                  {
+                    error: error.message,
+                  },
+                );
+              },
+            )
+          : watchClasses(
+              this.schoolId,
+              (items) => {
+                this.classes = items;
+
+                if (
+                  !this.isEmbedded &&
+                  this.selectedClassId &&
+                  !items.some(
+                    (item) =>
+                      item.id === this.selectedClassId &&
+                      item.active !== false,
+                  )
+                ) {
+                  this.selectedClassId = "";
+                }
+              },
+              (error) => {
+                this.errorMessage = this.$t(
+                  "enrollments.messages.classesLoadError",
+                  {
+                    error: error.message,
+                  },
+                );
               },
             );
-          },
-        );
 
         this.unsubscribeStudents = watchStudents(
           this.schoolId,

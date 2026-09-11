@@ -127,6 +127,14 @@
         v-if="currentPage === 'class-workspace'"
         :school-id="session.activeSchool"
         :class-id="selectedClassId"
+        :actor-role="
+          isSystemAdmin
+            ? 'system-admin'
+            : session.membership?.role || ''
+        "
+        :actor-uid="
+          session.firebaseUser?.uid || ''
+        "
         @back="closeClassWorkspace"
       />
 

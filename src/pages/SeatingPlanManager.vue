@@ -580,6 +580,7 @@ import {
 } from "../services/seatingPlanExportService";
 import {
   watchClasses,
+  watchTeacherClasses,
 } from "../services/classService";
 import {
   watchEnrollments,
@@ -612,6 +613,15 @@ export default {
       required: true,
     },
       classId: {
+      type: String,
+      default: "",
+    },
+    actorRole: {
+      type: String,
+      default: "",
+    },
+
+    actorUid: {
       type: String,
       default: "",
     },
@@ -655,6 +665,10 @@ export default {
   },
 
   computed: {
+    isTeacher() {
+      return this.actorRole === "teacher";
+    },
+
     isEmbedded() {
       return Boolean(this.classId);
     },
@@ -790,6 +804,14 @@ export default {
   },
 
   watch: {
+    actorRole() {
+      this.startBaseListeners();
+    },
+
+    actorUid() {
+      this.startBaseListeners();
+    },
+
     schoolId() {
       this.selectedClassId = this.classId || "";
       this.resetWorkspaceState();
@@ -814,35 +836,53 @@ export default {
   methods: {
     startBaseListeners() {
       this.stopListeners();
+      this.errorMessage = "";
+
+      if (this.isTeacher && !this.actorUid) {
+        return;
+      }
 
       try {
-        this.unsubscribers = [
-          watchClasses(
-            this.schoolId,
-            (items) => {
-              this.classes = items;
+        const handleClasses = (items) => {
+          this.classes = items;
 
-              if (
-                !this.isEmbedded &&
-                this.selectedClassId &&
-                !items.some(
-                  (item) =>
-                    item.id === this.selectedClassId &&
-                    item.active !== false,
-                )
-              ) {
-                this.selectedClassId = "";
-              }
+          if (
+            !this.isEmbedded &&
+            this.selectedClassId &&
+            !items.some(
+              (item) =>
+                item.id === this.selectedClassId &&
+                item.active !== false,
+            )
+          ) {
+            this.selectedClassId = "";
+          }
+        };
+
+        const handleClassesError = (error) => {
+          this.errorMessage = this.$t(
+            "seatingPlans.messages.classesLoadError",
+            {
+              error: error.message,
             },
-            (error) => {
-              this.errorMessage = this.$t(
-                "seatingPlans.messages.classesLoadError",
-                {
-                  error: error.message,
-                },
-              );
-            },
-          ),
+          );
+        };
+
+        const classListener = this.isTeacher
+          ? watchTeacherClasses(
+              this.schoolId,
+              this.actorUid,
+              handleClasses,
+              handleClassesError,
+            )
+          : watchClasses(
+              this.schoolId,
+              handleClasses,
+              handleClassesError,
+            );
+
+        this.unsubscribers = [
+          classListener,
 
           watchRooms(
             this.schoolId,

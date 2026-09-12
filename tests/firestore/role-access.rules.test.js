@@ -8,10 +8,13 @@ const {
 } = require("@firebase/rules-unit-testing");
 
 const {
+  collection,
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
+  deleteDoc,
 } = require("firebase/firestore");
 
 const PROJECT_ID = "classroom-role-access-test";
@@ -224,10 +227,59 @@ console.log("✓ teacher cannot create students");
 
     console.log("✓ teacher cannot read buildings");
 
-    console.log("Teacher: rooms denied");
+    console.log(
+      "Teacher: rooms readable, writes denied"
+    );
+
+    await assertSucceeds(
+      getDocs(
+        collection(
+          teacherDb,
+          "schools",
+          schoolA,
+          "rooms"
+        )
+      )
+    );
+
+    console.log("✓ teacher can read rooms");
 
     await assertFails(
-      getDoc(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "rooms",
+          "teacher-created-room"
+        ),
+        {
+          name: "Teacher Created Room",
+        }
+      )
+    );
+
+    console.log("✓ teacher cannot create rooms");
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "rooms",
+          "room-1"
+        ),
+        {
+          name: "Changed by Teacher",
+        }
+      )
+    );
+
+    console.log("✓ teacher cannot update rooms");
+
+    await assertFails(
+      deleteDoc(
         doc(
           teacherDb,
           "schools",
@@ -238,7 +290,7 @@ console.log("✓ teacher cannot create students");
       )
     );
 
-    console.log("✓ teacher cannot read rooms");
+    console.log("✓ teacher cannot delete rooms");
 
     console.log(
       "Teacher: students in another school denied"

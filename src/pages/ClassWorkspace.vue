@@ -187,6 +187,8 @@
         <SeatingPlanManager
           :school-id="schoolId"
           :class-id="classId"
+          :actor-role="actorRole"
+          :actor-uid="actorUid"
         />
       </section>
     </template>

@@ -196,7 +196,11 @@ service cloud.firestore {
       // --------------------------------------
 
       match /rooms/{roomId} {
-        allow read, write:
+        allow read:
+          if canAdministerSchool(schoolId)
+            || isTeacher(schoolId);
+
+        allow create, update, delete:
           if canAdministerSchool(schoolId);
       }
 

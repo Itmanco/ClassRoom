@@ -56,7 +56,10 @@
     </p>
 
     <template v-if="selectedClassId">
-      <section class="panel">
+      <section 
+        v-if="canManageEnrollments"
+        class="panel"
+        >
         <div class="section-heading">
           <div>
             <h2>
@@ -135,7 +138,10 @@
             </p>
           </div>
 
-          <label class="archived-toggle">
+          <label 
+            v-if="canManageEnrollments"
+            class="archived-toggle"
+            >
             <input
               v-model="showArchived"
               type="checkbox"
@@ -169,7 +175,10 @@
             </p>
           </div>
 
-          <div class="actions">
+          <div 
+            v-if="canManageEnrollments"
+            class="actions"
+            >
             <button
               v-if="!enrollment.active"
               class="primary"
@@ -327,6 +336,12 @@ export default {
         (item) =>
           this.showArchived ||
           item.active !== false,
+      );
+    },
+    canManageEnrollments() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
       );
     },
   },

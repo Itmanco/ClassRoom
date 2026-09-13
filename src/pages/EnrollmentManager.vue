@@ -56,10 +56,10 @@
     </p>
 
     <template v-if="selectedClassId">
-      <section 
+      <section
         v-if="canManageEnrollments"
         class="panel"
-        >
+      >
         <div class="section-heading">
           <div>
             <h2>
@@ -138,10 +138,10 @@
             </p>
           </div>
 
-          <label 
+          <label
             v-if="canManageEnrollments"
             class="archived-toggle"
-            >
+          >
             <input
               v-model="showArchived"
               type="checkbox"
@@ -175,10 +175,10 @@
             </p>
           </div>
 
-          <div 
+          <div
             v-if="canManageEnrollments"
             class="actions"
-            >
+          >
             <button
               v-if="!enrollment.active"
               class="primary"

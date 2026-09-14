@@ -119,6 +119,14 @@
 
       <ClassManager
         v-if="currentPage === 'classes'"
+        :actor-role="
+          isSystemAdmin
+            ? 'system-admin'
+            : session.membership?.role || ''
+        "
+        :actor-uid="
+          session.firebaseUser?.uid || ''
+        "
         :school-id="session.activeSchool"
         @manage-class="openClassWorkspace"
       />

@@ -5,7 +5,10 @@
       <p>{{ $t("classes.description") }}</p>
     </header>
 
-    <section class="panel">
+    <section
+      v-if="canManageClasses"
+      class="panel"
+    >
       <h2>
         {{
           isEditing
@@ -372,12 +375,18 @@
             {{ $t("classes.actions.manage") }}
           </button>
           
-          <button @click="editClass(item)">
+          <button
+            v-if="canManageClasses"
+            @click="editClass(item)"
+          >
             {{ $t("common.edit") }}
           </button>
 
           <button
-            v-if="item.active"
+            v-if="
+              canManageClasses &&
+              item.active
+            "
             class="archive"
             @click="confirmArchive(item)"
           >
@@ -387,7 +396,10 @@
       </article>
     </section>
     <div
-      v-if="teacherModalOpen"
+      v-if="
+        canManageClasses &&
+        teacherModalOpen
+      "
       class="teacher-modal-backdrop"
       @click.self="closeTeacherModal"
     >
@@ -550,6 +562,7 @@ import {
   archiveClass,
   saveClass,
   watchClasses,
+  watchTeacherClasses,
 } from "../services/classService";
 import {
   watchCourses,
@@ -588,6 +601,15 @@ export default {
       type: String,
       required: true,
     },
+    actorRole: {
+      type: String,
+      default: "",
+    },
+
+    actorUid: {
+      type: String,
+      default: "",
+    },
   },
 
   emits: ["manage-class"],
@@ -612,6 +634,25 @@ export default {
   },
 
   computed: {
+    canAccessClasses() {
+      return [
+        "system-admin",
+        "school-admin",
+        "teacher",
+      ].includes(this.actorRole);
+    },
+
+    canManageClasses() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
+
+    isTeacher() {
+      return this.actorRole === "teacher";
+    },
+
     isEditing() {
       return Boolean(this.editingClassId);
     },
@@ -701,6 +742,16 @@ export default {
       this.resetForm();
       this.startListeners();
     },
+
+    actorRole() {
+      this.resetForm();
+      this.startListeners();
+    },
+
+    actorUid() {
+      this.resetForm();
+      this.startListeners();
+    },
   },
 
   methods: {
@@ -709,6 +760,74 @@ export default {
       this.loading = true;
       this.errorMessage = "";
       this.teachers = [];
+
+      if (!this.canAccessClasses) {
+        this.classes = [];
+        this.courses = [];
+        this.rooms = [];
+        this.loading = false;
+        return;
+      }
+
+      if (this.isTeacher && !this.actorUid) {
+        this.classes = [];
+        this.courses = [];
+        this.rooms = [];
+        this.loading = false;
+        return;
+      }
+
+      if (this.isTeacher) {
+        try {
+          this.courses = [];
+          this.rooms = [];
+
+          this.unsubscribers = [
+            watchTeacherClasses(
+              this.schoolId,
+              this.actorUid,
+              (items) => {
+                this.classes = items;
+                this.loading = false;
+              },
+              (error) => {
+                this.loading = false;
+                this.errorMessage = this.$t(
+                  "classes.messages.loadError",
+                  {
+                    error: error.message,
+                  },
+                );
+              },
+            ),
+
+            watchRooms(
+              this.schoolId,
+              (items) => {
+                this.rooms = items;
+              },
+              (error) => {
+                this.errorMessage = this.$t(
+                  "classes.messages.roomsLoadError",
+                  {
+                    error: error.message,
+                  },
+                );
+              },
+            ),
+          ];
+        } catch (error) {
+          this.loading = false;
+          this.errorMessage = this.$t(
+            "classes.messages.loadError",
+            {
+              error: error.message,
+            },
+          );
+        }
+
+        return;
+      }
 
       try {
         Promise.all([
@@ -908,6 +1027,9 @@ export default {
     },
 
     editClass(item) {
+      if (!this.canManageClasses) {
+        return;
+      }
       this.editingClassId = item.id;
 
       this.form = {
@@ -936,6 +1058,9 @@ export default {
     },
 
     async submitClass() {
+      if (!this.canManageClasses) {
+        return;
+      }
       this.saving = true;
       this.message = "";
       this.errorMessage = "";
@@ -977,6 +1102,10 @@ export default {
     },
 
     async confirmArchive(item) {
+      if (!this.canManageClasses) {
+        return;
+      }
+
       const confirmed = window.confirm(
         this.$t(
           "classes.messages.archiveConfirm",
@@ -1021,6 +1150,10 @@ export default {
     },
 
     openTeacherModal() {
+      if (!this.canManageClasses) {
+        return;
+      }
+
       this.pendingTeacherUids = [];
       this.teacherSearch = "";
       this.teacherModalOpen = true;
@@ -1033,6 +1166,10 @@ export default {
     },
 
     addSelectedTeachers() {
+      if (!this.canManageClasses) {
+        return;
+      }
+
       const teacherUids =
         [
           ...new Set([
@@ -1056,6 +1193,10 @@ export default {
     },
 
     removeTeacher(teacherUid) {
+      if (!this.canManageClasses) {
+        return;
+      }
+
       this.form.teacherUids =
         this.form.teacherUids.filter(
           (uid) => uid !== teacherUid
@@ -1077,6 +1218,10 @@ export default {
     },
 
     setMainTeacher(teacherUid) {
+      if (!this.canManageClasses) {
+        return;
+      }
+
       if (
         !this.form.teacherUids.includes(
           teacherUid

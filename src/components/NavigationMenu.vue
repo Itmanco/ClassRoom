@@ -57,6 +57,7 @@
       </button>
 
       <button
+        v-if="canAccessStudents"
         @click="$emit('change-page', 'students')"
         :class="{ active: currentPage === 'students' }"
         :title="collapsed ? $t('navigation.students') : ''"
@@ -68,6 +69,7 @@
       </button>
 
       <button
+        v-if="canManageSchoolStructure"
         @click="$emit('change-page', 'courses')"
         :class="{ active: currentPage === 'courses' }"
         :title="collapsed ? $t('navigation.courses') : ''"
@@ -79,6 +81,7 @@
       </button>
 
       <button
+        v-if="canManageSchoolStructure"
         @click="$emit('change-page', 'buildings')"
         :class="{ active: currentPage === 'buildings' }"
         :title="collapsed ? $t('navigation.buildings') : ''"
@@ -90,6 +93,7 @@
       </button>
 
       <button
+        v-if="canManageSchoolStructure"
         @click="$emit('change-page', 'rooms')"
         :class="{ active: currentPage === 'rooms' }"
         :title="collapsed ? $t('navigation.rooms') : ''"
@@ -101,6 +105,7 @@
       </button>
 
       <button
+        v-if="canAccessClasses"
         @click="$emit('change-page', 'classes')"
         :class="{ active: currentPage === 'classes' }"
         :title="collapsed ? $t('navigation.classes') : ''"
@@ -198,6 +203,21 @@ export default {
     },
 
     canAccessAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    canAccessStudents: {
+      type: Boolean,
+      default: false,
+    },
+
+    canAccessClasses: {
+      type: Boolean,
+      default: false,
+    },
+
+    canManageSchoolStructure: {
       type: Boolean,
       default: false,
     },

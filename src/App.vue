@@ -77,9 +77,14 @@
       :user="session.firebaseUser"
       :profile="session.profile"
       :schools="session.schools"
-      :active-school="session.activeSchool" 
-      :is-system-admin="isSystemAdmin" 
-      :can-access-admin="canAccessAdmin" 
+      :active-school="session.activeSchool"
+      :is-system-admin="isSystemAdmin"
+      :can-access-admin="canAccessAdmin"
+      :can-access-students="canAccessStudents"
+      :can-access-classes="canAccessClasses"
+      :can-manage-school-structure="
+        canManageSchoolStructure
+      "
       @change-page="changePage"
       @change-school="handleSchoolChange"
       @open-profile="openProfile"
@@ -93,7 +98,10 @@
       />
 
       <StudentManager
-        v-if="currentPage === 'students'"
+        v-if="
+          currentPage === 'students' &&
+          canAccessStudents
+        "
         :school-id="session.activeSchool"
         :actor-role="
           isSystemAdmin
@@ -103,22 +111,34 @@
       />
 
       <CourseManager
-        v-if="currentPage === 'courses'"
+        v-if="
+          currentPage === 'courses' &&
+          canManageSchoolStructure
+        "
         :school-id="session.activeSchool"
       />
 
       <BuildingManager
-        v-if="currentPage === 'buildings'"
+        v-if="
+          currentPage === 'buildings' &&
+          canManageSchoolStructure
+        "
         :school-id="session.activeSchool"
       />
 
       <RoomManager
-        v-if="currentPage === 'rooms'"
+        v-if="
+          currentPage === 'rooms' &&
+          canManageSchoolStructure
+        "
         :school-id="session.activeSchool"
       />
 
       <ClassManager
-        v-if="currentPage === 'classes'"
+        v-if="
+          currentPage === 'classes' &&
+          canAccessClasses
+        "
         :actor-role="
           isSystemAdmin
             ? 'system-admin'
@@ -132,7 +152,10 @@
       />
 
       <ClassWorkspace
-        v-if="currentPage === 'class-workspace'"
+        v-if="
+          currentPage === 'class-workspace' &&
+          canAccessClasses
+        "
         :school-id="session.activeSchool"
         :class-id="selectedClassId"
         :actor-role="
@@ -281,6 +304,29 @@ export default {
         this.isSchoolAdmin
       );
     },
+
+    canAccessStudents() {
+      return (
+        this.isSystemAdmin ||
+        this.isSchoolAdmin ||
+        this.session.membership?.role === "teacher"
+      );
+    },
+
+    canAccessClasses() {
+      return (
+        this.isSystemAdmin ||
+        this.isSchoolAdmin ||
+        this.session.membership?.role === "teacher"
+      );
+    },
+
+    canManageSchoolStructure() {
+      return (
+        this.isSystemAdmin ||
+        this.isSchoolAdmin
+      );
+    },
   },
 
   beforeUnmount() {
@@ -417,11 +463,53 @@ export default {
     },
 
     changePage(page) {
+      const alwaysAllowedPages = [
+        "dashboard",
+        "settings",
+        "profile",
+      ];
+
+      let canAccessPage =
+        alwaysAllowedPages.includes(page);
+
+      if (page === "students") {
+        canAccessPage = this.canAccessStudents;
+      }
+
+      if (page === "classes") {
+        canAccessPage = this.canAccessClasses;
+      }
+
+      if (
+        [
+          "courses",
+          "buildings",
+          "rooms",
+        ].includes(page)
+      ) {
+        canAccessPage =
+          this.canManageSchoolStructure;
+      }
+
+      if (page === "admin") {
+        canAccessPage = this.canAccessAdmin;
+      }
+
+      if (!canAccessPage) {
+        this.selectedClassId = "";
+        this.currentPage = "dashboard";
+        return;
+      }
+
       this.selectedClassId = "";
       this.currentPage = page;
     },
 
     openClassWorkspace(classId) {
+      if (!this.canAccessClasses) {
+        return;
+      }
+
       this.selectedClassId = classId;
       this.currentPage = "class-workspace";
     },

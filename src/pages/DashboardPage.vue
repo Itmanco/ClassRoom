@@ -24,7 +24,10 @@
     </p>
 
     <section class="summary-grid">
-      <article class="summary-card">
+      <article
+        v-if="canViewStudentSummary"
+        class="summary-card"
+      >
         <span class="summary-icon">
           👨‍🎓
         </span>
@@ -40,7 +43,10 @@
         </div>
       </article>
 
-      <article class="summary-card">
+      <article
+        v-if="canViewClassSummary"
+        class="summary-card"
+      >
         <span class="summary-icon">
           🏷️
         </span>
@@ -56,7 +62,10 @@
         </div>
       </article>
 
-      <article class="summary-card">
+      <article
+        v-if="canViewRoomSummary"
+        class="summary-card"
+      >
         <span class="summary-icon">
           📐
         </span>
@@ -72,7 +81,10 @@
         </div>
       </article>
 
-      <article class="summary-card">
+      <article
+        v-if="canViewCourseSummary"
+        class="summary-card"
+      >
         <span class="summary-icon">
           📚
         </span>
@@ -136,6 +148,7 @@ import {
 
 import {
   watchClasses,
+  watchTeacherClasses,
 } from "../services/classService";
 
 import {
@@ -153,6 +166,16 @@ export default {
     schoolId: {
       type: String,
       required: true,
+    },
+
+    actorRole: {
+      type: String,
+      default: "",
+    },
+
+    actorUid: {
+      type: String,
+      default: "",
     },
   },
 
@@ -195,6 +218,48 @@ export default {
           course.active !== false,
       );
     },
+
+    isTeacher() {
+      return this.actorRole === "teacher";
+    },
+
+    canViewStudentSummary() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.actorRole === "teacher"
+      );
+    },
+
+    canViewClassSummary() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.actorRole === "teacher"
+      );
+    },
+
+    canViewRoomSummary() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.actorRole === "teacher"
+      );
+    },
+
+    canViewCourseSummary() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
+
+    canViewAllClasses() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
   },
 
   mounted() {
@@ -209,6 +274,14 @@ export default {
     schoolId() {
       this.startListeners();
     },
+
+    actorRole() {
+      this.startListeners();
+    },
+
+    actorUid() {
+      this.startListeners();
+    },
   },
 
   methods: {
@@ -221,40 +294,73 @@ export default {
       this.courses = [];
       this.errorMessage = "";
 
+      if (this.isTeacher && !this.actorUid) {
+        return;
+      }
+
       try {
-        this.unsubscribers = [
-          watchStudents(
-            this.schoolId,
-            (items) => {
-              this.students = items;
-            },
-            this.handleLoadError,
-          ),
+        const listeners = [];
 
-          watchClasses(
-            this.schoolId,
-            (items) => {
-              this.classes = items;
-            },
-            this.handleLoadError,
-          ),
+        if (this.canViewStudentSummary) {
+          listeners.push(
+            watchStudents(
+              this.schoolId,
+              (items) => {
+                this.students = items;
+              },
+              this.handleLoadError,
+            ),
+          );
+        }
 
-          watchRooms(
-            this.schoolId,
-            (items) => {
-              this.rooms = items;
-            },
-            this.handleLoadError,
-          ),
+        if (this.canViewRoomSummary) {
+          listeners.push(
+            watchRooms(
+              this.schoolId,
+              (items) => {
+                this.rooms = items;
+              },
+              this.handleLoadError,
+            ),
+          );
+        }
 
-          watchCourses(
-            this.schoolId,
-            (items) => {
-              this.courses = items;
-            },
-            this.handleLoadError,
-          ),
-        ];
+        if (this.isTeacher) {
+          listeners.push(
+            watchTeacherClasses(
+              this.schoolId,
+              this.actorUid,
+              (items) => {
+                this.classes = items;
+              },
+              this.handleLoadError,
+            ),
+          );
+        } else if (this.canViewAllClasses) {
+          listeners.push(
+            watchClasses(
+              this.schoolId,
+              (items) => {
+                this.classes = items;
+              },
+              this.handleLoadError,
+            ),
+          );
+        }
+
+        if (this.canViewCourseSummary) {
+          listeners.push(
+            watchCourses(
+              this.schoolId,
+              (items) => {
+                this.courses = items;
+              },
+              this.handleLoadError,
+            ),
+          );
+        }
+
+        this.unsubscribers = listeners;
       } catch (error) {
         this.handleLoadError(error);
       }

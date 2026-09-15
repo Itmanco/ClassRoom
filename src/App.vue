@@ -95,6 +95,14 @@
       <DashboardPage
         v-if="currentPage === 'dashboard'"
         :school-id="session.activeSchool"
+        :actor-role="
+          isSystemAdmin
+            ? 'system-admin'
+            : session.membership?.role || ''
+        "
+        :actor-uid="
+          session.firebaseUser?.uid || ''
+        "
       />
 
       <StudentManager

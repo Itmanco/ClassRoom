@@ -62,8 +62,11 @@ async function seedSchoolData(schoolId) {
     await setDoc(
       doc(db, "schools", schoolId, "students", "student-1"),
       {
-        firstName: "Test",
-        lastName: "Student",
+        name: "Test Student",
+        hiragana: "てすと",
+        country: "Japan",
+        gender_id: 1,
+        isActive: true,
       }
     );
 
@@ -166,12 +169,196 @@ async function run() {
           "student-1"
         ),
         {
-          firstName: "Updated",
+          name: "Updated Student",
         }
       )
     );
 
-    console.log("✓ teacher can update students");
+    console.log(
+      "✓ teacher can update permitted student fields"
+    );
+
+    console.log(
+      "Teacher: student status update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        ),
+        {
+          isActive: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot change student status"
+    );
+
+    console.log(
+      "Teacher: unexpected student field update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        ),
+        {
+          adminOnlyField: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot add unexpected student fields"
+    );
+
+    console.log(
+      "Teacher: valid student update audit allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "auditLogs",
+          "teacher-student-update"
+        ),
+        {
+          actorUid: teacherUid,
+          actorEmail: "",
+          actorRole: "teacher",
+          action: "student.updated",
+          entityType: "student",
+          entityId: "student-1",
+          schoolId: schoolA,
+          changedFields: [
+            "name",
+          ],
+          details: {
+            entityName: "Updated Student",
+          },
+          createdAt: new Date(),
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher can create valid student update audit"
+    );
+
+    console.log(
+      "Teacher: student creation audit denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "auditLogs",
+          "teacher-student-created"
+        ),
+        {
+          actorUid: teacherUid,
+          actorEmail: "",
+          actorRole: "teacher",
+          action: "student.created",
+          entityType: "student",
+          entityId: "student-2",
+          schoolId: schoolA,
+          changedFields: [],
+          details: {},
+          createdAt: new Date(),
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot create student creation audit"
+    );
+
+    console.log(
+      "Teacher: student status audit denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "auditLogs",
+          "teacher-student-status"
+        ),
+        {
+          actorUid: teacherUid,
+          actorEmail: "",
+          actorRole: "teacher",
+          action: "student.updated",
+          entityType: "student",
+          entityId: "student-1",
+          schoolId: schoolA,
+          changedFields: [
+            "isActive",
+          ],
+          details: {},
+          createdAt: new Date(),
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot audit student status changes"
+    );
+
+    console.log(
+      "Teacher: spoofed audit actor denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "auditLogs",
+          "teacher-spoofed-actor"
+        ),
+        {
+          actorUid: "another-user",
+          actorEmail: "",
+          actorRole: "teacher",
+          action: "student.updated",
+          entityType: "student",
+          entityId: "student-1",
+          schoolId: schoolA,
+          changedFields: [
+            "name",
+          ],
+          details: {},
+          createdAt: new Date(),
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot spoof audit actor"
+    );
 
     console.log(
   "Teacher: create student denied"

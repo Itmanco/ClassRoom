@@ -29,7 +29,15 @@
     </p>
 
     <div class="content-grid">
-      <form class="card form-card" @submit.prevent="handleSave">
+      <form
+        v-if="
+          canCreateStudents ||
+          (canEditStudents &&
+            editingStudentId !== null)
+        "
+        class="card form-card"
+        @submit.prevent="handleSave"
+      >
         <h2>
           {{
             editingStudentId === null
@@ -45,7 +53,7 @@
             v-model.number="form.id"
             type="number"
             min="1"
-            :disabled="editingStudentId !== null"
+            disabled
             required
           />
         </label>
@@ -107,7 +115,10 @@
           </select>
         </label>
 
-        <label class="checkbox-label">
+        <label
+          v-if="canManageStudentStatus"
+          class="checkbox-label"
+        >
           <input v-model="form.isActive" type="checkbox" />
 
           {{ $t("students.fields.active") }}
@@ -207,6 +218,7 @@
 
             <div class="row-actions">
               <button
+                v-if="canEditStudents"
                 type="button"
                 class="secondary"
                 @click="editStudent(student)"
@@ -215,7 +227,10 @@
               </button>
 
               <button
-                v-if="student.isActive !== false"
+                v-if="
+                  canManageStudentStatus &&
+                  student.isActive !== false
+                "
                 type="button"
                 class="danger"
                 @click="handleArchive(student)"
@@ -279,6 +294,28 @@ export default {
   },
 
   computed: {
+    canCreateStudents() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
+
+    canEditStudents() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.actorRole === "teacher"
+      );
+    },
+
+    canManageStudentStatus() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
+
     activeStudentCount() {
       return this.students.filter(
         (student) => student.isActive !== false,
@@ -381,6 +418,7 @@ export default {
 
     async prepareNextStudentId() {
       if (
+        !this.canCreateStudents ||
         !this.schoolId ||
         this.editingStudentId !== null
       ) {
@@ -402,17 +440,48 @@ export default {
     },
 
     async handleSave() {
+      const isCreating =
+        this.editingStudentId === null;
+
+      if (
+        (isCreating && !this.canCreateStudents) ||
+        (!isCreating && !this.canEditStudents)
+      ) {
+        return;
+      }
+
       this.saving = true;
       this.errorMessage = "";
       this.successMessage = "";
 
-      const wasCreating = this.editingStudentId === null;
+      const wasCreating = isCreating;
       const studentName = this.form.name;
 
       try {
+        const studentData = {
+          ...this.form,
+        };
+
+        if (
+          !this.canManageStudentStatus &&
+          !isCreating
+        ) {
+          const existingStudent =
+            this.students.find(
+              (student) =>
+                student.id ===
+                this.editingStudentId,
+            );
+
+          if (existingStudent) {
+            studentData.isActive =
+              existingStudent.isActive !== false;
+          }
+        }
+
         await saveStudent(
           this.schoolId,
-          this.form,
+          studentData,
           this.editingStudentId,
           {
             actorRole:
@@ -442,6 +511,10 @@ export default {
     },
 
     editStudent(student) {
+      if (!this.canEditStudents) {
+        return;
+      }
+
       this.editingStudentId = student.id;
 
       this.form = {
@@ -463,6 +536,10 @@ export default {
     },
 
     async handleArchive(student) {
+      if (!this.canManageStudentStatus) {
+        return;
+      }
+
       const confirmed = window.confirm(
         this.$t("students.messages.archiveConfirm", {
           name: student.name,

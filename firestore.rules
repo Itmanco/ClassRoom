@@ -85,6 +85,43 @@ service cloud.firestore {
           resource.data.get("teacherUids", []);
     }
 
+    function isValidTeacherStudentAudit(
+      schoolId
+    ) {
+      return isTeacher(schoolId)
+        && request.resource.data.actorUid
+          == request.auth.uid
+        && request.resource.data.actorRole
+          == "teacher"
+        && request.resource.data.schoolId
+          == schoolId
+        && request.resource.data.entityType
+          == "student"
+        && request.resource.data.action
+          == "student.updated"
+        && request.resource.data
+          .keys()
+          .hasOnly([
+            "actorUid",
+            "actorEmail",
+            "actorRole",
+            "action",
+            "entityType",
+            "entityId",
+            "schoolId",
+            "changedFields",
+            "details",
+            "createdAt"
+          ])
+        && request.resource.data.changedFields
+          .hasOnly([
+            "name",
+            "hiragana",
+            "gender_id",
+            "country"
+          ]);
+    }
+
     // ----------------------------------------
     // Users
     // ----------------------------------------
@@ -175,10 +212,18 @@ service cloud.firestore {
         allow update:
           if canAdministerSchool(schoolId)
             || (
-              isActiveSchoolMember(schoolId)
-              && get(
-                /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
-              ).data.role == "teacher"
+              isTeacher(schoolId)
+
+              && request.resource.data
+                .diff(resource.data)
+                .affectedKeys()
+                .hasOnly([
+                  "name",
+                  "hiragana",
+                  "gender_id",
+                  "country",
+                  "updatedAt"
+                ])
             );
       }
 
@@ -326,7 +371,10 @@ service cloud.firestore {
         allow create:
           if canAdministerSchool(
             schoolId
-          );
+          )
+            || isValidTeacherStudentAudit(
+              schoolId
+            );
 
         // Audit history is immutable.
         allow update, delete:

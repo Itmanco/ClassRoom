@@ -271,21 +271,7 @@ service cloud.firestore {
           if canAdministerSchool(schoolId);
 
         allow update:
-          if canAdministerSchool(schoolId)
-            || (
-              isAssignedTeacherToClass(schoolId)
-
-              // Teachers cannot assign/remove teachers.
-              && request.resource.data.get("teacherUids", [])
-                == resource.data.get("teacherUids", [])
-
-              && request.resource.data.get("mainTeacherUid", "")
-                == resource.data.get("mainTeacherUid", "")
-
-              // Teachers cannot archive/reactivate classes.
-              && request.resource.data.get("active", true)
-                == resource.data.get("active", true)
-            );
+          if canAdministerSchool(schoolId);
 
         match /enrollments/{enrollmentId} {
 

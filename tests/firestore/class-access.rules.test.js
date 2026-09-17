@@ -303,10 +303,10 @@ async function run() {
     );
 
     console.log(
-      "Assigned teacher: class update allowed"
+      "Assigned teacher: class update denied"
     );
 
-    await assertSucceeds(
+    await assertFails(
       updateDoc(
         doc(
           teacherDb,
@@ -316,13 +316,13 @@ async function run() {
           "CLASS_A"
         ),
         {
-          name: "Updated Class Name",
+          name: "Forbidden Class Rename",
         }
       )
     );
 
     console.log(
-      "✓ assigned teacher can update class"
+      "✓ assigned teacher cannot update class document"
     );
 
     console.log(

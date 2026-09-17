@@ -561,7 +561,10 @@
             </button>
 
             <button
-              v-if="plan.active !== false"
+              v-if="
+                canArchiveSeatingPlans &&
+                plan.active !== false
+              "
               class="archive"
               @click="confirmArchive(plan)"
             >
@@ -667,6 +670,23 @@ export default {
   computed: {
     isTeacher() {
       return this.actorRole === "teacher";
+    },
+
+    isMainTeacher() {
+      return (
+        this.actorRole === "teacher" &&
+        Boolean(this.actorUid) &&
+        this.selectedClass?.mainTeacherUid ===
+          this.actorUid
+      );
+    },
+
+    canArchiveSeatingPlans() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.isMainTeacher
+      );
     },
 
     isEmbedded() {
@@ -1316,6 +1336,9 @@ export default {
     },
 
     async confirmArchive(plan) {
+      if (!this.canArchiveSeatingPlans) {
+        return;
+      }
       const confirmed = window.confirm(
         this.$t(
           "seatingPlans.messages.archiveConfirm",

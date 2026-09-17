@@ -79,6 +79,16 @@ service cloud.firestore {
         ).data.get("teacherUids", []);
     }
 
+    function isMainTeacher(schoolId, classId) {
+      return isTeacher(schoolId)
+        && exists(
+          /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
+        )
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
+        ).data.get("mainTeacherUid", "") == request.auth.uid;
+    }
+
     function isAssignedTeacherToClass(schoolId) {
       return isTeacher(schoolId)
         && request.auth.uid in
@@ -284,10 +294,28 @@ service cloud.firestore {
         }
 
         match /seatingPlans/{seatingPlanId} {
-
-          allow read, write:
+          allow read:
             if canAdministerSchool(schoolId)
               || isAssignedTeacher(schoolId, classId);
+
+          allow create:
+            if canAdministerSchool(schoolId)
+              || isAssignedTeacher(schoolId, classId);
+
+          allow update:
+            if canAdministerSchool(schoolId)
+              || (
+                isAssignedTeacher(schoolId, classId)
+                && (
+                  request.resource.data.get("active", true)
+                    == resource.data.get("active", true)
+                  || isMainTeacher(schoolId, classId)
+                )
+              );
+
+          allow delete:
+            if canAdministerSchool(schoolId)
+              || isMainTeacher(schoolId, classId);
         }
       }
 

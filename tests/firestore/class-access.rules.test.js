@@ -9,6 +9,7 @@ const {
 
 const {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -157,10 +158,12 @@ async function run() {
     const otherTeacherUid = "teacher-other";
     const adminUid = "school-admin";
     const studentId = "student-1";
+    const mainTeacherUid = "teacher-main";
 
     await seedUser(assignedTeacherUid);
     await seedUser(otherTeacherUid);
     await seedUser(adminUid);
+    await seedUser(mainTeacherUid);
 
     await seedMembership(
       schoolId,
@@ -180,11 +183,20 @@ async function run() {
       "school-admin"
     );
 
+    await seedMembership(
+      schoolId,
+      mainTeacherUid,
+      "teacher"
+    );
+
     await seedClass(
       schoolId,
       "CLASS_A",
-      [assignedTeacherUid],
-      assignedTeacherUid
+      [
+        assignedTeacherUid,
+        mainTeacherUid,
+      ],
+      mainTeacherUid
     );
 
     await seedClass(
@@ -215,6 +227,11 @@ async function run() {
     const teacherDb =
       testEnv
         .authenticatedContext(assignedTeacherUid)
+        .firestore();
+
+    const mainTeacherDb =
+      testEnv
+        .authenticatedContext(mainTeacherUid)
         .firestore();
 
     const adminDb =
@@ -536,7 +553,34 @@ console.log(
     );
 
     console.log(
-      "Assigned teacher: seating plan write allowed"
+      "Assigned teacher: seating plan create allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_TEACHER"
+        ),
+        {
+          name: "Teacher Seating Plan",
+          seats: [],
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can create seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating plan update allowed"
     );
 
     await assertSucceeds(
@@ -558,6 +602,199 @@ console.log(
 
     console.log(
       "✓ assigned teacher can update seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating plan archive denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        ),
+        {
+          active: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned non-main teacher cannot archive seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating plan delete denied"
+    );
+
+    await assertFails(
+      deleteDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ assigned non-main teacher cannot delete seating plan"
+    );
+
+    console.log(
+      "Main teacher: seating plan read allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ main teacher can read seating plan"
+    );
+
+    console.log(
+      "Main teacher: seating plan create allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_MAIN_TEACHER"
+        ),
+        {
+          name: "Main Teacher Seating Plan",
+          seats: [],
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ main teacher can create seating plan"
+    );
+
+    console.log(
+      "Main teacher: seating plan update allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        ),
+        {
+          name: "Main Teacher Updated Plan",
+        }
+      )
+    );
+
+    console.log(
+      "✓ main teacher can update seating plan"
+    );
+
+    console.log(
+      "Main teacher: seating plan archive allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        ),
+        {
+          active: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ main teacher can archive seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating plan reactivation denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        ),
+        {
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned non-main teacher cannot reactivate seating plan"
+    );
+
+    console.log(
+      "Main teacher: seating plan delete allowed"
+    );
+
+    await assertSucceeds(
+      deleteDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_MAIN_TEACHER"
+        )
+      )
+    );
+
+    console.log(
+      "✓ main teacher can delete seating plan"
     );
 
     console.log(
@@ -583,7 +820,34 @@ console.log(
     );
 
     console.log(
-      "Unassigned teacher: seating plan write denied"
+      "Unassigned teacher: seating plan create denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_FORBIDDEN"
+        ),
+        {
+          name: "Forbidden Seating Plan",
+          seats: [],
+          active: true,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot create unassigned seating plan"
+    );
+
+    console.log(
+      "Unassigned teacher: seating plan update denied"
     );
 
     await assertFails(
@@ -605,6 +869,119 @@ console.log(
 
     console.log(
       "✓ teacher cannot update unassigned seating plan"
+    );
+
+    console.log(
+      "Unassigned teacher: seating plan archive denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        ),
+        {
+          active: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot archive unassigned seating plan"
+    );
+
+    console.log(
+      "Unassigned teacher: seating plan delete denied"
+    );
+
+    await assertFails(
+      deleteDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        )
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot delete unassigned seating plan"
+    );
+
+    console.log(
+      "School Admin: seating plan archive allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_B"
+        ),
+        {
+          active: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can archive seating plan"
+    );
+
+    console.log(
+      "School Admin: seating plan delete allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_ADMIN_DELETE"
+        ),
+        {
+          name: "Admin Delete Test Plan",
+          seats: [],
+          active: true,
+        }
+      )
+    );
+
+    await assertSucceeds(
+      deleteDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_B",
+          "seatingPlans",
+          "PLAN_ADMIN_DELETE"
+        )
+      )
+    );
+
+    console.log(
+      "✓ school admin can delete seating plan"
     );
 
     console.log(

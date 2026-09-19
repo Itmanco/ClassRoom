@@ -458,12 +458,14 @@
       "date": "Date",
       "room": "Room",
       "capacity": "Capacity",
-      "activeEnrollments": "Active enrollments"
+      "activeEnrollments": "Active enrollments",
+      "mainTeacher": "Main Teacher"
     },
 
     "placeholders": {
       "class": "Select a class",
       "title": "August seating plan",
+      "notAssigned": "Not assigned",
       "emptySeat": "Empty"
     },
 
@@ -519,6 +521,7 @@
       "saveError": "Unable to save the seating plan: {error}",
       "archiveError": "Unable to archive the seating plan: {error}",
       "exported": "The seating plan was exported successfully.",
+      "teachersLoadError": "Unable to load assigned teachers: {error}",
       "exportError": "Unable to export the seating plan: {error}"
     }
   },

@@ -67,6 +67,17 @@
 
         <div>
           <strong>
+            {{ $t("seatingPlans.fields.mainTeacher") }}:
+          </strong>
+
+          {{
+            mainTeacherName ||
+            $t("seatingPlans.placeholders.notAssigned")
+          }}
+        </div>
+
+        <div>
+          <strong>
             {{ $t("seatingPlans.fields.capacity") }}:
           </strong>
 
@@ -582,6 +593,9 @@ import {
   exportSeatingPlan,
 } from "../services/seatingPlanExportService";
 import {
+  getClassTeacherDirectory,
+} from "../services/classTeacherDirectoryService";
+import {
   watchClasses,
   watchTeacherClasses,
 } from "../services/classService";
@@ -637,6 +651,7 @@ export default {
       students: [],
       enrollments: [],
       plans: [],
+      teacherDirectory: [],
       seats: [],
       selectedClassId: this.classId || "",
       editingPlanId: "",
@@ -678,6 +693,39 @@ export default {
         Boolean(this.actorUid) &&
         this.selectedClass?.mainTeacherUid ===
           this.actorUid
+      );
+    },
+
+    mainTeacherName() {
+      const mainTeacherUid =
+        this.selectedClass?.mainTeacherUid;
+
+      if (!mainTeacherUid) {
+        return "";
+      }
+
+      const teacher =
+        this.teacherDirectory.find(
+          (item) =>
+            item.id === mainTeacherUid,
+        );
+
+      if (!teacher) {
+        return "";
+      }
+
+      const fullName = [
+        teacher.firstName,
+        teacher.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      return (
+        teacher.displayName ||
+        fullName ||
+        teacher.id
       );
     },
 
@@ -816,6 +864,7 @@ export default {
 
     if (this.selectedClassId) {
       this.startClassListeners();
+      this.loadTeacherDirectory();
     }
   },
 
@@ -845,6 +894,7 @@ export default {
 
     selectedClassId() {
       this.startClassListeners();
+      this.loadTeacherDirectory();
       this.resetForm();
     },
 
@@ -996,6 +1046,43 @@ export default {
           );
         },
       );
+    },
+
+    async loadTeacherDirectory() {
+      this.teacherDirectory = [];
+
+      if (!this.selectedClassId) {
+        return;
+      }
+
+      const classId =
+        this.selectedClassId;
+
+      try {
+        const teachers =
+          await getClassTeacherDirectory(
+            this.schoolId,
+            classId,
+          );
+
+        if (
+          this.selectedClassId === classId
+        ) {
+          this.teacherDirectory =
+            teachers;
+        }
+      } catch (error) {
+        if (
+          this.selectedClassId === classId
+        ) {
+          this.errorMessage = this.$t(
+            "seatingPlans.messages.teachersLoadError",
+            {
+              error: error.message,
+            },
+          );
+        }
+      }
     },
 
     stopListeners() {
@@ -1417,6 +1504,10 @@ export default {
           classroom: this.selectedClass,
           room,
           students: this.students,
+          mainTeacherName: this.mainTeacherName,
+          mainTeacherLabel: this.$t(
+            "seatingPlans.fields.mainTeacher",
+          ),
         });
 
         this.message = this.$t(

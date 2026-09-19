@@ -191,6 +191,153 @@ async function requireSchoolAdmin(
 }
 
 /**
+ * Verifies that the caller may access teacher display
+ * information for a specific class.
+ *
+ * System Admins and School Admins may access any class
+ * in the school. Teachers must be active members and
+ * assigned to the requested class.
+ *
+ * @param {Object} request Callable function request.
+ * @param {string} schoolId School to authorize.
+ * @param {string} classId Class to authorize.
+ * @return {Promise<Object>} Caller and class information.
+ */
+async function requireClassTeacherDirectoryAccess(
+    request,
+    schoolId,
+    classId,
+) {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "Authentication is required.",
+    );
+  }
+
+  const uid =
+    request.auth.uid;
+
+  const userDocument =
+    await db
+        .collection("users")
+        .doc(uid)
+        .get();
+
+  if (!userDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "User profile not found.",
+    );
+  }
+
+  const profile =
+    userDocument.data();
+
+  if (profile.active === false) {
+    throw new HttpsError(
+        "permission-denied",
+        "ACCOUNT_INACTIVE",
+    );
+  }
+
+  const classDocument =
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("classes")
+        .doc(classId)
+        .get();
+
+  if (!classDocument.exists) {
+    throw new HttpsError(
+        "not-found",
+        "Class not found.",
+    );
+  }
+
+  if (
+    profile.systemRole ===
+    "system-admin"
+  ) {
+    return {
+      uid,
+      profile,
+      role: "system-admin",
+      classData:
+        classDocument.data(),
+    };
+  }
+
+  const membershipDocument =
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("members")
+        .doc(uid)
+        .get();
+
+  if (!membershipDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "Class access is required.",
+    );
+  }
+
+  const membership =
+    membershipDocument.data();
+
+  if (membership.active === false) {
+    throw new HttpsError(
+        "permission-denied",
+        "Class access is required.",
+    );
+  }
+
+  if (
+    membership.role ===
+    "school-admin"
+  ) {
+    return {
+      uid,
+      profile,
+      role: "school-admin",
+      membership,
+      classData:
+        classDocument.data(),
+    };
+  }
+
+  const classData =
+    classDocument.data();
+
+  const teacherUids =
+    Array.isArray(
+        classData.teacherUids,
+    ) ?
+      classData.teacherUids :
+      [];
+
+  if (
+    membership.role !== "teacher" ||
+    !teacherUids.includes(uid)
+  ) {
+    throw new HttpsError(
+        "permission-denied",
+        "Class access is required.",
+    );
+  }
+
+  return {
+    uid,
+    profile,
+    role: "teacher",
+    membership,
+    classData,
+  };
+}
+
+/**
  * Validates and normalizes a required text value.
  *
  * @param {*} value Value to validate.
@@ -644,6 +791,96 @@ exports.getSchoolUsers =
                       },
                   ),
             );
+      },
+  );
+
+/**
+ * Returns safe display information for teachers assigned
+ * to a class.
+ *
+ * The caller must be a System Admin, School Admin, or
+ * an active Teacher assigned to the requested class.
+ */
+exports.getClassTeacherDirectory =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          requireText(
+              data.schoolId,
+              "School ID",
+          );
+
+        const classId =
+          requireText(
+              data.classId,
+              "Class ID",
+          );
+
+        const {
+          classData,
+        } =
+          await requireClassTeacherDirectoryAccess(
+              request,
+              schoolId,
+              classId,
+          );
+
+        const teacherUids =
+          [
+            ...new Set(
+                (
+                  Array.isArray(
+                      classData.teacherUids,
+                  ) ?
+                    classData.teacherUids :
+                    []
+                )
+                    .map(
+                        (uid) =>
+                          String(uid)
+                              .trim(),
+                    )
+                    .filter(Boolean),
+            ),
+          ];
+
+        const teachers =
+          await Promise.all(
+              teacherUids.map(
+                  async (uid) => {
+                    const userDocument =
+                      await db
+                          .collection("users")
+                          .doc(uid)
+                          .get();
+
+                    if (!userDocument.exists) {
+                      return null;
+                    }
+
+                    const user =
+                      userDocument.data();
+
+                    return {
+                      id: uid,
+
+                      displayName:
+                        user.displayName || "",
+
+                      firstName:
+                        user.firstName || "",
+
+                      lastName:
+                        user.lastName || "",
+                    };
+                  },
+              ),
+          );
+
+        return teachers.filter(Boolean);
       },
   );
 

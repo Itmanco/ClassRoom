@@ -80,13 +80,16 @@ service cloud.firestore {
     }
 
     function isMainTeacher(schoolId, classId) {
-      return isTeacher(schoolId)
-        && exists(
-          /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
-        )
+      return isAssignedTeacher(
+        schoolId,
+        classId
+      )
         && get(
           /databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)
-        ).data.get("mainTeacherUid", "") == request.auth.uid;
+        ).data.get(
+          "mainTeacherUid",
+          ""
+        ) == request.auth.uid;
     }
 
     function isAssignedTeacherToClass(schoolId) {

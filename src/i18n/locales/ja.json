@@ -458,12 +458,14 @@
       "date": "日付",
       "room": "教室",
       "capacity": "定員",
+      "mainTeacher": "メイン講師",
       "activeEnrollments": "所属中の生徒"
     },
 
     "placeholders": {
       "class": "クラスを選択",
       "title": "8月座席表",
+      "notAssigned": "未設定",
       "emptySeat": "空席"
     },
 
@@ -520,6 +522,7 @@
       "saveError": "座席表を保存できませんでした：{error}",
       "archiveError": "座席表をアーカイブできませんでした：{error}",
       "exported": "座席表をExcelファイルに出力しました。",
+      "teachersLoadError": "担当講師を読み込めませんでした：{error}",
       "exportError": "座席表を出力できませんでした：{error}"
     }
   },

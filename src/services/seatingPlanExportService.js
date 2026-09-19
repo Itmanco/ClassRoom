@@ -6,16 +6,171 @@ function safeFileName(value) {
     .trim();
 }
 
-function studentLabel(student) {
+const STUDENT_FONT_SIZE = 8;
+const SEAT_TEXT_CAPACITY = 18;
+
+function textVisualLength(value) {
+  return Array.from(
+    String(value || ""),
+  ).reduce(
+    (length, character) => {
+      const codePoint =
+        character.codePointAt(0);
+
+      return (
+        length +
+        (
+          codePoint > 0xff
+            ? 2
+            : 1
+        )
+      );
+    },
+    0,
+  );
+}
+
+function textFitsAtSize(
+  value,
+  fontSize,
+) {
+  const availableLength =
+    SEAT_TEXT_CAPACITY *
+    (
+      STUDENT_FONT_SIZE /
+      fontSize
+    );
+
+  return (
+    textVisualLength(value) <=
+    availableLength
+  );
+}
+
+function truncateToFit(
+  value,
+  fontSize,
+) {
+  const text =
+    String(value || "").trim();
+
+  if (
+    !text ||
+    textFitsAtSize(
+      text,
+      fontSize,
+    )
+  ) {
+    return text;
+  }
+
+  let result = "";
+
+  for (
+    const character of Array.from(text)
+  ) {
+    const candidate =
+      `${result}${character}`;
+
+    if (
+      !textFitsAtSize(
+        `${candidate}…`,
+        fontSize,
+      )
+    ) {
+      break;
+    }
+
+    result = candidate;
+  }
+
+  return result
+    ? `${result}…`
+    : "";
+}
+
+function shortenName(
+  value,
+  fontSize,
+) {
+  const text =
+    String(value || "").trim();
+
+  if (
+    textFitsAtSize(
+      text,
+      fontSize,
+    )
+  ) {
+    return text;
+  }
+
+  const parts =
+    text
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if (parts.length > 1) {
+    const firstPart =
+      parts[0];
+
+    if (
+      textFitsAtSize(
+        firstPart,
+        fontSize,
+      )
+    ) {
+      return firstPart;
+    }
+
+    return truncateToFit(
+      firstPart,
+      fontSize,
+    );
+  }
+
+  return truncateToFit(
+    text,
+    fontSize,
+  );
+}
+
+function studentExportLabel(
+  student,
+) {
   if (!student) {
-    return "";
+    return {
+      label: "",
+      fontSize:
+        STUDENT_FONT_SIZE,
+    };
   }
 
-  if (student.hiragana) {
-    return `${student.name}\n${student.hiragana}`;
-  }
+  const lines = [
+    student.name,
+    student.hiragana,
+  ]
+    .filter(Boolean)
+    .map(
+      (value) =>
+        String(value).trim(),
+    );
 
-  return student.name || "";
+  const fittedLines =
+    lines.map(
+      (line) =>
+        shortenName(
+          line,
+          STUDENT_FONT_SIZE,
+        ),
+    );
+
+  return {
+    label:
+      fittedLines.join("\n"),
+    fontSize:
+      STUDENT_FONT_SIZE,
+  };
 }
 
 function printedAtLabel() {
@@ -192,6 +347,8 @@ export async function exportSeatingPlan({
   classroom,
   room,
   students,
+  mainTeacherName = "",
+  mainTeacherLabel = "",
 }) {
   if (!plan) {
     throw new Error(
@@ -605,6 +762,10 @@ export async function exportSeatingPlan({
                 ),
               )
             : null;
+        const studentExport =
+          studentExportLabel(
+            student,
+          );
 
         setCell(
           worksheet,
@@ -612,15 +773,14 @@ export async function exportSeatingPlan({
           startColumn +
             seatNumber -
             1,
-          studentLabel(
-            student,
-          ),
+          studentExport.label,
           cellStyle({
             bold:
               Boolean(
                 student,
               ),
-            fontSize: 11,
+            fontSize:
+              studentExport.fontSize,
           }),
         );
       }
@@ -782,6 +942,34 @@ export async function exportSeatingPlan({
   );
 
   row += 1;
+
+  // --------------------------------------------------
+  // Main teacher
+  // --------------------------------------------------
+
+  if (mainTeacherName) {
+    merge(
+      worksheet,
+      row,
+      0,
+      row,
+      totalColumns - 1,
+    );
+
+    setCell(
+      worksheet,
+      row,
+      0,
+      `${mainTeacherLabel}: ${mainTeacherName}`,
+      cellStyle({
+        fontSize: 8,
+        horizontal: "right",
+        border: false,
+      }),
+    );
+
+    row += 1;
+  }
 
   const lastContentRow =
     row - 1;

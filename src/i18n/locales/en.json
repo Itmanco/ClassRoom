@@ -486,7 +486,8 @@
       "clear": "Clear",
       "save": "Save plan",
       "update": "Update plan",
-      "exportExcel": "Export Excel"
+      "exportExcel": "Export Excel",
+      "reactivate": "Reactivate"
     },
 
     "list": {
@@ -522,7 +523,9 @@
       "archiveError": "Unable to archive the seating plan: {error}",
       "exported": "The seating plan was exported successfully.",
       "teachersLoadError": "Unable to load assigned teachers: {error}",
-      "exportError": "Unable to export the seating plan: {error}"
+      "exportError": "Unable to export the seating plan: {error}",
+      "reactivated": "{title} was reactivated.",
+      "reactivateError": "Unable to reactivate the seating plan: {error}"
     }
   },
 

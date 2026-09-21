@@ -581,6 +581,16 @@
             >
               {{ $t("common.archive") }}
             </button>
+            <button
+              v-if="
+                canArchiveSeatingPlans &&
+                plan.active === false
+              "
+              type="button"
+              @click="reactivatePlan(plan)"
+            >
+              {{ $t("seatingPlans.actions.reactivate") }}
+            </button>
           </div>
         </article>
       </section>
@@ -610,6 +620,7 @@ import {
 } from "../services/studentService";
 import {
   archiveSeatingPlan,
+  reactivateSeatingPlan,
   saveSeatingPlan,
   watchSeatingPlans,
 } from "../services/seatingPlanService";
@@ -1458,6 +1469,40 @@ export default {
       } catch (error) {
         this.errorMessage = this.$t(
           "seatingPlans.messages.archiveError",
+          {
+            error: error.message,
+          },
+        );
+      }
+    },
+
+    async reactivatePlan(plan) {
+      if (
+        !this.canArchiveSeatingPlans ||
+        plan.active !== false
+      ) {
+        return;
+      }
+
+      this.message = "";
+      this.errorMessage = "";
+
+      try {
+        await reactivateSeatingPlan(
+          this.schoolId,
+          this.selectedClassId,
+          plan.id,
+        );
+
+        this.message = this.$t(
+          "seatingPlans.messages.reactivated",
+          {
+            title: plan.title,
+          },
+        );
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "seatingPlans.messages.reactivateError",
           {
             error: error.message,
           },

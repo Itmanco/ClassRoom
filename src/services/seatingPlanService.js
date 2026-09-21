@@ -141,3 +141,40 @@ export async function archiveSeatingPlan(schoolId, classId, planId) {
   if (!existing.exists()) throw new Error(`Seating plan ${id} does not exist.`);
   await updateDoc(planRef, { active: false, updatedAt: serverTimestamp() });
 }
+
+export async function reactivateSeatingPlan(
+  schoolId,
+  classId,
+  planId,
+) {
+  const id = requireText(
+    planId,
+    "Seating plan ID",
+  );
+
+  const planRef = doc(
+    getSeatingPlansRef(
+      schoolId,
+      classId,
+    ),
+    id,
+  );
+
+  const existing =
+    await getDoc(planRef);
+
+  if (!existing.exists()) {
+    throw new Error(
+      `Seating plan ${id} does not exist.`,
+    );
+  }
+
+  await updateDoc(
+    planRef,
+    {
+      active: true,
+      updatedAt:
+        serverTimestamp(),
+    },
+  );
+}

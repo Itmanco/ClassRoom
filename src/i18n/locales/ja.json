@@ -487,7 +487,8 @@
       "clear": "クリア",
       "save": "座席表を保存",
       "update": "座席表を更新",
-      "exportExcel": "Excelに出力"
+      "exportExcel": "Excelに出力",
+      "reactivate": "再有効化"
     },
 
     "list": {
@@ -523,7 +524,9 @@
       "archiveError": "座席表をアーカイブできませんでした：{error}",
       "exported": "座席表をExcelファイルに出力しました。",
       "teachersLoadError": "担当講師を読み込めませんでした：{error}",
-      "exportError": "座席表を出力できませんでした：{error}"
+      "exportError": "座席表を出力できませんでした：{error}",
+      "reactivated": "{title} を再有効化しました。",
+      "reactivateError": "座席表を再有効化できませんでした：{error}"
     }
   },
 

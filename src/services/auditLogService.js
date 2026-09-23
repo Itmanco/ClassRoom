@@ -40,6 +40,7 @@ export function createAuditLogWrite(
     actorRole = "",
     changedFields = [],
     details = {},
+    context = null,
   },
 ) {
   const actor =
@@ -115,6 +116,15 @@ export function createAuditLogWrite(
         typeof details === "object"
           ? details
           : {},
+
+      ...(
+        context &&
+        typeof context === "object"
+          ? {
+              context,
+            }
+          : {}
+      ),
 
       createdAt:
         serverTimestamp(),

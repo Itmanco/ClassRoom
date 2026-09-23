@@ -135,6 +135,96 @@ service cloud.firestore {
           ]);
     }
 
+    function isValidTeacherSeatingPlanAudit(
+      schoolId
+    ) {
+      return request.resource.data.context
+          is map
+        && request.resource.data.context.classId
+          is string
+        && isAssignedTeacher(
+          schoolId,
+          request.resource.data.context.classId
+        )
+        && request.resource.data.actorUid
+          == request.auth.uid
+        && request.resource.data.actorRole
+          == "teacher"
+        && request.resource.data.schoolId
+          == schoolId
+        && request.resource.data.entityType
+          == "seatingPlan"
+        && request.resource.data.action in [
+          "seatingPlan.created",
+          "seatingPlan.updated"
+        ]
+        && request.resource.data
+          .keys()
+          .hasOnly([
+            "actorUid",
+            "actorEmail",
+            "actorRole",
+            "action",
+            "entityType",
+            "entityId",
+            "schoolId",
+            "changedFields",
+            "details",
+            "context",
+            "createdAt"
+          ])
+        && request.resource.data.context
+          .keys()
+          .hasOnly([
+            "classId"
+          ]);
+    }
+
+    function isValidMainTeacherSeatingPlanAudit(
+      schoolId
+    ) {
+      return request.resource.data.context
+          is map
+        && request.resource.data.context.classId
+          is string
+        && isMainTeacher(
+          schoolId,
+          request.resource.data.context.classId
+        )
+        && request.resource.data.actorUid
+          == request.auth.uid
+        && request.resource.data.actorRole
+          == "teacher"
+        && request.resource.data.schoolId
+          == schoolId
+        && request.resource.data.entityType
+          == "seatingPlan"
+        && request.resource.data.action in [
+          "seatingPlan.archived",
+          "seatingPlan.reactivated"
+        ]
+        && request.resource.data
+          .keys()
+          .hasOnly([
+            "actorUid",
+            "actorEmail",
+            "actorRole",
+            "action",
+            "entityType",
+            "entityId",
+            "schoolId",
+            "changedFields",
+            "details",
+            "context",
+            "createdAt"
+          ])
+        && request.resource.data.context
+          .keys()
+          .hasOnly([
+            "classId"
+          ]);
+    }
+
     // ----------------------------------------
     // Users
     // ----------------------------------------
@@ -390,6 +480,12 @@ service cloud.firestore {
             schoolId
           )
             || isValidTeacherStudentAudit(
+              schoolId
+            )
+            || isValidTeacherSeatingPlanAudit(
+              schoolId
+            )
+            || isValidMainTeacherSeatingPlanAudit(
               schoolId
             );
 

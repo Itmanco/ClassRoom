@@ -413,7 +413,59 @@
                   {{ fieldLabel(field) }}
                 </strong>
 
-                <div class="change-values">
+                <div
+                  v-if="
+                    field === 'assignments' &&
+                    Array.isArray(
+                      change.students,
+                    )
+                  "
+                  class="assignment-changes"
+                >
+                  <div
+                    v-for="
+                      student
+                      in change.students
+                    "
+                    :key="student.studentId"
+                    class="assignment-change"
+                  >
+                    <strong>
+                      {{ student.studentName }}
+                    </strong>
+
+                    <span>
+                      {{
+                        $t(
+                          "adminAudit.details.previousPosition",
+                        )
+                      }}:
+                      {{
+                        formatSeatPosition(
+                          student.before,
+                        )
+                      }}
+                    </span>
+
+                    <span>
+                      {{
+                        $t(
+                          "adminAudit.details.updatedPosition",
+                        )
+                      }}:
+                      {{
+                        formatSeatPosition(
+                          student.after,
+                        )
+                      }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-else
+                  class="change-values"
+                >
                   <span>
                     {{
                       $t(
@@ -695,6 +747,24 @@ export default {
         );
     },
 
+    formatSeatPosition(
+      position,
+    ) {
+      if (!position) {
+        return "—";
+      }
+
+      return this.$t(
+        "adminAudit.details.seatPosition",
+        {
+          desk:
+            position.deskNumber,
+          seat:
+            position.seatNumber,
+        },
+      );
+    },
+
     formatDetailValue(
       value,
     ) {
@@ -710,9 +780,36 @@ export default {
           value,
         )
       ) {
-        return value.join(
-          ", ",
-        );
+        if (
+          value.every(
+            (item) =>
+              item &&
+              typeof item ===
+                "object" &&
+              "studentId" in item &&
+              "deskNumber" in item &&
+              "seatNumber" in item,
+          )
+        ) {
+          return value
+            .map(
+              (item) =>
+                `${item.studentId} (Desk ${item.deskNumber}, Seat ${item.seatNumber})`,
+            )
+            .join(", ");
+        }
+
+        return value
+          .map(
+            (item) =>
+              typeof item ===
+              "object"
+                ? JSON.stringify(
+                    item,
+                  )
+                : String(item),
+          )
+          .join(", ");
       }
 
       if (
@@ -898,6 +995,23 @@ export default {
   display: block;
   margin-bottom: 6px;
   font-weight: 700;
+}
+
+.assignment-changes {
+  display: grid;
+  gap: 10px;
+}
+
+.assignment-change {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.assignment-change span {
+  color: #667085;
 }
 
 .technical-value {

@@ -6,9 +6,12 @@ import {
   getDocs,
   onSnapshot,
   serverTimestamp,
-  setDoc,
-  updateDoc,
+  writeBatch,
 } from "firebase/firestore";
+
+import {
+  createAuditLogWrite,
+} from "./auditLogService";
 
 function requireText(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -108,6 +111,156 @@ function validatePlan(plan) {
   };
 }
 
+function getAssignmentChanges(
+  previousAssignments = [],
+  nextAssignments = [],
+  studentNames = {},
+) {
+  const previousByStudent =
+    new Map(
+      previousAssignments.map(
+        (item) => [
+          String(item.studentId),
+          item,
+        ],
+      ),
+    );
+
+  const nextByStudent =
+    new Map(
+      nextAssignments.map(
+        (item) => [
+          String(item.studentId),
+          item,
+        ],
+      ),
+    );
+
+  const studentIds =
+    new Set([
+      ...previousByStudent.keys(),
+      ...nextByStudent.keys(),
+    ]);
+
+  const changes = [];
+
+  studentIds.forEach(
+    (studentId) => {
+      const before =
+        previousByStudent.get(
+          studentId,
+        );
+
+      const after =
+        nextByStudent.get(
+          studentId,
+        );
+
+      const unchanged =
+        before &&
+        after &&
+        before.deskNumber ===
+          after.deskNumber &&
+        before.seatNumber ===
+          after.seatNumber;
+
+      if (unchanged) {
+        return;
+      }
+
+      changes.push({
+        studentId,
+
+        studentName:
+          studentNames[studentId] ||
+          studentId,
+
+        before: before
+          ? {
+              deskNumber:
+                before.deskNumber,
+              seatNumber:
+                before.seatNumber,
+            }
+          : null,
+
+        after: after
+          ? {
+              deskNumber:
+                after.deskNumber,
+              seatNumber:
+                after.seatNumber,
+            }
+          : null,
+      });
+    },
+  );
+
+  return changes;
+}
+
+function getChanges(
+  previous,
+  next,
+  studentNames = {},
+) {
+  const trackedFields = [
+    "title",
+    "planDate",
+    "roomId",
+    "deskCount",
+    "seatsPerDesk",
+    "desksPerRow",
+    "teacherPosition",
+    "capacity",
+    "assignments",
+    "active",
+  ];
+
+  const changes = {};
+
+  for (
+    const field
+    of trackedFields
+  ) {
+    const before =
+      previous?.[field];
+
+    const after =
+      next?.[field];
+
+    if (field === "assignments") {
+      const assignmentChanges =
+        getAssignmentChanges(
+          before || [],
+          after || [],
+          studentNames,
+        );
+
+      if (assignmentChanges.length) {
+        changes.assignments = {
+          students:
+            assignmentChanges,
+        };
+      }
+
+      continue;
+    }
+
+    if (before !== after) {
+      changes[field] = {
+        before:
+          before ?? null,
+
+        after:
+          after ?? null,
+      };
+    }
+  }
+
+  return changes;
+}
+
 export async function getSeatingPlans(schoolId, classId) {
   const snapshot = await getDocs(getSeatingPlansRef(schoolId, classId));
   return sortPlans(snapshot.docs.map(mapPlan));
@@ -121,44 +274,153 @@ export function watchSeatingPlans(schoolId, classId, onChange, onError) {
   );
 }
 
-export async function saveSeatingPlan(schoolId, classId, plan) {
-  requireContext(schoolId, classId);
-  const normalized = validatePlan(plan);
-  const planRef = plan.id
-    ? doc(getSeatingPlansRef(schoolId, classId), String(plan.id))
-    : doc(getSeatingPlansRef(schoolId, classId));
-  const existing = await getDoc(planRef);
-  const data = { ...normalized, updatedAt: serverTimestamp() };
-  if (!existing.exists()) data.createdAt = serverTimestamp();
-  await setDoc(planRef, data, { merge: true });
+export async function saveSeatingPlan(
+  schoolId,
+  classId,
+  plan,
+  options = {},
+) {
+  requireContext(
+    schoolId,
+    classId,
+  );
+
+  const normalized =
+    validatePlan(plan);
+
+  const planRef =
+    plan.id
+      ? doc(
+          getSeatingPlansRef(
+            schoolId,
+            classId,
+          ),
+          String(plan.id),
+        )
+      : doc(
+          getSeatingPlansRef(
+            schoolId,
+            classId,
+          ),
+        );
+
+  const existing =
+    await getDoc(planRef);
+
+  const isNew =
+    !existing.exists();
+
+  const previous =
+    existing.exists()
+      ? existing.data()
+      : null;
+
+  const changes =
+  previous
+    ? getChanges(
+        previous,
+        normalized,
+        options.studentNames || {},
+      )
+    : {};
+
+  const changedFields =
+    Object.keys(
+      changes,
+    );
+
+  const data = {
+    ...normalized,
+    updatedAt:
+      serverTimestamp(),
+  };
+
+  if (isNew) {
+    data.createdAt =
+      serverTimestamp();
+  }
+
+  const batch =
+    writeBatch(db);
+
+  batch.set(
+    planRef,
+    data,
+    {
+      merge: true,
+    },
+  );
+
+  const audit =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          isNew
+            ? "seatingPlan.created"
+            : "seatingPlan.updated",
+
+        entityType:
+          "seatingPlan",
+
+        entityId:
+          planRef.id,
+
+        actorRole:
+          options.actorRole ||
+          "",
+
+        changedFields,
+
+        details: {
+          entityName:
+            normalized.title,
+
+          ...(
+            !isNew
+              ? {
+                  changes,
+                }
+              : {}
+          ),
+        },
+
+        context: {
+          classId,
+        },
+      },
+    );
+
+  batch.set(
+    audit.ref,
+    audit.data,
+  );
+
+  await batch.commit();
+
   return planRef.id;
 }
 
-export async function archiveSeatingPlan(schoolId, classId, planId) {
-  const id = requireText(planId, "Seating plan ID");
-  const planRef = doc(getSeatingPlansRef(schoolId, classId), id);
-  const existing = await getDoc(planRef);
-  if (!existing.exists()) throw new Error(`Seating plan ${id} does not exist.`);
-  await updateDoc(planRef, { active: false, updatedAt: serverTimestamp() });
-}
-
-export async function reactivateSeatingPlan(
+export async function archiveSeatingPlan(
   schoolId,
   classId,
   planId,
+  options = {},
 ) {
-  const id = requireText(
-    planId,
-    "Seating plan ID",
-  );
+  const id =
+    requireText(
+      planId,
+      "Seating plan ID",
+    );
 
-  const planRef = doc(
-    getSeatingPlansRef(
-      schoolId,
-      classId,
-    ),
-    id,
-  );
+  const planRef =
+    doc(
+      getSeatingPlansRef(
+        schoolId,
+        classId,
+      ),
+      id,
+    );
 
   const existing =
     await getDoc(planRef);
@@ -169,7 +431,93 @@ export async function reactivateSeatingPlan(
     );
   }
 
-  await updateDoc(
+  const batch =
+    writeBatch(db);
+
+  batch.update(
+    planRef,
+    {
+      active: false,
+      updatedAt:
+        serverTimestamp(),
+    },
+  );
+
+  const audit =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          "seatingPlan.archived",
+
+        entityType:
+          "seatingPlan",
+
+        entityId:
+          id,
+
+        actorRole:
+          options.actorRole ||
+          "",
+
+        changedFields: [
+          "active",
+        ],
+
+        details: {
+          entityName:
+            existing.data().title ||
+            "",
+        },
+
+        context: {
+          classId,
+        },
+      },
+    );
+
+  batch.set(
+    audit.ref,
+    audit.data,
+  );
+
+  await batch.commit();
+}
+
+export async function reactivateSeatingPlan(
+  schoolId,
+  classId,
+  planId,
+  options = {},
+) {
+  const id =
+    requireText(
+      planId,
+      "Seating plan ID",
+    );
+
+  const planRef =
+    doc(
+      getSeatingPlansRef(
+        schoolId,
+        classId,
+      ),
+      id,
+    );
+
+  const existing =
+    await getDoc(planRef);
+
+  if (!existing.exists()) {
+    throw new Error(
+      `Seating plan ${id} does not exist.`,
+    );
+  }
+
+  const batch =
+    writeBatch(db);
+
+  batch.update(
     planRef,
     {
       active: true,
@@ -177,4 +525,44 @@ export async function reactivateSeatingPlan(
         serverTimestamp(),
     },
   );
+
+  const audit =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          "seatingPlan.reactivated",
+
+        entityType:
+          "seatingPlan",
+
+        entityId:
+          id,
+
+        actorRole:
+          options.actorRole ||
+          "",
+
+        changedFields: [
+          "active",
+        ],
+
+        details: {
+          entityName:
+            existing.data().title ||
+            "",
+        },
+
+        context: {
+          classId,
+        },
+      },
+    );
+
+  batch.set(
+    audit.ref,
+    audit.data,
+  );
+
+  await batch.commit();
 }

@@ -889,6 +889,12 @@
         "deactivated": "Membership deactivated",
         "reactivated": "Membership reactivated",
         "removed": "Membership removed"
+      },
+      "seatingPlan": {
+        "created": "Seating plan created",
+        "updated": "Seating plan updated",
+        "archived": "Seating plan archived",
+        "reactivated": "Seating plan reactivated"
       }
     },
     "entities": {
@@ -899,7 +905,8 @@
       "course": "Course",
       "room": "Room",
       "building": "Building",
-      "school": "School"
+      "school": "School",
+      "seatingPlan": "Seating plan"
     },
     "details": {
       "action": "Action",
@@ -914,7 +921,10 @@
       "additional": "Additional details",
       "changes": "Changes",
       "previousValue": "Previous value",
-      "updatedValue": "Updated value"
+      "updatedValue": "Updated value",
+      "previousPosition": "Previous position",
+      "updatedPosition": "Updated position",
+      "seatPosition": "Desk {desk}, Seat {seat}"
     },
     "fields": {
       "name": "Name",
@@ -928,7 +938,16 @@
       "firstName": "First name",
       "lastName": "Last name",
       "displayName": "Display name",
-      "language": "Language"
+      "language": "Language",
+      "title": "Title",
+      "planDate": "Plan date",
+      "roomId": "Room",
+      "deskCount": "Desk count",
+      "seatsPerDesk": "Seats per desk",
+      "desksPerRow": "Desks per row",
+      "teacherPosition": "Teacher position",
+      "capacity": "Capacity",
+      "assignments": "Seat assignments"
     },
     "filters": {
       "all": "All",

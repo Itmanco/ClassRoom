@@ -138,6 +138,29 @@ async function seedSeatingPlan(
   );
 }
 
+function seatingPlanAuditData({
+  actorUid,
+  action,
+  classId,
+  entityId = "PLAN_A",
+}) {
+  return {
+    actorUid,
+    actorEmail: `${actorUid}@example.com`,
+    actorRole: "teacher",
+    action,
+    entityType: "seatingPlan",
+    entityId,
+    schoolId: "school-a",
+    changedFields: [],
+    details: {},
+    context: {
+      classId,
+    },
+    createdAt: new Date(),
+  };
+}
+
 async function run() {
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
@@ -916,6 +939,207 @@ console.log(
 
     console.log(
       "✓ teacher cannot delete unassigned seating plan"
+    );
+
+    console.log(
+      "Assigned teacher: seating create audit allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-seating-created"
+        ),
+        seatingPlanAuditData({
+          actorUid: assignedTeacherUid,
+          action: "seatingPlan.created",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can audit seating plan creation"
+    );
+
+    console.log(
+      "Assigned teacher: seating update audit allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-seating-updated"
+        ),
+        seatingPlanAuditData({
+          actorUid: assignedTeacherUid,
+          action: "seatingPlan.updated",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher can audit seating plan update"
+    );
+
+    console.log(
+      "Assigned teacher: seating archive audit denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-seating-archived"
+        ),
+        seatingPlanAuditData({
+          actorUid: assignedTeacherUid,
+          action: "seatingPlan.archived",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ assigned non-main teacher cannot audit seating plan archive"
+    );
+
+    console.log(
+      "Assigned teacher: seating reactivation audit denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-seating-reactivated"
+        ),
+        seatingPlanAuditData({
+          actorUid: assignedTeacherUid,
+          action: "seatingPlan.reactivated",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ assigned non-main teacher cannot audit seating plan reactivation"
+    );
+
+    console.log(
+      "Assigned teacher: unassigned-class seating audit denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-unassigned-seating"
+        ),
+        seatingPlanAuditData({
+          actorUid: assignedTeacherUid,
+          action: "seatingPlan.updated",
+          classId: "CLASS_B",
+          entityId: "PLAN_B",
+        })
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot audit seating plan for unassigned class"
+    );
+
+    console.log(
+      "Assigned teacher: spoofed seating audit actor denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "teacher-spoofed-seating"
+        ),
+        seatingPlanAuditData({
+          actorUid: otherTeacherUid,
+          action: "seatingPlan.updated",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot spoof seating audit actor"
+    );
+
+    console.log(
+      "Main teacher: seating archive audit allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "main-teacher-seating-archived"
+        ),
+        seatingPlanAuditData({
+          actorUid: mainTeacherUid,
+          action: "seatingPlan.archived",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ main teacher can audit seating plan archive"
+    );
+
+    console.log(
+      "Main teacher: seating reactivation audit allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          mainTeacherDb,
+          "schools",
+          schoolId,
+          "auditLogs",
+          "main-teacher-seating-reactivated"
+        ),
+        seatingPlanAuditData({
+          actorUid: mainTeacherUid,
+          action: "seatingPlan.reactivated",
+          classId: "CLASS_A",
+        })
+      )
+    );
+
+    console.log(
+      "✓ main teacher can audit seating plan reactivation"
     );
 
     console.log(

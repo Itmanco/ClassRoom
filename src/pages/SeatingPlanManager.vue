@@ -1414,6 +1414,20 @@ export default {
               })),
             active: true,
           },
+          {
+            actorRole: this.actorRole,
+
+            studentNames:
+              Object.fromEntries(
+                this.students.map(
+                  (student) => [
+                    String(student.id),
+                    student.name ||
+                      String(student.id),
+                  ],
+                ),
+              ),
+          },
         );
 
         this.message = this.editingPlanId
@@ -1458,6 +1472,9 @@ export default {
           this.schoolId,
           this.selectedClassId,
           plan.id,
+          {
+            actorRole: this.actorRole,
+          },
         );
 
         this.message = this.$t(
@@ -1492,6 +1509,9 @@ export default {
           this.schoolId,
           this.selectedClassId,
           plan.id,
+          {
+            actorRole: this.actorRole,
+          },
         );
 
         this.message = this.$t(

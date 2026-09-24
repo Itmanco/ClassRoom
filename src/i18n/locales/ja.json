@@ -890,6 +890,12 @@
         "deactivated": "学校アクセスを無効化",
         "reactivated": "学校アクセスを再有効化",
         "removed": "学校アクセスを削除"
+      },
+      "seatingPlan": {
+        "created": "座席表を作成",
+        "updated": "座席表を更新",
+        "archived": "座席表をアーカイブ",
+        "reactivated": "座席表を再有効化"
       }
     },
     "entities": {
@@ -900,7 +906,8 @@
       "course": "コース",
       "room": "教室",
       "building": "建物",
-      "school": "学校"
+      "school": "学校",
+      "seatingPlan": "座席表"
     },
     "details": {
       "action": "操作",
@@ -915,7 +922,10 @@
       "additional": "追加情報",
       "changes": "変更内容",
       "previousValue": "変更前",
-      "updatedValue": "変更後"
+      "updatedValue": "変更後",
+      "previousPosition": "変更前の位置",
+      "updatedPosition": "変更後の位置",
+      "seatPosition": "机 {desk}、座席 {seat}"
     },
     "fields": {
       "name": "名前",
@@ -929,7 +939,16 @@
       "firstName": "名",
       "lastName": "姓",
       "displayName": "表示名",
-      "language": "言語"
+      "language": "言語",
+      "title": "タイトル",
+      "planDate": "日付",
+      "roomId": "教室",
+      "deskCount": "机の数",
+      "seatsPerDesk": "1台あたりの座席数",
+      "desksPerRow": "1列あたりの机の数",
+      "teacherPosition": "教師の位置",
+      "capacity": "定員",
+      "assignments": "座席配置"
     },
     "filters": {
       "all": "すべて",

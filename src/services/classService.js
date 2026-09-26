@@ -6,11 +6,14 @@ import {
   getDocs,
   onSnapshot,
   serverTimestamp,
-  setDoc,
-  updateDoc,
+  writeBatch,
   where,
   query
 } from "firebase/firestore";
+
+import {
+  createAuditLogWrite,
+} from "./auditLogService";
 
 function requireSchoolId(schoolId) {
   if (!schoolId || typeof schoolId !== "string") {
@@ -91,6 +94,91 @@ function validateClass(classItem) {
   };
 }
 
+function getClassChanges(
+  previous,
+  next,
+  teacherNames = {},
+) {
+  const trackedFields = [
+    "name",
+    "courseId",
+    "roomId",
+    "academicYear",
+    "semester",
+    "teacherUids",
+    "mainTeacherUid",
+    "active",
+  ];
+
+  const teacherName = (uid) => {
+    if (!uid) {
+      return "";
+    }
+
+    return (
+      teacherNames[String(uid)] ||
+      String(uid)
+    );
+  };
+
+  const changes = {};
+
+  for (const field of trackedFields) {
+    const before = previous?.[field];
+    const after = next?.[field];
+
+    if (field === "teacherUids") {
+      const beforeUids = [
+        ...(before || []),
+      ].sort();
+
+      const afterUids = [
+        ...(after || []),
+      ].sort();
+
+      if (
+        JSON.stringify(beforeUids) !==
+        JSON.stringify(afterUids)
+      ) {
+        changes[field] = {
+          before:
+            (before || []).map(
+              teacherName,
+            ),
+          after:
+            (after || []).map(
+              teacherName,
+            ),
+        };
+      }
+
+      continue;
+    }
+
+    if (field === "mainTeacherUid") {
+      if (before !== after) {
+        changes[field] = {
+          before:
+            teacherName(before),
+          after:
+            teacherName(after),
+        };
+      }
+
+      continue;
+    }
+
+    if (before !== after) {
+      changes[field] = {
+        before: before ?? null,
+        after: after ?? null,
+      };
+    }
+  }
+
+  return changes;
+}
+
 function getClassesRef(schoolId) {
   requireSchoolId(schoolId);
   return collection(db, "schools", schoolId, "classes");
@@ -145,20 +233,193 @@ export function watchTeacherClasses(
   );
 }
 
-export async function saveClass(schoolId, classItem) {
-  const normalized = validateClass(classItem);
-  const classRef = doc(getClassesRef(schoolId), normalized.code);
-  const existing = await getDoc(classRef);
-  const data = { ...normalized, updatedAt: serverTimestamp() };
-  if (!existing.exists()) data.createdAt = serverTimestamp();
-  await setDoc(classRef, data, { merge: true });
+export async function saveClass(
+  schoolId,
+  classItem,
+  options = {},
+) {
+  const normalized =
+    validateClass(classItem);
+
+  const classRef = doc(
+    getClassesRef(schoolId),
+    normalized.code,
+  );
+
+  const existing =
+    await getDoc(classRef);
+
+  const isNew =
+    !existing.exists();
+
+  const previous =
+    existing.exists()
+      ? existing.data()
+      : null;
+
+  const changes =
+    previous
+      ? getClassChanges(
+          previous,
+          normalized,
+          options.teacherNames || {},
+        )
+      : {};
+
+  const changedFields =
+    Object.keys(changes);
+
+  const data = {
+    ...normalized,
+    updatedAt:
+      serverTimestamp(),
+  };
+
+  if (isNew) {
+    data.createdAt =
+      serverTimestamp();
+  }
+
+  const batch =
+    writeBatch(db);
+
+  batch.set(
+    classRef,
+    data,
+    {
+      merge: true,
+    },
+  );
+
+  const auditWrite =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          isNew
+            ? "class.created"
+            : "class.updated",
+
+        entityType: "class",
+        entityId: classRef.id,
+        actorRole:
+          options.actorRole || "",
+
+        changedFields,
+
+        details: {
+          entityName:
+            normalized.name,
+
+          ...(
+            !isNew
+              ? {
+                  changes,
+                }
+              : {}
+          ),
+        },
+
+        context: {
+          classId:
+            classRef.id,
+        },
+      },
+    );
+
+  batch.set(
+    auditWrite.ref,
+    auditWrite.data,
+  );
+
+  await batch.commit();
+
   return classRef.id;
 }
 
-export async function archiveClass(schoolId, classId) {
-  const normalizedId = normalizeClassCode(classId);
-  const classRef = doc(getClassesRef(schoolId), normalizedId);
-  const existing = await getDoc(classRef);
-  if (!existing.exists()) throw new Error(`Class ${normalizedId} does not exist.`);
-  await updateDoc(classRef, { active: false, updatedAt: serverTimestamp() });
+export async function archiveClass(
+  schoolId,
+  classId,
+  options = {},
+) {
+  const normalizedId =
+    normalizeClassCode(classId);
+
+  const classRef = doc(
+    getClassesRef(schoolId),
+    normalizedId,
+  );
+
+  const existing =
+    await getDoc(classRef);
+
+  if (!existing.exists()) {
+    throw new Error(
+      `Class ${normalizedId} does not exist.`,
+    );
+  }
+
+  const existingData =
+    existing.data();
+
+  const batch =
+    writeBatch(db);
+
+  batch.update(
+    classRef,
+    {
+      active: false,
+      updatedAt:
+        serverTimestamp(),
+    },
+  );
+
+  const auditWrite =
+    createAuditLogWrite(
+      schoolId,
+      {
+        action:
+          "class.archived",
+
+        entityType:
+          "class",
+
+        entityId:
+          normalizedId,
+
+        actorRole:
+          options.actorRole || "",
+
+        changedFields: [
+          "active",
+        ],
+
+        details: {
+          entityName:
+            existingData.name ||
+            normalizedId,
+
+          changes: {
+            active: {
+              before:
+                existingData.active !==
+                false,
+              after: false,
+            },
+          },
+        },
+
+        context: {
+          classId:
+            normalizedId,
+        },
+      },
+    );
+
+  batch.set(
+    auditWrite.ref,
+    auditWrite.data,
+  );
+
+  await batch.commit();
 }

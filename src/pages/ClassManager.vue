@@ -1066,9 +1066,23 @@ export default {
       this.errorMessage = "";
 
       try {
+        const teacherNames =
+          Object.fromEntries(
+            this.teachers.map(
+              (teacher) => [
+                String(teacher.id),
+                this.teacherLabel(teacher),
+              ],
+            ),
+          );
+
         const id = await saveClass(
           this.schoolId,
           this.form,
+          {
+            actorRole: this.actorRole,
+            teacherNames,
+          },
         );
 
         this.message = this.$t(
@@ -1127,6 +1141,9 @@ export default {
         await archiveClass(
           this.schoolId,
           item.id,
+          {
+            actorRole: this.actorRole,
+          },
         );
 
         this.message = this.$t(

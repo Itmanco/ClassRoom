@@ -895,6 +895,11 @@
         "updated": "Seating plan updated",
         "archived": "Seating plan archived",
         "reactivated": "Seating plan reactivated"
+      },
+      "class": {
+        "created": "Class created",
+        "updated": "Class updated",
+        "archived": "Class archived"
       }
     },
     "entities": {
@@ -947,7 +952,12 @@
       "desksPerRow": "Desks per row",
       "teacherPosition": "Teacher position",
       "capacity": "Capacity",
-      "assignments": "Seat assignments"
+      "assignments": "Seat assignments",
+      "courseId": "Course",
+      "academicYear": "Academic year",
+      "semester": "Semester",
+      "teacherUids": "Assigned teachers",
+      "mainTeacherUid": "Main teacher"
     },
     "filters": {
       "all": "All",

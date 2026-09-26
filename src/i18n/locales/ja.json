@@ -896,6 +896,11 @@
         "updated": "座席表を更新",
         "archived": "座席表をアーカイブ",
         "reactivated": "座席表を再有効化"
+      },
+      "class": {
+        "created": "クラスを作成",
+        "updated": "クラスを更新",
+        "archived": "クラスをアーカイブ"
       }
     },
     "entities": {
@@ -948,7 +953,12 @@
       "desksPerRow": "1列あたりの机の数",
       "teacherPosition": "教師の位置",
       "capacity": "定員",
-      "assignments": "座席配置"
+      "assignments": "座席配置",
+      "courseId": "コース",
+      "academicYear": "年度",
+      "semester": "学期",
+      "teacherUids": "担当教師",
+      "mainTeacherUid": "主担当教師"
     },
     "filters": {
       "all": "すべて",

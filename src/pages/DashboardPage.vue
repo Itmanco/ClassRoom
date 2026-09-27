@@ -104,24 +104,6 @@
     <section class="dashboard-grid">
       <article class="dashboard-card">
         <h2>
-          {{ $t("dashboard.activity.title") }}
-        </h2>
-
-        <p class="section-description">
-          {{ $t("dashboard.activity.description") }}
-        </p>
-
-        <div class="empty-state">
-          <span>📋</span>
-
-          <p>
-            {{ $t("dashboard.activity.empty") }}
-          </p>
-        </div>
-      </article>
-
-      <article class="dashboard-card">
-        <h2>
           {{ $t("dashboard.messages.title") }}
         </h2>
 
@@ -137,6 +119,91 @@
           </p>
         </div>
       </article>
+
+      <article class="dashboard-card">
+        <h2>
+          {{ $t("dashboard.activity.title") }}
+        </h2>
+
+        <p class="section-description">
+          {{ $t("dashboard.activity.description") }}
+        </p>
+
+        <div
+          v-if="activityLoading"
+          class="empty-state loading-state"
+        >
+          <span>📋</span>
+
+          <p>
+            {{ $t("dashboard.activity.loading") }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="activity.length === 0"
+          class="empty-state"
+        >
+          <span>📋</span>
+
+          <p>
+            {{ $t("dashboard.activity.empty") }}
+          </p>
+        </div>
+
+        <div
+          v-else
+          class="activity-list"
+        >
+          <div
+            v-for="item in activity"
+            :key="item.id"
+            class="activity-item"
+          >
+            <div class="activity-content">
+              <strong>
+                {{ activityLabel(item) }}
+              </strong>
+
+              <span
+                v-if="item.entityName"
+                class="activity-entity"
+              >
+                {{ item.entityName }}
+              </span>
+
+              <span
+                v-if="activityChangeLabel(item)"
+                class="activity-change"
+              >
+                {{ activityChangeLabel(item) }}
+              </span>
+
+              <span
+                v-if="item.actorName"
+                class="activity-actor"
+              >
+                {{
+                  $t(
+                    "dashboard.activity.by",
+                    {
+                      name: item.actorName,
+                    },
+                  )
+                }}
+              </span>
+            </div>
+
+            <time
+              v-if="item.createdAt"
+              class="activity-time"
+            >
+              {{ formatActivityDate(item.createdAt) }}
+            </time>
+          </div>
+        </div>
+      </article>
+
     </section>
   </div>
 </template>
@@ -158,6 +225,10 @@ import {
 import {
   watchCourses,
 } from "../services/courseService";
+
+import {
+  getDashboardActivity,
+} from "../services/activityService";
 
 export default {
   name: "DashboardPage",
@@ -185,6 +256,8 @@ export default {
       classes: [],
       rooms: [],
       courses: [],
+      activity: [],
+      activityLoading: false,
       errorMessage: "",
       unsubscribers: [],
     };
@@ -292,6 +365,7 @@ export default {
       this.classes = [];
       this.rooms = [];
       this.courses = [];
+      this.activity = [];
       this.errorMessage = "";
 
       if (this.isTeacher && !this.actorUid) {
@@ -361,6 +435,7 @@ export default {
         }
 
         this.unsubscribers = listeners;
+        this.loadActivity();
       } catch (error) {
         this.handleLoadError(error);
       }
@@ -376,6 +451,106 @@ export default {
       );
 
       this.unsubscribers = [];
+    },
+
+    async loadActivity() {
+      if (!this.schoolId) {
+        return;
+      }
+
+      this.activityLoading = true;
+
+      try {
+        this.activity =
+          await getDashboardActivity(
+            this.schoolId,
+          );
+      } catch (error) {
+        this.handleLoadError(error);
+      } finally {
+        this.activityLoading = false;
+      }
+    },
+
+    activityLabel(item) {
+      const key =
+        `adminAudit.actions.${item.action}`;
+
+      const translated =
+        this.$t(key);
+
+      return translated === key ?
+        item.action :
+        translated;
+    },
+
+    activityChangeLabel(item) {
+      const lifecycleActions = [
+        "enrollment.created",
+        "enrollment.reactivated",
+        "enrollment.archived",
+      ];
+
+      if (
+        lifecycleActions.includes(
+          item.action,
+        )
+      ) {
+        return "";
+      }
+
+      if (
+        !Array.isArray(
+          item.changedFields,
+        ) ||
+        item.changedFields.length === 0
+      ) {
+        return "";
+      }
+
+
+      if (
+        !Array.isArray(
+          item.changedFields,
+        ) ||
+        item.changedFields.length === 0
+      ) {
+        return "";
+      }
+
+      return item.changedFields
+          .map((field) => {
+            const key =
+              `dashboard.activity.changes.${field}`;
+
+            const translated =
+              this.$t(key);
+
+            return translated === key ?
+              "" :
+              translated;
+          })
+          .filter(Boolean)
+          .join(" · ");
+    },
+
+    formatActivityDate(value) {
+      const timestamp =
+        Number(value);
+
+      if (!Number.isFinite(timestamp)) {
+        return "";
+      }
+
+      return new Intl.DateTimeFormat(
+          this.$i18n.locale,
+          {
+            dateStyle: "medium",
+            timeStyle: "short",
+          },
+      ).format(
+          new Date(timestamp),
+      );
     },
 
     handleLoadError(error) {
@@ -476,6 +651,53 @@ export default {
   color: #667085;
 }
 
+.activity-list {
+  margin-top: 18px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.activity-item:last-child {
+  border-bottom: 0;
+}
+
+.activity-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.activity-entity {
+  color: #344054;
+}
+
+.activity-actor,
+.activity-time {
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+.activity-time {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.activity-change {
+  color: #475467;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .empty-state {
   min-height: 160px;
   display: flex;
@@ -490,6 +712,14 @@ export default {
   font-size: 2rem;
 }
 
+.loading-state {
+  color: #475467;
+}
+
+.loading-state p {
+  font-weight: 600;
+}
+
 .error {
   color: #b00020;
   margin-bottom: 18px;
@@ -500,9 +730,22 @@ export default {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
   }
+
+  .activity-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .activity-content {
+    gap: 4px;
+  }
+
+  .activity-time {
+    white-space: normal;
+  }
 }
 
-@media (max-width: 650px) {
+@media (max-width: 600px) {
   .dashboard-page {
     padding: 20px 14px;
   }
@@ -512,4 +755,5 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
 </style>

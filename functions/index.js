@@ -338,6 +338,138 @@ async function requireClassTeacherDirectoryAccess(
 }
 
 /**
+ * Verifies that the caller may access Dashboard Activity
+ * for the requested school.
+ *
+ * System Admins receive system-level activity.
+ * School Admins receive activity for the requested school.
+ * Teachers receive activity only for classes to which they
+ * are currently assigned.
+ *
+ * @param {Object} request Callable function request.
+ * @param {string} schoolId School to authorize.
+ * @return {Promise<Object>} Caller role and activity scope.
+ */
+async function requireDashboardActivityAccess(
+    request,
+    schoolId,
+) {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "Authentication is required.",
+    );
+  }
+
+  const uid =
+    request.auth.uid;
+
+  const userDocument =
+    await db
+        .collection("users")
+        .doc(uid)
+        .get();
+
+  if (!userDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "User profile not found.",
+    );
+  }
+
+  const profile =
+    userDocument.data();
+
+  if (profile.active === false) {
+    throw new HttpsError(
+        "permission-denied",
+        "ACCOUNT_INACTIVE",
+    );
+  }
+
+  if (
+    profile.systemRole ===
+    "system-admin"
+  ) {
+    return {
+      uid,
+      profile,
+      role: "system-admin",
+      classIds: [],
+    };
+  }
+
+  const membershipDocument =
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("members")
+        .doc(uid)
+        .get();
+
+  if (!membershipDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "School access is required.",
+    );
+  }
+
+  const membership =
+    membershipDocument.data();
+
+  if (membership.active === false) {
+    throw new HttpsError(
+        "permission-denied",
+        "School access is required.",
+    );
+  }
+
+  if (
+    membership.role ===
+    "school-admin"
+  ) {
+    return {
+      uid,
+      profile,
+      role: "school-admin",
+      membership,
+      classIds: [],
+    };
+  }
+
+  if (membership.role !== "teacher") {
+    throw new HttpsError(
+        "permission-denied",
+        "Dashboard activity access is required.",
+    );
+  }
+
+  const classesSnapshot =
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("classes")
+        .where(
+            "teacherUids",
+            "array-contains",
+            uid,
+        )
+        .get();
+
+  return {
+    uid,
+    profile,
+    role: "teacher",
+    membership,
+    classIds:
+      classesSnapshot.docs.map(
+          (classDocument) =>
+            classDocument.id,
+      ),
+  };
+}
+
+/**
  * Validates and normalizes a required text value.
  *
  * @param {*} value Value to validate.
@@ -881,6 +1013,270 @@ exports.getClassTeacherDirectory =
           );
 
         return teachers.filter(Boolean);
+      },
+  );
+
+/**
+ * Returns recent Dashboard Activity visible to the caller.
+ *
+ * Activity is selected and filtered server-side according
+ * to the authenticated caller's role and current access.
+ * Returned events contain only sanitized display data.
+ */
+exports.getDashboardActivity =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          requireText(
+              data.schoolId,
+              "School ID",
+          );
+
+        const access =
+          await requireDashboardActivityAccess(
+              request,
+              schoolId,
+          );
+
+        let snapshot;
+
+        if (
+          access.role ===
+          "system-admin"
+        ) {
+          snapshot =
+            await db
+                .collection(
+                    "systemAuditLogs",
+                )
+                .orderBy(
+                    "createdAt",
+                    "desc",
+                )
+                .limit(20)
+                .get();
+        } else {
+          snapshot =
+            await db
+                .collection("schools")
+                .doc(schoolId)
+                .collection("auditLogs")
+                .orderBy(
+                    "createdAt",
+                    "desc",
+                )
+                .limit(
+                    access.role ===
+                      "teacher" ?
+                      50 :
+                      10,
+                )
+                .get();
+        }
+
+        let auditDocuments =
+          snapshot.docs;
+
+        if (
+          access.role ===
+          "teacher"
+        ) {
+          const assignedClassIds =
+            new Set(
+                access.classIds,
+            );
+
+          auditDocuments =
+            auditDocuments.filter(
+                (auditDocument) => {
+                  const audit =
+                    auditDocument.data();
+
+                  const classId =
+                    audit.context &&
+                    typeof audit.context ===
+                      "object" ?
+                      audit.context.classId :
+                      "";
+
+                  return (
+                    typeof classId ===
+                      "string" &&
+                    assignedClassIds.has(
+                        classId,
+                    )
+                  );
+                },
+            )
+                .slice(0, 10);
+        }
+
+        const actorUids =
+          [
+            ...new Set(
+                auditDocuments
+                    .map(
+                        (auditDocument) =>
+                          String(
+                              auditDocument
+                                  .data()
+                                  .actorUid ||
+                              "",
+                          ).trim(),
+                    )
+                    .filter(Boolean),
+            ),
+          ];
+
+        const actorDocuments =
+          await Promise.all(
+              actorUids.map(
+                  async (uid) => {
+                    const userDocument =
+                      await db
+                          .collection(
+                              "users",
+                          )
+                          .doc(uid)
+                          .get();
+
+                    if (
+                      !userDocument.exists
+                    ) {
+                      return [
+                        uid,
+                        "",
+                      ];
+                    }
+
+                    const user =
+                      userDocument.data();
+
+                    const fullName =
+                      [
+                        user.firstName,
+                        user.lastName,
+                      ]
+                          .filter(Boolean)
+                          .join(" ")
+                          .trim();
+
+                    return [
+                      uid,
+                      user.displayName ||
+                        fullName ||
+                        "",
+                    ];
+                  },
+              ),
+          );
+
+        const actorNames =
+          Object.fromEntries(
+              actorDocuments,
+          );
+
+        return auditDocuments.map(
+            (auditDocument) => {
+              const audit =
+                auditDocument.data();
+
+              const context =
+                audit.context &&
+                typeof audit.context ===
+                  "object" ?
+                  audit.context :
+                  {};
+
+              const createdAt =
+                audit.createdAt &&
+                typeof audit.createdAt
+                    .toMillis ===
+                  "function" ?
+                  audit.createdAt.toMillis() :
+                  null;
+
+              const actorUid =
+                String(
+                    audit.actorUid ||
+                    "",
+                );
+
+              const allowedChangedFields =
+                new Set([
+                  "name",
+                  "courseId",
+                  "roomId",
+                  "academicYear",
+                  "semester",
+                  "teacherUids",
+                  "mainTeacherUid",
+                  "active",
+                  "title",
+                  "planDate",
+                  "deskCount",
+                  "seatsPerDesk",
+                  "desksPerRow",
+                  "teacherPosition",
+                  "capacity",
+                  "assignments",
+                ]);
+
+              const changedFields =
+                Array.isArray(
+                    audit.changedFields,
+                ) ?
+                  audit.changedFields.filter(
+                      (field) =>
+                        typeof field === "string" &&
+                        allowedChangedFields.has(
+                            field,
+                        ),
+                  ) :
+                  [];
+
+              return {
+                id:
+                  auditDocument.id,
+
+                action:
+                  audit.action || "",
+
+                entityType:
+                  audit.entityType || "",
+
+                entityId:
+                  audit.entityId || "",
+
+                entityName:
+                  audit.details &&
+                  typeof audit.details ===
+                    "object" ?
+                    audit.details
+                        .entityName ||
+                      "" :
+                    "",
+
+                classId:
+                  typeof context.classId ===
+                    "string" ?
+                    context.classId :
+                    "",
+
+                changedFields,
+
+                actorName:
+                  actorNames[
+                      actorUid
+                  ] || "",
+
+                createdAt,
+              };
+            },
+        );
       },
   );
 

@@ -652,7 +652,27 @@
     "activity": {
       "title": "最近のアクティビティ",
       "description": "クラスや座席表の最近の活動をここに表示します。",
-      "empty": "最近のアクティビティはありません。"
+      "empty": "最近のアクティビティはありません。",
+      "loading": "最近のアクティビティを読み込んでいます...",
+      "by": "{name}による操作",
+      "changes": {
+        "name": "名前を更新",
+        "courseId": "コースを更新",
+        "roomId": "教室を更新",
+        "academicYear": "年度を更新",
+        "semester": "学期を更新",
+        "teacherUids": "担当教師を更新",
+        "mainTeacherUid": "主担当教師を更新",
+        "active": "ステータスを更新",
+        "title": "タイトルを更新",
+        "planDate": "座席表の日付を更新",
+        "deskCount": "机の数を更新",
+        "seatsPerDesk": "机ごとの座席数を更新",
+        "desksPerRow": "机の配置を更新",
+        "teacherPosition": "教師の位置を更新",
+        "capacity": "定員を更新",
+        "assignments": "座席割り当てを更新"
+      }
     },
     "messages": {
       "title": "メッセージ",
@@ -901,6 +921,11 @@
         "created": "クラスを作成",
         "updated": "クラスを更新",
         "archived": "クラスをアーカイブ"
+      },
+      "enrollment": {
+        "created": "学生をクラスに追加",
+        "reactivated": "学生をクラスに再追加",
+        "archived": "学生をクラスから削除"
       }
     },
     "entities": {
@@ -912,7 +937,8 @@
       "room": "教室",
       "building": "建物",
       "school": "学校",
-      "seatingPlan": "座席表"
+      "seatingPlan": "座席表",
+      "enrollment": "在籍登録"
     },
     "details": {
       "action": "操作",

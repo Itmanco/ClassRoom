@@ -651,7 +651,27 @@
     "activity": {
       "title": "Recent activity",
       "description": "Recent class and seating-plan activity will appear here.",
-      "empty": "No recent activity yet."
+      "empty": "No recent activity yet.",
+      "loading": "Loading recent activity...",
+      "by": "By {name}",
+      "changes": {
+        "name": "Name updated",
+        "courseId": "Course updated",
+        "roomId": "Room updated",
+        "academicYear": "Academic year updated",
+        "semester": "Semester updated",
+        "teacherUids": "Assigned teachers updated",
+        "mainTeacherUid": "Main teacher updated",
+        "active": "Status updated",
+        "title": "Title updated",
+        "planDate": "Plan date updated",
+        "deskCount": "Desk count updated",
+        "seatsPerDesk": "Seats per desk updated",
+        "desksPerRow": "Desk layout updated",
+        "teacherPosition": "Teacher position updated",
+        "capacity": "Capacity updated",
+        "assignments": "Seat assignments updated"
+      }
     },
     "messages": {
       "title": "Messages",
@@ -900,6 +920,11 @@
         "created": "Class created",
         "updated": "Class updated",
         "archived": "Class archived"
+      },
+      "enrollment": {
+        "created": "Student added to class",
+        "reactivated": "Student re-added to class",
+        "archived": "Student removed from class"
       }
     },
     "entities": {
@@ -911,7 +936,8 @@
       "room": "Room",
       "building": "Building",
       "school": "School",
-      "seatingPlan": "Seating plan"
+      "seatingPlan": "Seating plan",
+      "enrollment": "Enrollment"
     },
     "details": {
       "action": "Action",

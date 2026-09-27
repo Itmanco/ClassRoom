@@ -564,6 +564,12 @@ export default {
           this.schoolId,
           this.selectedClassId,
           student.id,
+          {
+            actorRole: this.actorRole,
+            studentName:
+              student.name ||
+              String(student.id),
+          },
         );
 
         this.message = this.$t(
@@ -588,6 +594,13 @@ export default {
       this.message = "";
       this.errorMessage = "";
 
+      const studentRecord =
+        this.students.find(
+          (item) =>
+            String(item.id) ===
+            String(enrollment.studentId),
+        );
+
       const student = this.studentLabel(
         enrollment.studentId,
       );
@@ -597,6 +610,14 @@ export default {
           this.schoolId,
           this.selectedClassId,
           enrollment.studentId,
+          {
+            actorRole: this.actorRole,
+            studentName:
+              studentRecord?.name ||
+              String(
+                enrollment.studentId,
+              ),
+          },
         );
 
         this.message = this.$t(
@@ -620,6 +641,13 @@ export default {
         enrollment.studentId,
       );
 
+      const studentRecord =
+        this.students.find(
+          (item) =>
+            String(item.id) ===
+            String(enrollment.studentId),
+        );
+
       const confirmed = window.confirm(
         this.$t(
           "enrollments.messages.archiveConfirm",
@@ -641,6 +669,14 @@ export default {
           this.schoolId,
           this.selectedClassId,
           enrollment.studentId,
+          {
+            actorRole: this.actorRole,
+            studentName:
+              studentRecord?.name ||
+              String(
+                enrollment.studentId,
+              ),
+          },
         );
 
         this.message = this.$t(

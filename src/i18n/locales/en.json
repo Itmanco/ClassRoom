@@ -178,7 +178,25 @@
       "notSpecified": "Not specified"
     },
     "actions": {
-      "add": "Add Student"
+      "add": "Add Student",
+      "account": "Account"
+    },
+    "account": {
+      "title": "ClassRoom Account",
+      "loading": "Loading account information...",
+      "linkedTitle": "Account linked",
+      "notLinked": "This student does not have a ClassRoom login account linked yet.",
+      "selectAccount": "Student account",
+      "selectPlaceholder": "Select an account",
+      "noEligibleAccounts": "No eligible Student accounts are available.",
+      "link": "Link account",
+      "unlink": "Unlink account",
+      "linked": "A ClassRoom account was linked to {name}.",
+      "unlinked": "The ClassRoom account was unlinked from {name}.",
+      "unlinkConfirm": "Unlink the ClassRoom account from {name}?",
+      "loadError": "Unable to load account information: {error}",
+      "linkError": "Unable to link the account: {error}",
+      "unlinkError": "Unable to unlink the account: {error}"
     },
     "list": {
       "title": "Students",

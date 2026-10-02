@@ -227,6 +227,15 @@
               </button>
 
               <button
+                v-if="canManageStudentAccounts"
+                type="button"
+                class="secondary"
+                @click="openStudentAccount(student)"
+              >
+                {{ $t("students.actions.account") }}
+              </button>
+
+              <button
                 v-if="
                   canManageStudentStatus &&
                   student.isActive !== false
@@ -242,6 +251,132 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="accountStudent"
+      class="account-overlay"
+      @click.self="closeStudentAccount"
+    >
+      <section class="card account-card">
+        <div class="account-header">
+          <div>
+            <h2>
+              {{ $t("students.account.title") }}
+            </h2>
+
+            <p>
+              {{ accountStudent.name }}
+              · #{{ accountStudent.id }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="secondary"
+            :disabled="accountSaving"
+            @click="closeStudentAccount"
+          >
+            {{ $t("common.close") }}
+          </button>
+        </div>
+
+        <p v-if="accountLoading">
+          {{ $t("students.account.loading") }}
+        </p>
+
+        <template v-else-if="accountStudent.userUid">
+          <div class="account-status linked">
+            <strong>
+              {{ $t("students.account.linkedTitle") }}
+            </strong>
+
+            <template v-if="linkedAccount">
+              <span>
+                {{
+                  linkedAccount.displayName ||
+                  linkedAccount.email
+                }}
+              </span>
+
+              <small>
+                {{ linkedAccount.email }}
+              </small>
+            </template>
+
+            <small v-else>
+              {{ accountStudent.userUid }}
+            </small>
+          </div>
+
+          <button
+            type="button"
+            class="danger"
+            :disabled="accountSaving"
+            @click="handleUnlinkStudentAccount"
+          >
+            {{
+              accountSaving
+                ? $t("common.saving")
+                : $t("students.account.unlink")
+            }}
+          </button>
+        </template>
+
+        <template v-else>
+          <p>
+            {{ $t("students.account.notLinked") }}
+          </p>
+
+          <label>
+            {{ $t("students.account.selectAccount") }}
+
+            <select
+              v-model="selectedAccountUid"
+              :disabled="accountSaving"
+            >
+              <option value="">
+                {{ $t("students.account.selectPlaceholder") }}
+              </option>
+
+              <option
+                v-for="user in eligibleStudentAccounts"
+                :key="user.id"
+                :value="user.id"
+              >
+                {{
+                  user.displayName ||
+                  user.email ||
+                  user.id
+                }}
+                · {{ user.email }}
+              </option>
+            </select>
+          </label>
+
+          <p
+            v-if="eligibleStudentAccounts.length === 0"
+            class="empty-state"
+          >
+            {{ $t("students.account.noEligibleAccounts") }}
+          </p>
+
+          <button
+            type="button"
+            :disabled="
+              accountSaving ||
+              !selectedAccountUid
+            "
+            @click="handleLinkStudentAccount"
+          >
+            {{
+              accountSaving
+                ? $t("common.saving")
+                : $t("students.account.link")
+            }}
+          </button>
+        </template>
+      </section>
+    </div>
   </section>
 </template>
 
@@ -252,6 +387,15 @@ import {
   saveStudent,
   watchStudents,
 } from "../services/studentService";
+
+import {
+  getManagedSchoolUsers,
+} from "../services/adminUserService";
+
+import {
+  linkStudentAccount,
+  unlinkStudentAccount,
+} from "../services/studentAccountService";
 
 function emptyForm() {
   return {
@@ -290,6 +434,11 @@ export default {
       showArchived: false,
       errorMessage: "",
       successMessage: "",
+      accountStudent: null,
+      schoolUsers: [],
+      accountLoading: false,
+      accountSaving: false,
+      selectedAccountUid: "",
     };
   },
 
@@ -348,6 +497,43 @@ export default {
             .includes(search),
         );
       });
+    },
+
+    canManageStudentAccounts() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin"
+      );
+    },
+
+    eligibleStudentAccounts() {
+      return this.schoolUsers.filter(
+        (user) =>
+          user.schoolRole === "student" &&
+          user.active !== false &&
+          user.membershipActive !== false &&
+          (
+            !user.linkedStudentId ||
+            user.linkedStudentId ===
+              this.accountStudent?.id
+          ),
+      );
+    },
+
+    linkedAccount() {
+      if (
+        !this.accountStudent?.userUid
+      ) {
+        return null;
+      }
+
+      return (
+        this.schoolUsers.find(
+          (user) =>
+            user.id ===
+            this.accountStudent.userUid,
+        ) || null
+      );
     },
   },
 
@@ -602,6 +788,167 @@ export default {
 
       return this.$t(key);
     },
+
+    async openStudentAccount(student) {
+      if (!this.canManageStudentAccounts) {
+        return;
+      }
+
+      this.accountStudent = student;
+      this.accountLoading = true;
+      this.accountSaving = false;
+      this.selectedAccountUid =
+        student.userUid || "";
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        const users =
+          await getManagedSchoolUsers(
+            this.schoolId,
+          );
+
+        const linkedByUid =
+          new Map();
+
+        this.students.forEach(
+          (existingStudent) => {
+            if (existingStudent.userUid) {
+              linkedByUid.set(
+                existingStudent.userUid,
+                existingStudent.id,
+              );
+            }
+          },
+        );
+
+        this.schoolUsers =
+          users.map((user) => ({
+            ...user,
+            linkedStudentId:
+              linkedByUid.get(
+                user.id,
+              ) || null,
+          }));
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "students.account.loadError",
+          {
+            error: error.message,
+          },
+        );
+      } finally {
+        this.accountLoading = false;
+      }
+    },
+
+    closeStudentAccount() {
+      this.accountStudent = null;
+      this.schoolUsers = [];
+      this.selectedAccountUid = "";
+      this.accountLoading = false;
+    },
+
+    async handleLinkStudentAccount() {
+      if (
+        !this.canManageStudentAccounts ||
+        !this.accountStudent ||
+        !this.selectedAccountUid
+      ) {
+        return;
+      }
+
+      this.accountSaving = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        await linkStudentAccount(
+          this.schoolId,
+          String(
+            this.accountStudent.id,
+          ),
+          this.selectedAccountUid,
+        );
+
+        this.successMessage = this.$t(
+          "students.account.linked",
+          {
+            name:
+              this.accountStudent.name,
+          },
+        );
+
+        this.closeStudentAccount();
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "students.account.linkError",
+          {
+            error: error.message,
+          },
+        );
+      } finally {
+        this.accountSaving = false;
+      }
+    },
+
+    async handleUnlinkStudentAccount() {
+      if (
+        !this.canManageStudentAccounts ||
+        !this.accountStudent?.userUid
+      ) {
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          this.$t(
+            "students.account.unlinkConfirm",
+            {
+              name:
+                this.accountStudent.name,
+            },
+          ),
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      this.accountSaving = true;
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      const studentName =
+        this.accountStudent.name;
+
+      try {
+        await unlinkStudentAccount(
+          this.schoolId,
+          String(
+            this.accountStudent.id,
+          ),
+        );
+
+        this.successMessage = this.$t(
+          "students.account.unlinked",
+          {
+            name: studentName,
+          },
+        );
+
+        this.closeStudentAccount();
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "students.account.unlinkError",
+          {
+            error: error.message,
+          },
+        );
+      } finally {
+        this.accountSaving = false;
+      }
+    },
   },
 };
 </script>
@@ -809,6 +1156,61 @@ button.danger {
   color: #666;
   text-align: center;
   padding: 30px 0;
+}
+
+.account-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.account-card {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.account-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.account-header h2,
+.account-header p {
+  margin: 0;
+}
+
+.account-header p {
+  margin-top: 4px;
+}
+
+.account-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+.account-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.account-card select {
+  width: 100%;
 }
 
 @media (max-width: 850px) {

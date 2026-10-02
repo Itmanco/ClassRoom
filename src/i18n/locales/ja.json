@@ -149,7 +149,7 @@
         "description": "教室管理アプリ全体で使用する言語を選択します。"
       }
     },
-    "students": {
+  "students": {
     "title": "生徒管理",
     "description": "現在の学校に所属する生徒の登録、編集、アーカイブを行います。",
     "summary": "人在籍中 / 全{total}人",
@@ -178,7 +178,25 @@
       "notSpecified": "未指定"
     },
     "actions": {
-      "add": "生徒を追加"
+      "add": "生徒を追加",
+      "account": "アカウント"
+    },
+    "account": {
+      "title": "ClassRoomアカウント",
+      "loading": "アカウント情報を読み込んでいます...",
+      "linkedTitle": "アカウント連携済み",
+      "notLinked": "この生徒にはまだClassRoomのログインアカウントが連携されていません。",
+      "selectAccount": "生徒アカウント",
+      "selectPlaceholder": "アカウントを選択",
+      "noEligibleAccounts": "連携可能な生徒アカウントがありません。",
+      "link": "アカウントを連携",
+      "unlink": "アカウント連携を解除",
+      "linked": "{name}さんにClassRoomアカウントを連携しました。",
+      "unlinked": "{name}さんのClassRoomアカウント連携を解除しました。",
+      "unlinkConfirm": "{name}さんのClassRoomアカウント連携を解除しますか？",
+      "loadError": "アカウント情報を読み込めませんでした：{error}",
+      "linkError": "アカウントを連携できませんでした：{error}",
+      "unlinkError": "アカウント連携を解除できませんでした：{error}"
     },
     "list": {
       "title": "生徒一覧",

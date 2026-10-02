@@ -113,8 +113,15 @@ async function run() {
     const teacherUid = "teacher-a";
     const studentUid = "student-a";
 
+    const schoolAdminUid = "school-admin-a";
+    const inactiveStudentUid = "student-inactive";
+    const wrongSchoolStudentUid = "student-school-b";
+
     await seedUser(teacherUid);
     await seedUser(studentUid);
+    await seedUser(schoolAdminUid);
+    await seedUser(inactiveStudentUid);
+    await seedUser(wrongSchoolStudentUid);
 
     await seedMembership(
       schoolA,
@@ -128,14 +135,116 @@ async function run() {
       "student"
     );
 
+    await seedMembership(
+      schoolA,
+      schoolAdminUid,
+      "school-admin"
+    );
+
+    await seedMembership(
+      schoolA,
+      inactiveStudentUid,
+      "student",
+      {
+        active: false,
+      }
+    );
+
+    await seedMembership(
+      schoolB,
+      wrongSchoolStudentUid,
+      "student"
+    );
+
     await seedSchoolData(schoolA);
     await seedSchoolData(schoolB);
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+
+      // A second student record lets us verify that a
+      // linked Student cannot read another student's data.
+      await setDoc(
+        doc(
+          db,
+          "schools",
+          schoolA,
+          "students",
+          "student-2"
+        ),
+        {
+          name: "Other Student",
+          hiragana: "おーぷん",
+          country: "Japan",
+          gender_id: 2,
+          isActive: true,
+        }
+      );
+
+      // student-a is explicitly linked to student-1.
+      await setDoc(
+        doc(
+          db,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        ),
+        {
+          studentId: "student-1",
+        }
+      );
+
+      // Even with a stored mapping, an inactive Student
+      // must not gain Student access.
+      await setDoc(
+        doc(
+          db,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          inactiveStudentUid
+        ),
+        {
+          studentId: "student-1",
+        }
+      );
+
+      // This account belongs to schoolB. A mapping placed
+      // in schoolA must not bypass school membership.
+      await setDoc(
+        doc(
+          db,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          wrongSchoolStudentUid
+        ),
+        {
+          studentId: "student-1",
+        }
+      );
+
+    });
 
     const teacherDb =
       testEnv.authenticatedContext(teacherUid).firestore();
 
     const studentDb =
       testEnv.authenticatedContext(studentUid).firestore();
+
+    const schoolAdminDb =
+      testEnv.authenticatedContext(schoolAdminUid).firestore();
+
+    const inactiveStudentDb =
+      testEnv.authenticatedContext(
+        inactiveStudentUid
+      ).firestore();
+
+    const wrongSchoolStudentDb =
+      testEnv.authenticatedContext(
+        wrongSchoolStudentUid
+      ).firestore();
 
     console.log(
       "Teacher: read students in own school"
@@ -500,10 +609,50 @@ console.log("✓ teacher cannot create students");
     );
 
     console.log(
-      "Student: school-wide students denied"
+      "Student: own account mapping allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ student can read own account mapping"
+    );
+
+    console.log(
+      "Student: another account mapping denied"
     );
 
     await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          "another-student"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot read another account mapping"
+    );
+
+    console.log(
+      "Student: own linked student allowed"
+    );
+
+    await assertSucceeds(
       getDoc(
         doc(
           studentDb,
@@ -516,7 +665,236 @@ console.log("✓ teacher cannot create students");
     );
 
     console.log(
-      "✓ student cannot browse school-wide students"
+      "✓ student can read own linked student record"
+    );
+
+    console.log(
+      "Student: another student denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-2"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot read another student record"
+    );
+
+    console.log(
+      "Student: own official student update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        ),
+        {
+          country: "Colombia",
+        }
+      )
+    );
+
+    console.log(
+      "✓ student cannot modify own official student record"
+    );
+
+    console.log(
+      "Student: account-link creation denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          "new-link"
+        ),
+        {
+          studentId: "student-2",
+        }
+      )
+    );
+
+    console.log(
+      "✓ student cannot create account links"
+    );
+
+    console.log(
+      "Student: own account-link update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        ),
+        {
+          studentId: "student-2",
+        }
+      )
+    );
+
+    console.log(
+      "✓ student cannot change own account link"
+    );
+
+    console.log(
+      "Student: own account-link delete denied"
+    );
+
+    await assertFails(
+      deleteDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot delete own account link"
+    );
+
+    console.log(
+      "Teacher: student account mapping denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ teacher cannot read student account mappings"
+    );
+
+    console.log(
+      "School Admin: student account mapping allowed"
+    );
+
+    await assertSucceeds(
+      getDoc(
+        doc(
+          schoolAdminDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          studentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ school admin can read student account mappings"
+    );
+
+    console.log(
+      "Inactive Student: own account mapping denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          inactiveStudentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          inactiveStudentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ inactive student cannot read own account mapping"
+    );
+
+    console.log(
+      "Inactive Student: linked student record denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          inactiveStudentDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        )
+      )
+    );
+
+    console.log(
+      "✓ inactive student cannot read linked student record"
+    );
+
+    console.log(
+      "Wrong-school Student: mapping denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          wrongSchoolStudentDb,
+          "schools",
+          schoolA,
+          "studentAccounts",
+          wrongSchoolStudentUid
+        )
+      )
+    );
+
+    console.log(
+      "✓ wrong-school student cannot read mapping"
+    );
+
+    console.log(
+      "Wrong-school Student: student record denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          wrongSchoolStudentDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        )
+      )
+    );
+
+    console.log(
+      "✓ wrong-school student cannot read student record"
     );
 
     console.log("Student: courses denied");

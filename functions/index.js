@@ -851,16 +851,18 @@ exports.getSchoolUsers =
               .collection("members")
               .get();
 
-        const userIds =
-          membershipsSnapshot.docs.map(
-              (documentSnapshot) =>
-                documentSnapshot.id,
-          );
-
         const users =
           await Promise.all(
-              userIds.map(
-                  async (uid) => {
+              membershipsSnapshot.docs.map(
+                  async (
+                      membershipDocument,
+                  ) => {
+                    const uid =
+                      membershipDocument.id;
+
+                    const membership =
+                      membershipDocument.data();
+
                     const userDocument =
                       await db
                           .collection("users")
@@ -897,6 +899,13 @@ exports.getSchoolUsers =
 
                       active:
                         user.active !== false,
+
+                      schoolRole:
+                        membership.role || "",
+
+                      membershipActive:
+                        membership.active !==
+                          false,
                     };
                   },
               ),
@@ -1277,6 +1286,489 @@ exports.getDashboardActivity =
               };
             },
         );
+      },
+  );
+
+exports.linkStudentAccount =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        const studentId =
+          String(
+              data.studentId || "",
+          ).trim();
+
+        const userUid =
+          String(
+              data.userUid || "",
+          ).trim();
+
+        if (
+          !schoolId ||
+          !studentId ||
+          !userUid
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "schoolId, studentId, and userUid are required.",
+          );
+        }
+
+        const actor =
+          await requireSchoolAdmin(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const studentRef =
+          schoolRef
+              .collection("students")
+              .doc(studentId);
+
+        const accountRef =
+          schoolRef
+              .collection("studentAccounts")
+              .doc(userUid);
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(userUid);
+
+        const membershipRef =
+          schoolRef
+              .collection("members")
+              .doc(userUid);
+
+        await db.runTransaction(
+            async (transaction) => {
+              const [
+                studentDocument,
+                accountDocument,
+                userDocument,
+                membershipDocument,
+              ] =
+                await Promise.all([
+                  transaction.get(
+                      studentRef,
+                  ),
+                  transaction.get(
+                      accountRef,
+                  ),
+                  transaction.get(
+                      userRef,
+                  ),
+                  transaction.get(
+                      membershipRef,
+                  ),
+                ]);
+
+              if (
+                !studentDocument.exists
+              ) {
+                throw new HttpsError(
+                    "not-found",
+                    "Student record not found.",
+                );
+              }
+
+              if (
+                !userDocument.exists
+              ) {
+                throw new HttpsError(
+                    "not-found",
+                    "User profile not found.",
+                );
+              }
+
+              const user =
+                userDocument.data();
+
+              if (
+                user.active === false
+              ) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "TARGET_ACCOUNT_INACTIVE",
+                );
+              }
+
+              if (
+                !membershipDocument.exists
+              ) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "STUDENT_MEMBERSHIP_REQUIRED",
+                );
+              }
+
+              const membership =
+                membershipDocument.data();
+
+              if (
+                membership.active === false ||
+                membership.role !==
+                  "student" ||
+                membership.userUid !==
+                  userUid
+              ) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "ACTIVE_STUDENT_MEMBERSHIP_REQUIRED",
+                );
+              }
+
+              const student =
+                studentDocument.data();
+
+              const existingUserUid =
+                typeof student.userUid ===
+                  "string" ?
+                  student.userUid.trim() :
+                  "";
+
+              if (
+                existingUserUid &&
+                existingUserUid !==
+                  userUid
+              ) {
+                throw new HttpsError(
+                    "already-exists",
+                    "STUDENT_ALREADY_LINKED",
+                );
+              }
+
+              if (
+                accountDocument.exists
+              ) {
+                const existingStudentId =
+                  String(
+                      accountDocument
+                          .data()
+                          .studentId || "",
+                  ).trim();
+
+                if (
+                  existingStudentId !==
+                    studentId
+                ) {
+                  throw new HttpsError(
+                      "already-exists",
+                      "ACCOUNT_ALREADY_LINKED",
+                  );
+                }
+              }
+
+              /*
+               * If both sides already describe the
+               * requested relationship, treat this
+               * operation as idempotent.
+               */
+              if (
+                existingUserUid ===
+                  userUid &&
+                accountDocument.exists &&
+                String(
+                    accountDocument
+                        .data()
+                        .studentId || "",
+                ).trim() ===
+                  studentId
+              ) {
+                return;
+              }
+
+              transaction.set(
+                  studentRef,
+                  {
+                    userUid,
+                    updatedAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+                  {
+                    merge: true,
+                  },
+              );
+
+              transaction.set(
+                  accountRef,
+                  {
+                    studentId,
+                    createdAt:
+                      FieldValue
+                          .serverTimestamp(),
+                    updatedAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+                  {
+                    merge: true,
+                  },
+              );
+
+              const auditRef =
+                schoolRef
+                    .collection(
+                        "auditLogs",
+                    )
+                    .doc();
+
+              transaction.set(
+                  auditRef,
+                  {
+                    action:
+                      "student.accountLinked",
+
+                    entityType:
+                      "student",
+
+                    entityId:
+                      studentId,
+
+                    actorUid:
+                      actor.uid,
+
+                    actorEmail:
+                      actor.profile.email ||
+                      request.auth
+                          .token.email ||
+                      "",
+
+                    actorRole:
+                      actor.role ||
+                      actor.profile
+                          .systemRole ||
+                      null,
+
+                    schoolId,
+
+                    changedFields: [
+                      "userUid",
+                    ],
+
+                    details: {
+                      entityName:
+                        student.name ||
+                        "",
+                      userUid,
+                    },
+
+                    createdAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+              );
+            },
+        );
+
+        return {
+          schoolId,
+          studentId,
+          userUid,
+        };
+      },
+  );
+
+exports.unlinkStudentAccount =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        const studentId =
+          String(
+              data.studentId || "",
+          ).trim();
+
+        if (
+          !schoolId ||
+          !studentId
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "schoolId and studentId are required.",
+          );
+        }
+
+        const actor =
+          await requireSchoolAdmin(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const studentRef =
+          schoolRef
+              .collection("students")
+              .doc(studentId);
+
+        await db.runTransaction(
+            async (transaction) => {
+              const studentDocument =
+                await transaction.get(
+                    studentRef,
+                );
+
+              if (
+                !studentDocument.exists
+              ) {
+                throw new HttpsError(
+                    "not-found",
+                    "Student record not found.",
+                );
+              }
+
+              const student =
+                studentDocument.data();
+
+              const userUid =
+                typeof student.userUid ===
+                  "string" ?
+                  student.userUid.trim() :
+                  "";
+
+              /*
+               * Already unlinked: idempotent no-op.
+               */
+              if (!userUid) {
+                return;
+              }
+
+              const accountRef =
+                schoolRef
+                    .collection(
+                        "studentAccounts",
+                    )
+                    .doc(userUid);
+
+              const accountDocument =
+                await transaction.get(
+                    accountRef,
+                );
+
+              /*
+               * Refuse to delete a reverse mapping
+               * that belongs to another student.
+               * This protects against inconsistent
+               * historical data.
+               */
+              if (
+                accountDocument.exists &&
+                String(
+                    accountDocument
+                        .data()
+                        .studentId || "",
+                ).trim() !==
+                  studentId
+              ) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "STUDENT_ACCOUNT_LINK_MISMATCH",
+                );
+              }
+
+              transaction.update(
+                  studentRef,
+                  {
+                    userUid:
+                      FieldValue
+                          .delete(),
+                    updatedAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+              );
+
+              if (
+                accountDocument.exists
+              ) {
+                transaction.delete(
+                    accountRef,
+                );
+              }
+
+              const auditRef =
+                schoolRef
+                    .collection(
+                        "auditLogs",
+                    )
+                    .doc();
+
+              transaction.set(
+                  auditRef,
+                  {
+                    action:
+                      "student.accountUnlinked",
+
+                    entityType:
+                      "student",
+
+                    entityId:
+                      studentId,
+
+                    actorUid:
+                      actor.uid,
+
+                    actorEmail:
+                      actor.profile.email ||
+                      request.auth
+                          .token.email ||
+                      "",
+
+                    actorRole:
+                      actor.role ||
+                      actor.profile
+                          .systemRole ||
+                      null,
+
+                    schoolId,
+
+                    changedFields: [
+                      "userUid",
+                    ],
+
+                    details: {
+                      entityName:
+                        student.name ||
+                        "",
+                      userUid,
+                    },
+
+                    createdAt:
+                      FieldValue
+                          .serverTimestamp(),
+                  },
+              );
+            },
+        );
+
+        return {
+          schoolId,
+          studentId,
+          unlinked: true,
+        };
       },
   );
 

@@ -69,6 +69,13 @@ service cloud.firestore {
         ).data.role == "teacher";
     }
 
+    function isStudent(schoolId) {
+      return isActiveSchoolMember(schoolId)
+        && get(
+          /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+        ).data.role == "student";
+    }
+
     function isAssignedTeacher(schoolId, classId) {
       return isTeacher(schoolId)
         && exists(
@@ -296,17 +303,43 @@ service cloud.firestore {
         if isSystemAdmin();
 
       // --------------------------------------
+      // Student account links
+      // --------------------------------------
+
+      match /studentAccounts/{userUid} {
+
+        // A Student may resolve only their own
+        // account-to-student relationship.
+        // School administrators may inspect links.
+        allow read:
+          if canAdministerSchool(schoolId)
+            || (
+              isStudent(schoolId)
+              && request.auth.uid == userUid
+            );
+
+        // Account linking will be handled by a
+        // trusted server operation.
+        allow create, update, delete:
+          if false;
+      }
+
+      // --------------------------------------
       // Students
       // --------------------------------------
 
       match /students/{studentId} {
         allow read:
           if canAdministerSchool(schoolId)
+            || isTeacher(schoolId)
             || (
-              isActiveSchoolMember(schoolId)
+              isStudent(schoolId)
+              && exists(
+                /databases/$(database)/documents/schools/$(schoolId)/studentAccounts/$(request.auth.uid)
+              )
               && get(
-                /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)
-              ).data.role == "teacher"
+                /databases/$(database)/documents/schools/$(schoolId)/studentAccounts/$(request.auth.uid)
+              ).data.studentId == studentId
             );
 
         allow create, delete:

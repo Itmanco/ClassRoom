@@ -155,7 +155,8 @@
     "summary": "active / {total} total",
     "fields": {
       "id": "Student ID",
-      "name": "Name",
+      "firstName": "First name",
+      "lastName": "Last name",
       "hiragana": "Hiragana",
       "country": "Country",
       "gender": "Gender",
@@ -167,7 +168,8 @@
       "idHelp": "IDs cannot be changed after creation because seating history references them."
     },
     "placeholders": {
-      "name": "Yamada",
+      "firstName": "Taro",
+      "lastName": "Yamada",
       "hiragana": "やまだ",
       "country": "Japan"
     },
@@ -184,18 +186,22 @@
     "account": {
       "title": "ClassRoom Account",
       "loading": "Loading account information...",
-      "linkedTitle": "Account linked",
-      "notLinked": "This student does not have a ClassRoom login account linked yet.",
-      "selectAccount": "Student account",
-      "selectPlaceholder": "Select an account",
-      "noEligibleAccounts": "No eligible Student accounts are available.",
-      "link": "Link account",
+      "linkedTitle": "Login account",
+      "notLinked": "This student does not have a ClassRoom login account yet.",
+      "createTitle": "Create login account",
+      "createDescription": "Create a dedicated login account for this student.",
+      "email": "Email",
+      "password": "Password",
+      "language": "Language",
+      "languageEnglish": "English",
+      "languageJapanese": "Japanese",
+      "create": "Create account",
+      "created": "A ClassRoom login account was created for {name}.",
+      "createError": "Unable to create the account: {error}",
       "unlink": "Unlink account",
-      "linked": "A ClassRoom account was linked to {name}.",
       "unlinked": "The ClassRoom account was unlinked from {name}.",
       "unlinkConfirm": "Unlink the ClassRoom account from {name}?",
       "loadError": "Unable to load account information: {error}",
-      "linkError": "Unable to link the account: {error}",
       "unlinkError": "Unable to unlink the account: {error}"
     },
     "list": {

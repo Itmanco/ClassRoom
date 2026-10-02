@@ -1289,6 +1289,408 @@ exports.getDashboardActivity =
       },
   );
 
+exports.createStudentAccount =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        const studentId =
+          String(
+              data.studentId || "",
+          ).trim();
+
+        const email =
+          requireText(
+              data.email,
+              "Email",
+          ).toLowerCase();
+
+        const password =
+          requireText(
+              data.password,
+              "Password",
+          );
+
+        const language =
+          typeof data.language ===
+            "string" &&
+          data.language.trim() ?
+            data.language.trim() :
+            "en";
+
+        if (
+          !schoolId ||
+          !studentId
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "schoolId and studentId are required.",
+          );
+        }
+
+        const actor =
+          await requireSchoolAdmin(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const studentRef =
+          schoolRef
+              .collection("students")
+              .doc(studentId);
+
+        /*
+         * Validate the academic Student before
+         * creating anything in Firebase Auth.
+         */
+        const studentDocument =
+          await studentRef.get();
+
+        if (!studentDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              "Student record not found.",
+          );
+        }
+
+        const student =
+          studentDocument.data();
+
+        const firstName =
+          String(
+              student.firstName || "",
+          ).trim();
+
+        const lastName =
+          String(
+              student.lastName || "",
+          ).trim();
+
+        if (
+          !firstName ||
+          !lastName
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_NAME_INCOMPLETE",
+          );
+        }
+
+        const displayName =
+          [
+            firstName,
+            lastName,
+          ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+
+        if (
+          student.isActive === false
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_INACTIVE",
+          );
+        }
+
+        const existingUserUid =
+          typeof student.userUid ===
+            "string" ?
+            student.userUid.trim() :
+            "";
+
+        if (existingUserUid) {
+          throw new HttpsError(
+              "already-exists",
+              "STUDENT_ALREADY_LINKED",
+          );
+        }
+
+        let authUser = null;
+
+        try {
+          authUser =
+            await getAuth()
+                .createUser({
+                  email,
+                  password,
+                  displayName,
+                  disabled: false,
+                });
+
+          const uid =
+            authUser.uid;
+
+          const userRef =
+            db
+                .collection("users")
+                .doc(uid);
+
+          const membershipRef =
+            schoolRef
+                .collection("members")
+                .doc(uid);
+
+          const accountRef =
+            schoolRef
+                .collection(
+                    "studentAccounts",
+                )
+                .doc(uid);
+
+          const auditRef =
+            schoolRef
+                .collection("auditLogs")
+                .doc();
+
+          await db.runTransaction(
+              async (transaction) => {
+                /*
+                 * Re-read the Student inside the
+                 * transaction so concurrent account
+                 * creation cannot link two accounts.
+                 */
+                const currentStudentDocument =
+                  await transaction.get(
+                      studentRef,
+                  );
+
+                if (
+                  !currentStudentDocument
+                      .exists
+                ) {
+                  throw new HttpsError(
+                      "not-found",
+                      "Student record not found.",
+                  );
+                }
+
+                const currentStudent =
+                  currentStudentDocument
+                      .data();
+
+                if (
+                  currentStudent.isActive ===
+                    false
+                ) {
+                  throw new HttpsError(
+                      "failed-precondition",
+                      "STUDENT_INACTIVE",
+                  );
+                }
+
+                const currentUserUid =
+                  typeof currentStudent
+                      .userUid ===
+                    "string" ?
+                    currentStudent
+                        .userUid
+                        .trim() :
+                    "";
+
+                if (currentUserUid) {
+                  throw new HttpsError(
+                      "already-exists",
+                      "STUDENT_ALREADY_LINKED",
+                  );
+                }
+
+                transaction.set(
+                    userRef,
+                    {
+                      email,
+                      firstName,
+                      lastName,
+                      displayName,
+                      language,
+                      photoURL: "",
+                      systemRole: null,
+                      activeSchool:
+                        schoolId,
+                      active: true,
+                      createdAt:
+                        FieldValue
+                            .serverTimestamp(),
+                      updatedAt:
+                        FieldValue
+                            .serverTimestamp(),
+                    },
+                );
+
+                transaction.set(
+                    membershipRef,
+                    {
+                      userUid: uid,
+                      role: "student",
+                      active: true,
+                      createdAt:
+                        FieldValue
+                            .serverTimestamp(),
+                      updatedAt:
+                        FieldValue
+                            .serverTimestamp(),
+                    },
+                );
+
+                transaction.set(
+                    accountRef,
+                    {
+                      studentId,
+                      createdAt:
+                        FieldValue
+                            .serverTimestamp(),
+                      updatedAt:
+                        FieldValue
+                            .serverTimestamp(),
+                    },
+                );
+
+                transaction.set(
+                    studentRef,
+                    {
+                      userUid: uid,
+                      updatedAt:
+                        FieldValue
+                            .serverTimestamp(),
+                    },
+                    {
+                      merge: true,
+                    },
+                );
+
+                transaction.set(
+                    auditRef,
+                    {
+                      action:
+                        "student.accountCreated",
+
+                      entityType:
+                        "student",
+
+                      entityId:
+                        studentId,
+
+                      actorUid:
+                        actor.uid,
+
+                      actorEmail:
+                        actor.profile.email ||
+                        request.auth
+                            .token.email ||
+                        "",
+
+                      actorRole:
+                        actor.role ||
+                        actor.profile
+                            .systemRole ||
+                        null,
+
+                      schoolId,
+
+                      changedFields: [
+                        "userUid",
+                      ],
+
+                      details: {
+                        entityName:
+                          currentStudent
+                              .name ||
+                          "",
+                        userUid: uid,
+                        email,
+                      },
+
+                      createdAt:
+                        FieldValue
+                            .serverTimestamp(),
+                    },
+                );
+              },
+          );
+
+          return {
+            uid,
+            email,
+            displayName,
+            schoolId,
+            studentId,
+          };
+        } catch (error) {
+          /*
+           * Firebase Auth cannot participate in a
+           * Firestore transaction. If anything after
+           * Auth creation fails, remove the newly
+           * created Auth account.
+           */
+          if (authUser?.uid) {
+            try {
+              await getAuth()
+                  .deleteUser(
+                      authUser.uid,
+                  );
+            } catch (
+              rollbackError
+            ) {
+              console.error(
+                  "Unable to roll back Student Auth user:",
+                  rollbackError,
+              );
+            }
+          }
+
+          if (
+            error instanceof
+              HttpsError
+          ) {
+            throw error;
+          }
+
+          console.error(
+              "Unable to create Student account:",
+              error,
+          );
+
+          if (
+            error.code ===
+              "auth/email-already-exists"
+          ) {
+            throw new HttpsError(
+                "already-exists",
+                "A user with this email already exists.",
+            );
+          }
+
+          if (
+            error.code ===
+              "auth/invalid-password"
+          ) {
+            throw new HttpsError(
+                "invalid-argument",
+                "The password doesn't meet " +
+                  "Firebase Authentication requirements.",
+            );
+          }
+
+          throw new HttpsError(
+              "internal",
+              "Unable to create Student account.",
+          );
+        }
+      },
+  );
+
 exports.linkStudentAccount =
   onCall(
       async (request) => {
@@ -1432,6 +1834,15 @@ exports.linkStudentAccount =
 
               const student =
                 studentDocument.data();
+
+              if (
+                student.isActive === false
+              ) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "STUDENT_INACTIVE",
+                );
+              }
 
               const existingUserUid =
                 typeof student.userUid ===

@@ -79,11 +79,26 @@ function validateStudent(
       student.id,
     );
 
-  const name =
+  const firstName =
     String(
-      student.name ||
+      student.firstName ||
       "",
     ).trim();
+
+  const lastName =
+    String(
+      student.lastName ||
+      "",
+    ).trim();
+
+  const name =
+    [
+      firstName,
+      lastName,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
 
   const hiragana =
     String(
@@ -105,9 +120,15 @@ function validateStudent(
     );
   }
 
-  if (!name) {
+  if (!firstName) {
     throw new Error(
-      "Student name is required.",
+      "Student first name is required.",
+    );
+  }
+
+  if (!lastName) {
+    throw new Error(
+      "Student last name is required.",
     );
   }
 
@@ -133,6 +154,8 @@ function validateStudent(
 
   return {
     id,
+    firstName,
+    lastName,
     name,
     hiragana,
 
@@ -156,6 +179,8 @@ function getChanges(
   next,
 ) {
   const trackedFields = [
+    "firstName",
+    "lastName",
     "name",
     "hiragana",
     "gender_id",
@@ -282,6 +307,12 @@ export async function saveStudent(
   }
 
   const payload = {
+    firstName:
+      normalized.firstName,
+
+    lastName:
+      normalized.lastName,
+
     name:
       normalized.name,
 

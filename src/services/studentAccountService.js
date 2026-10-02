@@ -18,6 +18,12 @@ const unlinkStudentAccountCallable =
     "unlinkStudentAccount",
   );
 
+const createStudentAccountCallable =
+  httpsCallable(
+    functions,
+    "createStudentAccount",
+  );
+
 export async function linkStudentAccount(
   schoolId,
   studentId,
@@ -42,6 +48,17 @@ export async function unlinkStudentAccount(
       schoolId,
       studentId,
     });
+
+  return result.data;
+}
+
+export async function createStudentAccount(
+  accountData,
+) {
+  const result =
+    await createStudentAccountCallable(
+      accountData,
+    );
 
   return result.data;
 }

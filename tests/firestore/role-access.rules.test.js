@@ -669,6 +669,60 @@ console.log("✓ teacher cannot create students");
     );
 
     console.log(
+      "Student: archived linked student denied"
+    );
+
+    await testEnv.withSecurityRulesDisabled(
+      async (context) => {
+        await updateDoc(
+          doc(
+            context.firestore(),
+            "schools",
+            schoolA,
+            "students",
+            "student-1"
+          ),
+          {
+            isActive: false,
+          }
+        );
+      }
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot read archived linked student record"
+    );
+
+    await testEnv.withSecurityRulesDisabled(
+      async (context) => {
+        await updateDoc(
+          doc(
+            context.firestore(),
+            "schools",
+            schoolA,
+            "students",
+            "student-1"
+          ),
+          {
+            isActive: true,
+          }
+        );
+      }
+    );
+
+    console.log(
       "Student: another student denied"
     );
 

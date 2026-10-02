@@ -334,6 +334,7 @@ service cloud.firestore {
             || isTeacher(schoolId)
             || (
               isStudent(schoolId)
+              && resource.data.isActive != false
               && exists(
                 /databases/$(database)/documents/schools/$(schoolId)/studentAccounts/$(request.auth.uid)
               )
@@ -354,6 +355,8 @@ service cloud.firestore {
                 .diff(resource.data)
                 .affectedKeys()
                 .hasOnly([
+                  "firstName",
+                  "lastName",
                   "name",
                   "hiragana",
                   "gender_id",

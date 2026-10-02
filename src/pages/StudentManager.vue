@@ -63,13 +63,27 @@
         </small>
 
         <label>
-          {{ $t("students.fields.name") }}
+          {{ $t("students.fields.firstName") }}
 
           <input
-            v-model.trim="form.name"
+            v-model.trim="form.firstName"
             type="text"
             maxlength="80"
-            :placeholder="$t('students.placeholders.name')"
+            autocomplete="given-name"
+            :placeholder="$t('students.placeholders.firstName')"
+            required
+          />
+        </label>
+
+        <label>
+          {{ $t("students.fields.lastName") }}
+
+          <input
+            v-model.trim="form.lastName"
+            type="text"
+            maxlength="80"
+            autocomplete="family-name"
+            :placeholder="$t('students.placeholders.lastName')"
             required
           />
         </label>
@@ -323,55 +337,70 @@
         </template>
 
         <template v-else>
-          <p>
-            {{ $t("students.account.notLinked") }}
-          </p>
+          <div class="account-status">
+            <strong>
+              {{ $t("students.account.createTitle") }}
+            </strong>
 
-          <label>
-            {{ $t("students.account.selectAccount") }}
+            <small>
+              {{ $t("students.account.createDescription") }}
+            </small>
+          </div>
 
-            <select
-              v-model="selectedAccountUid"
-              :disabled="accountSaving"
-            >
-              <option value="">
-                {{ $t("students.account.selectPlaceholder") }}
-              </option>
+          <div class="account-form">
+            <label>
+              {{ $t("students.account.email") }}
 
-              <option
-                v-for="user in eligibleStudentAccounts"
-                :key="user.id"
-                :value="user.id"
+              <input
+                v-model.trim="accountForm.email"
+                type="email"
+                autocomplete="email"
+                :disabled="accountSaving"
+              />
+            </label>
+
+            <label>
+              {{ $t("students.account.password") }}
+
+              <input
+                v-model="accountForm.password"
+                type="password"
+                autocomplete="new-password"
+                :disabled="accountSaving"
+              />
+            </label>
+
+            <label>
+              {{ $t("students.account.language") }}
+
+              <select
+                v-model="accountForm.language"
+                :disabled="accountSaving"
               >
-                {{
-                  user.displayName ||
-                  user.email ||
-                  user.id
-                }}
-                · {{ user.email }}
-              </option>
-            </select>
-          </label>
+                <option value="en">
+                  {{ $t("students.account.languageEnglish") }}
+                </option>
 
-          <p
-            v-if="eligibleStudentAccounts.length === 0"
-            class="empty-state"
-          >
-            {{ $t("students.account.noEligibleAccounts") }}
-          </p>
+                <option value="ja">
+                  {{ $t("students.account.languageJapanese") }}
+                </option>
+              </select>
+            </label>
+          </div>
 
           <button
             type="button"
             :disabled="
               accountSaving ||
-              !selectedAccountUid
+              !accountForm.email ||
+              !accountForm.password
             "
-            @click="handleLinkStudentAccount"
+            @click="handleCreateStudentAccount"
           >
             {{
               accountSaving
                 ? $t("common.saving")
-                : $t("students.account.link")
+                : $t("students.account.create")
             }}
           </button>
         </template>
@@ -393,18 +422,27 @@ import {
 } from "../services/adminUserService";
 
 import {
-  linkStudentAccount,
+  createStudentAccount,
   unlinkStudentAccount,
 } from "../services/studentAccountService";
 
 function emptyForm() {
   return {
     id: 1,
-    name: "",
+    firstName: "",
+    lastName: "",
     hiragana: "",
     country: "",
     gender_id: 1,
     isActive: true,
+  };
+}
+
+function emptyAccountForm() {
+  return {
+    email: "",
+    password: "",
+    language: "en",
   };
 }
 
@@ -438,7 +476,7 @@ export default {
       schoolUsers: [],
       accountLoading: false,
       accountSaving: false,
-      selectedAccountUid: "",
+      accountForm: emptyAccountForm(),
     };
   },
 
@@ -503,20 +541,6 @@ export default {
       return (
         this.actorRole === "system-admin" ||
         this.actorRole === "school-admin"
-      );
-    },
-
-    eligibleStudentAccounts() {
-      return this.schoolUsers.filter(
-        (user) =>
-          user.schoolRole === "student" &&
-          user.active !== false &&
-          user.membershipActive !== false &&
-          (
-            !user.linkedStudentId ||
-            user.linkedStudentId ===
-              this.accountStudent?.id
-          ),
       );
     },
 
@@ -641,7 +665,13 @@ export default {
       this.successMessage = "";
 
       const wasCreating = isCreating;
-      const studentName = this.form.name;
+      const studentName = [
+        this.form.firstName,
+        this.form.lastName,
+      ]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
 
       try {
         const studentData = {
@@ -703,13 +733,34 @@ export default {
 
       this.editingStudentId = student.id;
 
+      const hasStructuredName =
+        Boolean(
+          student.firstName ||
+          student.lastName,
+        );
+
       this.form = {
         id: student.id,
-        name: student.name || "",
-        hiragana: student.hiragana || "",
-        country: student.country || "",
-        gender_id: Number(student.gender_id) || 1,
-        isActive: student.isActive !== false,
+
+        firstName:
+          hasStructuredName
+            ? student.firstName || ""
+            : student.name || "",
+
+        lastName:
+          student.lastName || "",
+
+        hiragana:
+          student.hiragana || "",
+
+        country:
+          student.country || "",
+
+        gender_id:
+          Number(student.gender_id) || 1,
+
+        isActive:
+          student.isActive !== false,
       };
 
       this.successMessage = "";
@@ -797,8 +848,8 @@ export default {
       this.accountStudent = student;
       this.accountLoading = true;
       this.accountSaving = false;
-      this.selectedAccountUid =
-        student.userUid || "";
+      this.accountForm =
+        emptyAccountForm();
       this.errorMessage = "";
       this.successMessage = "";
 
@@ -845,15 +896,17 @@ export default {
     closeStudentAccount() {
       this.accountStudent = null;
       this.schoolUsers = [];
-      this.selectedAccountUid = "";
+      this.accountForm =
+        emptyAccountForm();
       this.accountLoading = false;
     },
 
-    async handleLinkStudentAccount() {
+    async handleCreateStudentAccount() {
       if (
         !this.canManageStudentAccounts ||
         !this.accountStudent ||
-        !this.selectedAccountUid
+        !this.accountForm.email ||
+        !this.accountForm.password
       ) {
         return;
       }
@@ -862,27 +915,34 @@ export default {
       this.errorMessage = "";
       this.successMessage = "";
 
+      const studentName =
+        this.accountStudent.name;
+
       try {
-        await linkStudentAccount(
-          this.schoolId,
-          String(
+        await createStudentAccount({
+          schoolId: this.schoolId,
+          studentId: String(
             this.accountStudent.id,
           ),
-          this.selectedAccountUid,
-        );
+          email:
+            this.accountForm.email,
+          password:
+            this.accountForm.password,
+          language:
+            this.accountForm.language,
+        });
 
         this.successMessage = this.$t(
-          "students.account.linked",
+          "students.account.created",
           {
-            name:
-              this.accountStudent.name,
+            name: studentName,
           },
         );
 
         this.closeStudentAccount();
       } catch (error) {
         this.errorMessage = this.$t(
-          "students.account.linkError",
+          "students.account.createError",
           {
             error: error.message,
           },
@@ -1209,6 +1269,17 @@ button.danger {
   margin: 16px 0;
 }
 
+.account-form {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.account-form label {
+  margin: 0;
+}
+
+.account-card input,
 .account-card select {
   width: 100%;
 }

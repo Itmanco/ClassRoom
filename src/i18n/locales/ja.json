@@ -155,7 +155,8 @@
     "summary": "人在籍中 / 全{total}人",
     "fields": {
       "id": "生徒ID",
-      "name": "氏名",
+      "firstName": "名",
+      "lastName": "姓",
       "hiragana": "ひらがな",
       "country": "国籍・出身国",
       "gender": "性別",
@@ -167,7 +168,8 @@
       "idHelp": "座席履歴から参照されるため、作成後にIDを変更することはできません。"
     },
     "placeholders": {
-      "name": "山田",
+      "firstName": "太郎",
+      "lastName": "山田",
       "hiragana": "やまだ",
       "country": "日本"
     },
@@ -184,18 +186,22 @@
     "account": {
       "title": "ClassRoomアカウント",
       "loading": "アカウント情報を読み込んでいます...",
-      "linkedTitle": "アカウント連携済み",
-      "notLinked": "この生徒にはまだClassRoomのログインアカウントが連携されていません。",
-      "selectAccount": "生徒アカウント",
-      "selectPlaceholder": "アカウントを選択",
-      "noEligibleAccounts": "連携可能な生徒アカウントがありません。",
-      "link": "アカウントを連携",
+      "linkedTitle": "ログインアカウント",
+      "notLinked": "この生徒にはまだClassRoomのログインアカウントがありません。",
+      "createTitle": "ログインアカウントを作成",
+      "createDescription": "この生徒専用のログインアカウントを作成します。",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "language": "言語",
+      "languageEnglish": "英語",
+      "languageJapanese": "日本語",
+      "create": "アカウントを作成",
+      "created": "{name}さんのClassRoomログインアカウントを作成しました。",
+      "createError": "アカウントを作成できませんでした：{error}",
       "unlink": "アカウント連携を解除",
-      "linked": "{name}さんにClassRoomアカウントを連携しました。",
       "unlinked": "{name}さんのClassRoomアカウント連携を解除しました。",
       "unlinkConfirm": "{name}さんのClassRoomアカウント連携を解除しますか？",
       "loadError": "アカウント情報を読み込めませんでした：{error}",
-      "linkError": "アカウントを連携できませんでした：{error}",
       "unlinkError": "アカウント連携を解除できませんでした：{error}"
     },
     "list": {

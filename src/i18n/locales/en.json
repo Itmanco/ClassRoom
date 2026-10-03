@@ -44,7 +44,7 @@
       "admin": "Admin",
       "collapse": "Collapse navigation",
       "expand": "Expand navigation"
-    },
+  },
   "noSchool": {
     "title": "No school assigned yet",
     "description": "Your account is active, but it has not been assigned to a school.",
@@ -148,7 +148,7 @@
         "title": "Application language",
         "description": "Choose the language used throughout Classroom Manager."
       }
-    },
+  },
   "students": {
     "title": "Student Management",
     "description": "Create, edit, and archive students for the active school.",
@@ -202,7 +202,21 @@
       "unlinked": "The ClassRoom account was unlinked from {name}.",
       "unlinkConfirm": "Unlink the ClassRoom account from {name}?",
       "loadError": "Unable to load account information: {error}",
-      "unlinkError": "Unable to unlink the account: {error}"
+      "unlinkError": "Unable to unlink the account: {error}",
+      "statusEnabled": "Login enabled",
+      "statusDisabled": "Login disabled",
+      "enable": "Enable login",
+      "disable": "Disable login",
+      "enableConfirm": "Enable login for {name}?",
+      "disableConfirm": "Disable login for {name}? The student will no longer be able to sign in.",
+      "enabled": "Login enabled for {name}.",
+      "disabled": "Login disabled for {name}.",
+      "enableError": "Unable to enable login: {error}",
+      "disableError": "Unable to disable login: {error}",
+      "badgeEnabled": "Login",
+      "badgeDisabled": "Login disabled",
+      "badgeNone": "No login",
+      "badgeUnknown": "Account unavailable"
     },
     "list": {
       "title": "Students",
@@ -552,7 +566,6 @@
       "reactivateError": "Unable to reactivate the seating plan: {error}"
     }
   },
-
   "classWorkspace": {
     "eyebrow": "Class workspace",
     "description": "Manage the students, seating plans, and academic information that belong to this class.",
@@ -597,7 +610,6 @@
       "loadError": "Unable to load the class workspace: {error}"
     }
   },
-
   "userProfile": {
     "fallbackName": "User",
     "actions": {
@@ -605,7 +617,6 @@
       "signOut": "Sign out"
     }
   },
-
   "profile": {
     "eyebrow": "Account",
     "title": "My Profile",
@@ -661,7 +672,6 @@
       }
     }
   },
-
   "dashboard": {
     "eyebrow": "School overview",
     "title": "Dashboard",
@@ -704,7 +714,6 @@
       "loadError": "Unable to load dashboard information."
     }
   },
-
   "admin": {
     "eyebrow": "System Administration",
     "title": "Admin Console",
@@ -731,7 +740,6 @@
       }
     }
   },
-
   "adminSchools": {
     "eyebrow": "System Administration",
     "title": "Schools",
@@ -772,7 +780,6 @@
       "reactivateError": "Unable to reactivate school: {error}"
     }
   },
-
   "adminUsers": {
     "refresh": "Refresh",
     "eyebrow": "System Administration",
@@ -903,7 +910,6 @@
       "unknown": "An unexpected error occurred."
     }
   },
-
   "adminAudit": {
     "eyebrow": "System Administration",
     "title": "Activity Log",

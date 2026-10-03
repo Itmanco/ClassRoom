@@ -24,6 +24,12 @@ const createStudentAccountCallable =
     "createStudentAccount",
   );
 
+const setStudentAccountActiveCallable =
+  httpsCallable(
+    functions,
+    "setStudentAccountActive",
+  );
+
 export async function linkStudentAccount(
   schoolId,
   studentId,
@@ -59,6 +65,21 @@ export async function createStudentAccount(
     await createStudentAccountCallable(
       accountData,
     );
+
+  return result.data;
+}
+
+export async function setStudentAccountActive(
+  schoolId,
+  studentId,
+  active,
+) {
+  const result =
+    await setStudentAccountActiveCallable({
+      schoolId,
+      studentId,
+      active,
+    });
 
   return result.data;
 }

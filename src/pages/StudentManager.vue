@@ -217,6 +217,23 @@
                       : $t("common.active")
                   }}
                 </span>
+                <span
+                  v-if="canManageStudentAccounts"
+                  class="status account-status-badge"
+                  :class="
+                    `account-${studentAccountStatus(student)}`
+                  "
+                >
+                  {{
+                    studentAccountStatus(student) === "enabled"
+                      ? `🔐 ${$t("students.account.badgeEnabled")}`
+                      : studentAccountStatus(student) === "disabled"
+                        ? `🔒 ${$t("students.account.badgeDisabled")}`
+                        : studentAccountStatus(student) === "unknown"
+                          ? `⚠ ${$t("students.account.badgeUnknown")}`
+                          : $t("students.account.badgeNone")
+                  }}
+                </span>
               </div>
 
               <div>{{ student.hiragana }}</div>
@@ -315,6 +332,14 @@
               <small>
                 {{ linkedAccount.email }}
               </small>
+
+              <small>
+                {{
+                  linkedAccountActive
+                    ? $t("students.account.statusEnabled")
+                    : $t("students.account.statusDisabled")
+                }}
+              </small>
             </template>
 
             <small v-else>
@@ -323,15 +348,24 @@
           </div>
 
           <button
+            v-if="linkedAccount"
             type="button"
-            class="danger"
+            :class="{
+              danger: linkedAccountActive,
+            }"
             :disabled="accountSaving"
-            @click="handleUnlinkStudentAccount"
+            @click="
+              handleSetStudentAccountActive(
+                !linkedAccountActive
+              )
+            "
           >
             {{
               accountSaving
                 ? $t("common.saving")
-                : $t("students.account.unlink")
+                : linkedAccountActive
+                  ? $t("students.account.disable")
+                  : $t("students.account.enable")
             }}
           </button>
         </template>
@@ -423,7 +457,7 @@ import {
 
 import {
   createStudentAccount,
-  unlinkStudentAccount,
+  setStudentAccountActive,
 } from "../services/studentAccountService";
 
 function emptyForm() {
@@ -559,18 +593,27 @@ export default {
         ) || null
       );
     },
+
+    linkedAccountActive() {
+      return (
+        this.linkedAccount?.active !== false &&
+        this.linkedAccount?.membershipActive !== false
+      );
+    },
   },
 
   watch: {
     schoolId() {
       this.startStudentListener();
       this.resetForm();
+      this.loadStudentAccountStatuses();
     },
   },
 
   mounted() {
     this.startStudentListener();
     this.prepareNextStudentId();
+    this.loadStudentAccountStatuses();
   },
 
   beforeUnmount() {
@@ -578,6 +621,55 @@ export default {
   },
 
   methods: {
+    async loadStudentAccountStatuses() {
+      if (
+        !this.canManageStudentAccounts ||
+        !this.schoolId
+      ) {
+        this.schoolUsers = [];
+        return;
+      }
+
+      try {
+        this.schoolUsers =
+          await getManagedSchoolUsers(
+            this.schoolId,
+          );
+      } catch (error) {
+        console.error(
+          "Unable to load Student account statuses:",
+          error,
+        );
+
+        this.schoolUsers = [];
+      }
+    },
+
+    studentAccountStatus(student) {
+      if (!student.userUid) {
+        return "none";
+      }
+
+      const account =
+        this.schoolUsers.find(
+          (user) =>
+            user.id === student.userUid,
+        );
+
+      if (!account) {
+        return "unknown";
+      }
+
+      if (
+        account.active !== false &&
+        account.membershipActive !== false
+      ) {
+        return "enabled";
+      }
+
+      return "disabled";
+    },
+
     startStudentListener() {
       this.stopStudentListener();
       this.loading = true;
@@ -853,49 +945,13 @@ export default {
       this.errorMessage = "";
       this.successMessage = "";
 
-      try {
-        const users =
-          await getManagedSchoolUsers(
-            this.schoolId,
-          );
+      await this.loadStudentAccountStatuses();
 
-        const linkedByUid =
-          new Map();
-
-        this.students.forEach(
-          (existingStudent) => {
-            if (existingStudent.userUid) {
-              linkedByUid.set(
-                existingStudent.userUid,
-                existingStudent.id,
-              );
-            }
-          },
-        );
-
-        this.schoolUsers =
-          users.map((user) => ({
-            ...user,
-            linkedStudentId:
-              linkedByUid.get(
-                user.id,
-              ) || null,
-          }));
-      } catch (error) {
-        this.errorMessage = this.$t(
-          "students.account.loadError",
-          {
-            error: error.message,
-          },
-        );
-      } finally {
-        this.accountLoading = false;
-      }
+      this.accountLoading = false;
     },
 
     closeStudentAccount() {
       this.accountStudent = null;
-      this.schoolUsers = [];
       this.accountForm =
         emptyAccountForm();
       this.accountLoading = false;
@@ -952,21 +1008,26 @@ export default {
       }
     },
 
-    async handleUnlinkStudentAccount() {
+    async handleSetStudentAccountActive(active) {
       if (
         !this.canManageStudentAccounts ||
-        !this.accountStudent?.userUid
+        !this.accountStudent?.userUid ||
+        !this.linkedAccount
       ) {
         return;
       }
 
+      const studentName =
+        this.accountStudent.name;
+
       const confirmed =
         window.confirm(
           this.$t(
-            "students.account.unlinkConfirm",
+            active
+              ? "students.account.enableConfirm"
+              : "students.account.disableConfirm",
             {
-              name:
-                this.accountStudent.name,
+              name: studentName,
             },
           ),
         );
@@ -979,28 +1040,36 @@ export default {
       this.errorMessage = "";
       this.successMessage = "";
 
-      const studentName =
-        this.accountStudent.name;
-
       try {
-        await unlinkStudentAccount(
+        await setStudentAccountActive(
           this.schoolId,
           String(
             this.accountStudent.id,
           ),
+          active,
         );
 
         this.successMessage = this.$t(
-          "students.account.unlinked",
+          active
+            ? "students.account.enabled"
+            : "students.account.disabled",
           {
             name: studentName,
           },
         );
 
-        this.closeStudentAccount();
+        /*
+        * Refresh the managed account data so
+        * the modal immediately reflects the
+        * new account state.
+        */
+        await this.loadStudentAccountStatuses();
+
       } catch (error) {
         this.errorMessage = this.$t(
-          "students.account.unlinkError",
+          active
+            ? "students.account.enableError"
+            : "students.account.disableError",
           {
             error: error.message,
           },

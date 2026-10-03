@@ -1691,6 +1691,409 @@ exports.createStudentAccount =
       },
   );
 
+exports.setStudentAccountActive =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        const studentId =
+          String(
+              data.studentId || "",
+          ).trim();
+
+        const active =
+          data.active;
+
+        if (
+          !schoolId ||
+          !studentId
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "schoolId and studentId are required.",
+          );
+        }
+
+        if (
+          typeof active !==
+            "boolean"
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "ACTIVE_BOOLEAN_REQUIRED",
+          );
+        }
+
+        const actor =
+          await requireSchoolAdmin(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const studentRef =
+          schoolRef
+              .collection("students")
+              .doc(studentId);
+
+        const studentDocument =
+          await studentRef.get();
+
+        if (!studentDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              "STUDENT_NOT_FOUND",
+          );
+        }
+
+        const student =
+          studentDocument.data();
+
+        if (
+          active &&
+          student.isActive === false
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_INACTIVE",
+          );
+        }
+
+        const userUid =
+          typeof student.userUid ===
+            "string" ?
+            student.userUid.trim() :
+            "";
+
+        if (!userUid) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_NOT_LINKED",
+          );
+        }
+
+        const accountRef =
+          schoolRef
+              .collection(
+                  "studentAccounts",
+              )
+              .doc(userUid);
+
+        const membershipRef =
+          schoolRef
+              .collection("members")
+              .doc(userUid);
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(userUid);
+
+        const [
+          accountDocument,
+          membershipDocument,
+          userDocument,
+        ] =
+          await Promise.all([
+            accountRef.get(),
+            membershipRef.get(),
+            userRef.get(),
+          ]);
+
+        if (!accountDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_MAPPING_MISSING",
+          );
+        }
+
+        const account =
+          accountDocument.data();
+
+        if (
+          String(
+              account.studentId || "",
+          ) !== studentId
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_LINK_MISMATCH",
+          );
+        }
+
+        if (!membershipDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_MEMBERSHIP_REQUIRED",
+          );
+        }
+
+        const membership =
+          membershipDocument.data();
+
+        if (
+          membership.role !==
+            "student"
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_MEMBERSHIP_REQUIRED",
+          );
+        }
+
+        if (
+          membership.userUid &&
+          membership.userUid !==
+            userUid
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_LINK_MISMATCH",
+          );
+        }
+
+        if (!userDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_USER_PROFILE_MISSING",
+          );
+        }
+
+        let authUser;
+
+        try {
+          authUser =
+            await getAuth()
+                .getUser(userUid);
+        } catch (error) {
+          if (
+            error.code ===
+              "auth/user-not-found"
+          ) {
+            throw new HttpsError(
+                "failed-precondition",
+                "STUDENT_AUTH_USER_MISSING",
+            );
+          }
+
+          console.error(
+              "Unable to load Student Auth user:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to load Student account.",
+          );
+        }
+
+        const user =
+          userDocument.data();
+
+        const previousUserActive =
+          user.active !== false;
+
+        const previousMembershipActive =
+          membership.active !== false;
+
+        const previousAuthActive =
+          authUser.disabled !== true;
+
+        /*
+         * If all three access layers already
+         * match the requested state, there is
+         * nothing to change.
+         */
+        if (
+          previousUserActive === active &&
+          previousMembershipActive === active &&
+          previousAuthActive === active
+        ) {
+          return {
+            success: true,
+            schoolId,
+            studentId,
+            userUid,
+            active,
+            changed: false,
+          };
+        }
+
+        /*
+         * Firebase Auth cannot participate in
+         * the Firestore batch below. Update it
+         * first and restore its previous state
+         * if the Firestore write fails.
+         */
+        try {
+          await getAuth()
+              .updateUser(
+                  userUid,
+                  {
+                    disabled:
+                      !active,
+                  },
+              );
+        } catch (error) {
+          console.error(
+              "Unable to update Student Auth state:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to update Student login.",
+          );
+        }
+
+        const action =
+          active ?
+            "student.accountEnabled" :
+            "student.accountDisabled";
+
+        const auditRef =
+          schoolRef
+              .collection("auditLogs")
+              .doc();
+
+        const batch =
+          db.batch();
+
+        batch.update(
+            userRef,
+            {
+              active,
+              updatedAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        batch.update(
+            membershipRef,
+            {
+              active,
+              updatedAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        batch.set(
+            auditRef,
+            {
+              action,
+
+              entityType:
+                "student",
+
+              entityId:
+                studentId,
+
+              actorUid:
+                actor.uid,
+
+              actorEmail:
+                actor.profile.email ||
+                request.auth.token.email ||
+                "",
+
+              actorRole:
+                actor.role ||
+                actor.profile.systemRole ||
+                null,
+
+              schoolId,
+
+              changedFields: [
+                "accountActive",
+              ],
+
+              details: {
+                entityName:
+                  student.name || "",
+
+                userUid,
+
+                email:
+                  user.email ||
+                  authUser.email ||
+                  "",
+
+                changes: {
+                  accountActive: {
+                    before:
+                      previousUserActive &&
+                      previousMembershipActive &&
+                      previousAuthActive,
+
+                    after:
+                      active,
+                  },
+                },
+              },
+
+              createdAt:
+                FieldValue
+                    .serverTimestamp(),
+            },
+        );
+
+        try {
+          await batch.commit();
+        } catch (error) {
+          /*
+           * Restore Firebase Auth because the
+           * Firestore changes did not commit.
+           */
+          try {
+            await getAuth()
+                .updateUser(
+                    userUid,
+                    {
+                      disabled:
+                        !previousAuthActive,
+                    },
+                );
+          } catch (rollbackError) {
+            console.error(
+                "Unable to restore Student Auth state:",
+                rollbackError,
+            );
+          }
+
+          console.error(
+              "Unable to update Student account state:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to update Student login.",
+          );
+        }
+
+        return {
+          success: true,
+          schoolId,
+          studentId,
+          userUid,
+          active,
+          changed: true,
+        };
+      },
+  );
+
 exports.linkStudentAccount =
   onCall(
       async (request) => {

@@ -44,7 +44,7 @@
       "admin": "管理",
       "collapse": "ナビゲーションを折りたたむ",
       "expand": "ナビゲーションを展開する"
-    },
+  },
   "noSchool": {
     "title": "学校がまだ割り当てられていません",
     "description": "アカウントは有効ですが、現在所属する学校が割り当てられていません。",
@@ -87,7 +87,7 @@
         "classes": "クラスと登録生徒を管理",
         "seating": "座席表を作成・管理"
       }
-    },
+  },
   "planningEngine": {
     "title": "インテリジェント座席プランナー",
     "description": "過去の座席履歴を考慮して、最適化された座席配置を3案生成します。先生が候補を確認し、最終的な配置を選択します。",
@@ -148,7 +148,7 @@
         "title": "アプリケーションの言語",
         "description": "教室管理アプリ全体で使用する言語を選択します。"
       }
-    },
+  },
   "students": {
     "title": "生徒管理",
     "description": "現在の学校に所属する生徒の登録、編集、アーカイブを行います。",
@@ -202,7 +202,21 @@
       "unlinked": "{name}さんのClassRoomアカウント連携を解除しました。",
       "unlinkConfirm": "{name}さんのClassRoomアカウント連携を解除しますか？",
       "loadError": "アカウント情報を読み込めませんでした：{error}",
-      "unlinkError": "アカウント連携を解除できませんでした：{error}"
+      "unlinkError": "アカウント連携を解除できませんでした：{error}",
+      "statusEnabled": "ログイン有効",
+      "statusDisabled": "ログイン無効",
+      "enable": "ログインを有効にする",
+      "disable": "ログインを無効にする",
+      "enableConfirm": "{name}さんのログインを有効にしますか？",
+      "disableConfirm": "{name}さんのログインを無効にしますか？無効にするとログインできなくなります。",
+      "enabled": "{name}さんのログインを有効にしました。",
+      "disabled": "{name}さんのログインを無効にしました。",
+      "enableError": "ログインを有効にできませんでした：{error}",
+      "disableError": "ログインを無効にできませんでした：{error}",
+      "badgeEnabled": "ログイン",
+      "badgeDisabled": "ログイン無効",
+      "badgeNone": "ログインなし",
+      "badgeUnknown": "アカウント確認不可"
     },
     "list": {
       "title": "生徒一覧",
@@ -553,7 +567,6 @@
       "reactivateError": "座席表を再有効化できませんでした：{error}"
     }
   },
-
   "classWorkspace": {
     "eyebrow": "クラスワークスペース",
     "description": "このクラスに所属する生徒、座席表、学期情報をまとめて管理します。",
@@ -598,7 +611,6 @@
       "loadError": "クラスワークスペースを読み込めませんでした：{error}"
     }
   },
-
   "userProfile": {
     "fallbackName": "ユーザー",
     "actions": {
@@ -606,7 +618,6 @@
       "signOut": "ログアウト"
     }
   },
-
   "profile": {
     "eyebrow": "アカウント",
     "title": "マイプロフィール",
@@ -662,7 +673,6 @@
       }
     }
   },
-
   "dashboard": {
     "eyebrow": "学校概要",
     "title": "ダッシュボード",
@@ -705,7 +715,6 @@
       "loadError": "ダッシュボード情報を読み込めませんでした。"
     }
   },
-
   "admin": {
     "eyebrow": "システム管理",
     "title": "管理コンソール",
@@ -732,7 +741,6 @@
       }
     }
   },
-
   "adminSchools": {
     "eyebrow": "システム管理",
     "title": "学校",
@@ -773,7 +781,6 @@
       "reactivateError": "学校を再有効化できませんでした: {error}"
     }
   },
-
   "adminUsers": {
     "refresh": "更新",
     "eyebrow": "システム管理",
@@ -904,7 +911,6 @@
       "unknown": "予期しないエラーが発生しました。"
     }
   },
-
   "adminAudit": {
     "eyebrow": "システム管理",
     "title": "操作履歴",

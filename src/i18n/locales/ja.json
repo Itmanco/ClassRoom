@@ -216,7 +216,16 @@
       "badgeEnabled": "ログイン",
       "badgeDisabled": "ログイン無効",
       "badgeNone": "ログインなし",
-      "badgeUnknown": "アカウント確認不可"
+      "badgeUnknown": "アカウント確認不可",
+      "badgeLoading": "ログイン確認中…",
+      "validation": {
+        "emailRequired": "メールアドレスを入力してください。",
+        "emailInvalid": "有効なメールアドレスを入力してください。",
+        "emailExists": "このメールアドレスはすでに別のアカウントで使用されています。",
+        "passwordRequired": "パスワードを入力してください。",
+        "passwordShort": "パスワードは6文字以上で入力してください。",
+        "passwordInvalid": "有効なパスワードを入力してください。"
+      }
     },
     "list": {
       "title": "生徒一覧",

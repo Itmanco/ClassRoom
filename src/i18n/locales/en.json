@@ -216,7 +216,16 @@
       "badgeEnabled": "Login",
       "badgeDisabled": "Login disabled",
       "badgeNone": "No login",
-      "badgeUnknown": "Account unavailable"
+      "badgeUnknown": "Account unavailable",
+      "badgeLoading": "Checking login…",
+      "validation": {
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Enter a valid email address.",
+        "emailExists": "This email is already used by another account.",
+        "passwordRequired": "Password is required.",
+        "passwordShort": "Password must be at least 6 characters.",
+        "passwordInvalid": "Enter a valid password."
+      }
     },
     "list": {
       "title": "Students",

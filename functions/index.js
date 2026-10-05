@@ -1664,11 +1664,18 @@ exports.createStudentAccount =
 
           if (
             error.code ===
+              "auth/invalid-email"
+          ) {
+            throw new HttpsError("invalid-argument", "INVALID_EMAIL",
+            );
+          }
+          if (
+            error.code ===
               "auth/email-already-exists"
           ) {
             throw new HttpsError(
                 "already-exists",
-                "A user with this email already exists.",
+                "EMAIL_ALREADY_EXISTS",
             );
           }
 
@@ -1676,10 +1683,7 @@ exports.createStudentAccount =
             error.code ===
               "auth/invalid-password"
           ) {
-            throw new HttpsError(
-                "invalid-argument",
-                "The password doesn't meet " +
-                  "Firebase Authentication requirements.",
+            throw new HttpsError("invalid-argument", "INVALID_PASSWORD",
             );
           }
 

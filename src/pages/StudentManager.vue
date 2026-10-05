@@ -231,7 +231,9 @@
                         ? `🔒 ${$t("students.account.badgeDisabled")}`
                         : studentAccountStatus(student) === "unknown"
                           ? `⚠ ${$t("students.account.badgeUnknown")}`
-                          : $t("students.account.badgeNone")
+                          : studentAccountStatus(student) === "loading"
+                            ? $t("students.account.badgeLoading")
+                            : $t("students.account.badgeNone")
                   }}
                 </span>
               </div>
@@ -381,7 +383,10 @@
             </small>
           </div>
 
-          <div class="account-form">
+          <form
+            class="account-form"
+            @submit.prevent="handleCreateStudentAccount"
+          >
             <label>
               {{ $t("students.account.email") }}
 
@@ -389,8 +394,17 @@
                 v-model.trim="accountForm.email"
                 type="email"
                 autocomplete="email"
+                :class="{ 'input-error': accountErrors.email }"
                 :disabled="accountSaving"
+                @input="accountErrors.email = ''"
               />
+
+              <small
+                v-if="accountErrors.email"
+                class="field-error"
+              >
+                {{ accountErrors.email }}
+              </small>
             </label>
 
             <label>
@@ -400,8 +414,17 @@
                 v-model="accountForm.password"
                 type="password"
                 autocomplete="new-password"
+                :class="{ 'input-error': accountErrors.password }"
                 :disabled="accountSaving"
+                @input="accountErrors.password = ''"
               />
+
+              <small
+                v-if="accountErrors.password"
+                class="field-error"
+              >
+                {{ accountErrors.password }}
+              </small>
             </label>
 
             <label>
@@ -420,23 +443,18 @@
                 </option>
               </select>
             </label>
-          </div>
 
-          <button
-            type="button"
-            :disabled="
-              accountSaving ||
-              !accountForm.email ||
-              !accountForm.password
-            "
-            @click="handleCreateStudentAccount"
-          >
-            {{
-              accountSaving
-                ? $t("common.saving")
-                : $t("students.account.create")
-            }}
-          </button>
+            <button
+              type="submit"
+              :disabled="accountSaving"
+            >
+              {{
+                accountSaving
+                  ? $t("common.saving")
+                  : $t("students.account.create")
+              }}
+            </button>
+          </form>
         </template>
       </section>
     </div>
@@ -480,6 +498,13 @@ function emptyAccountForm() {
   };
 }
 
+function emptyAccountErrors() {
+  return {
+    email: "",
+    password: "",
+  };
+}
+
 export default {
   name: "StudentManager",
 
@@ -508,9 +533,12 @@ export default {
       successMessage: "",
       accountStudent: null,
       schoolUsers: [],
+      accountStatusesLoaded: false,
+      accountStatusesLoading: false,
       accountLoading: false,
       accountSaving: false,
       accountForm: emptyAccountForm(),
+      accountErrors: emptyAccountErrors(),
     };
   },
 
@@ -627,14 +655,21 @@ export default {
         !this.schoolId
       ) {
         this.schoolUsers = [];
+        this.accountStatusesLoaded = false;
+        this.accountStatusesLoading = false;
         return;
       }
+
+      this.accountStatusesLoading = true;
+      this.accountStatusesLoaded = false;
 
       try {
         this.schoolUsers =
           await getManagedSchoolUsers(
             this.schoolId,
           );
+
+        this.accountStatusesLoaded = true;
       } catch (error) {
         console.error(
           "Unable to load Student account statuses:",
@@ -642,12 +677,22 @@ export default {
         );
 
         this.schoolUsers = [];
+        this.accountStatusesLoaded = false;
+      } finally {
+        this.accountStatusesLoading = false;
       }
     },
 
     studentAccountStatus(student) {
       if (!student.userUid) {
         return "none";
+      }
+
+      if (
+        this.accountStatusesLoading ||
+        !this.accountStatusesLoaded
+      ) {
+        return "loading";
       }
 
       const account =
@@ -942,6 +987,8 @@ export default {
       this.accountSaving = false;
       this.accountForm =
         emptyAccountForm();
+      this.accountErrors =
+        emptyAccountErrors();
       this.errorMessage = "";
       this.successMessage = "";
 
@@ -955,15 +1002,61 @@ export default {
       this.accountForm =
         emptyAccountForm();
       this.accountLoading = false;
+      this.accountErrors =
+      emptyAccountErrors();
+    },
+
+    validateStudentAccountForm() {
+      this.accountErrors =
+        emptyAccountErrors();
+
+      const email =
+        this.accountForm.email.trim();
+
+      const password =
+        this.accountForm.password;
+
+      if (!email) {
+        this.accountErrors.email =
+          this.$t(
+            "students.account.validation.emailRequired",
+          );
+      } else if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      ) {
+        this.accountErrors.email =
+          this.$t(
+            "students.account.validation.emailInvalid",
+          );
+      }
+
+      if (!password) {
+        this.accountErrors.password =
+          this.$t(
+            "students.account.validation.passwordRequired",
+          );
+      } else if (password.length < 6) {
+        this.accountErrors.password =
+          this.$t(
+            "students.account.validation.passwordShort",
+          );
+      }
+
+      return (
+        !this.accountErrors.email &&
+        !this.accountErrors.password
+      );
     },
 
     async handleCreateStudentAccount() {
       if (
         !this.canManageStudentAccounts ||
-        !this.accountStudent ||
-        !this.accountForm.email ||
-        !this.accountForm.password
+        !this.accountStudent
       ) {
+        return;
+      }
+
+      if (!this.validateStudentAccountForm()) {
         return;
       }
 
@@ -995,8 +1088,46 @@ export default {
           },
         );
 
+        /*
+        * Refresh the managed account directory before
+        * closing the modal so the Student list can
+        * immediately resolve the newly linked account.
+        */
+        await this.loadStudentAccountStatuses();
+
         this.closeStudentAccount();
       } catch (error) {
+        const message =
+          String(error.message || "");
+
+        if (message.includes("INVALID_EMAIL")) {
+          this.accountErrors.email =
+            this.$t(
+              "students.account.validation.emailInvalid",
+            );
+          return;
+        }
+
+        if (
+          message.includes("EMAIL_ALREADY_EXISTS")
+        ) {
+          this.accountErrors.email =
+            this.$t(
+              "students.account.validation.emailExists",
+            );
+          return;
+        }
+
+        if (
+          message.includes("INVALID_PASSWORD")
+        ) {
+          this.accountErrors.password =
+            this.$t(
+              "students.account.validation.passwordInvalid",
+            );
+          return;
+        }
+
         this.errorMessage = this.$t(
           "students.account.createError",
           {
@@ -1351,6 +1482,28 @@ button.danger {
 .account-card input,
 .account-card select {
   width: 100%;
+}
+
+.account-form input:user-invalid {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 1px #dc3545;
+}
+
+.account-form input:user-valid {
+  border-color: #ced4da;
+  box-shadow: none;
+}
+
+.account-form .field-error {
+  color: #dc3545;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.account-form input.input-error {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 1px #dc3545;
 }
 
 @media (max-width: 850px) {

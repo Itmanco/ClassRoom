@@ -247,6 +247,52 @@ async function run() {
       ).firestore();
 
     console.log(
+      "School Admin: academic student update allowed"
+    );
+
+    await assertSucceeds(
+      updateDoc(
+        doc(
+          schoolAdminDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        ),
+        {
+          country: "Japan",
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can update academic student fields"
+    );
+
+    console.log(
+      "School Admin: direct student status update denied"
+    );
+
+    await assertFails(
+      updateDoc(
+        doc(
+          schoolAdminDb,
+          "schools",
+          schoolA,
+          "students",
+          "student-1"
+        ),
+        {
+          isActive: false,
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin cannot directly change student status"
+    );
+
+    console.log(
       "Teacher: read students in own school"
     );
 

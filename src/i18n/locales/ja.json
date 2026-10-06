@@ -18,6 +18,7 @@
     "loading": "読み込み中...",
     "language": "言語",
     "active": "在籍中",
+    "reactivate": "再有効化",
     "archive": "アーカイブ",
     "archived": "アーカイブ済み",
     "saveChanges": "変更を保存",
@@ -243,7 +244,10 @@
       "saveError": "生徒を保存できませんでした：{error}",
       "archiveConfirm": "{name}さんをアーカイブしますか？過去の座席表には生徒の参照が残ります。",
       "archived": "{name}さんをアーカイブしました。",
-      "archiveError": "生徒をアーカイブできませんでした：{error}"
+      "archiveError": "生徒をアーカイブできませんでした：{error}",
+      "reactivateConfirm": "{name}さんを再有効化しますか？ログインは別途有効にするまで無効のままです。",
+      "reactivated": "{name}さんを再有効化しました。ログインは別途有効にするまで無効のままです。",
+      "reactivateError": "生徒を再有効化できませんでした：{error}"
     }
   },
   "courses": {

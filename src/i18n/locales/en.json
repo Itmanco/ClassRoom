@@ -18,6 +18,7 @@
     "loading": "Loading...",
     "language": "Language",
     "active": "Active",
+    "reactivate": "Reactivate",
     "archive": "Archive",
     "archived": "Archived",
     "saveChanges": "Save changes",
@@ -243,7 +244,10 @@
       "saveError": "Unable to save student: {error}",
       "archiveConfirm": "Archive {name}? Historical seating plans will keep the student reference.",
       "archived": "{name} was archived.",
-      "archiveError": "Unable to archive student: {error}"
+      "archiveError": "Unable to archive student: {error}",
+      "reactivateConfirm": "Reactivate {name}? Their login will remain disabled until you enable it separately.",
+      "reactivated": "{name} was reactivated. Login remains disabled until you enable it separately.",
+      "reactivateError": "Unable to reactivate student: {error}"
     }
   },
   "courses": {

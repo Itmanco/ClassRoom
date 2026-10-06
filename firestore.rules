@@ -347,23 +347,22 @@ service cloud.firestore {
           if canAdministerSchool(schoolId);
 
         allow update:
-          if canAdministerSchool(schoolId)
-            || (
-              isTeacher(schoolId)
-
-              && request.resource.data
-                .diff(resource.data)
-                .affectedKeys()
-                .hasOnly([
-                  "firstName",
-                  "lastName",
-                  "name",
-                  "hiragana",
-                  "gender_id",
-                  "country",
-                  "updatedAt"
-                ])
-            );
+          if (
+            canAdministerSchool(schoolId)
+            || isTeacher(schoolId)
+          )
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              "firstName",
+              "lastName",
+              "name",
+              "hiragana",
+              "gender_id",
+              "country",
+              "updatedAt"
+            ]);
       }
 
       // --------------------------------------

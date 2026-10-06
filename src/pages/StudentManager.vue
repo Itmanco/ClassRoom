@@ -129,15 +129,6 @@
           </select>
         </label>
 
-        <label
-          v-if="canManageStudentStatus"
-          class="checkbox-label"
-        >
-          <input v-model="form.isActive" type="checkbox" />
-
-          {{ $t("students.fields.active") }}
-        </label>
-
         <div class="form-actions">
           <button type="submit" :disabled="saving">
             {{
@@ -278,6 +269,18 @@
                 @click="handleArchive(student)"
               >
                 {{ $t("common.archive") }}
+              </button>
+
+              <button
+                v-if="
+                  canManageStudentStatus &&
+                  student.isActive === false
+                "
+                type="button"
+                class="secondary"
+                @click="handleReactivate(student)"
+              >
+                {{ $t("common.reactivate") }}
               </button>
             </div>
           </article>
@@ -465,6 +468,7 @@
 import {
   archiveStudent,
   getNextStudentId,
+  reactivateStudent,
   saveStudent,
   watchStudents,
 } from "../services/studentService";
@@ -815,10 +819,13 @@ export default {
           ...this.form,
         };
 
-        if (
-          !this.canManageStudentStatus &&
-          !isCreating
-        ) {
+        /*
+        * Academic status is not editable through the
+        * normal Student form. Existing Students keep
+        * their current status; Archive/Reactivate use
+        * the dedicated trusted lifecycle operation.
+        */
+        if (!isCreating) {
           const existingStudent =
             this.students.find(
               (student) =>
@@ -931,10 +938,6 @@ export default {
         await archiveStudent(
           this.schoolId,
           student.id,
-          {
-            actorRole:
-              this.actorRole,
-          },
         );
 
         this.successMessage = this.$t(
@@ -943,6 +946,7 @@ export default {
             name: student.name,
           },
         );
+        await this.loadStudentAccountStatuses();
 
         if (this.editingStudentId === student.id) {
           await this.resetForm();
@@ -950,6 +954,62 @@ export default {
       } catch (error) {
         this.errorMessage = this.$t(
           "students.messages.archiveError",
+          {
+            error: error.message,
+          },
+        );
+      }
+    },
+
+    async handleReactivate(student) {
+      if (!this.canManageStudentStatus) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        this.$t(
+          "students.messages.reactivateConfirm",
+          {
+            name: student.name,
+          },
+        ),
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      this.errorMessage = "";
+      this.successMessage = "";
+
+      try {
+        await reactivateStudent(
+          this.schoolId,
+          student.id,
+        );
+
+        this.successMessage = this.$t(
+          "students.messages.reactivated",
+          {
+            name: student.name,
+          },
+        );
+
+        /*
+        * Refresh the privileged account directory so
+        * the login badge reflects the disabled state.
+        */
+        await this.loadStudentAccountStatuses();
+
+        if (
+          this.editingStudentId ===
+          student.id
+        ) {
+          await this.resetForm();
+        }
+      } catch (error) {
+        this.errorMessage = this.$t(
+          "students.messages.reactivateError",
           {
             error: error.message,
           },

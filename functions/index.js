@@ -1695,6 +1695,571 @@ exports.createStudentAccount =
       },
   );
 
+exports.setStudentActive =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          String(
+              data.schoolId || "",
+          ).trim();
+
+        const studentId =
+          String(
+              data.studentId || "",
+          ).trim();
+
+        const active =
+          data.active;
+
+        if (
+          !schoolId ||
+          !studentId
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "schoolId and studentId are required.",
+          );
+        }
+
+        if (
+          typeof active !==
+            "boolean"
+        ) {
+          throw new HttpsError(
+              "invalid-argument",
+              "ACTIVE_BOOLEAN_REQUIRED",
+          );
+        }
+
+        const actor =
+          await requireSchoolAdmin(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const studentRef =
+          schoolRef
+              .collection("students")
+              .doc(studentId);
+
+        const studentDocument =
+          await studentRef.get();
+
+        if (!studentDocument.exists) {
+          throw new HttpsError(
+              "not-found",
+              "STUDENT_NOT_FOUND",
+          );
+        }
+
+        const student =
+          studentDocument.data();
+
+        const previousStudentActive =
+          student.isActive !== false;
+
+        const userUid =
+          typeof student.userUid ===
+            "string" ?
+            student.userUid.trim() :
+            "";
+
+        /*
+         * Reactivation intentionally restores only
+         * the academic Student. Login access remains
+         * disabled until an administrator explicitly
+         * enables it through setStudentAccountActive.
+         */
+        if (active) {
+          if (previousStudentActive) {
+            return {
+              success: true,
+              schoolId,
+              studentId,
+              active: true,
+              changed: false,
+            };
+          }
+
+          const auditRef =
+            schoolRef
+                .collection("auditLogs")
+                .doc();
+
+          const batch =
+            db.batch();
+
+          batch.update(
+              studentRef,
+              {
+                isActive: true,
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              },
+          );
+
+          batch.set(
+              auditRef,
+              {
+                action:
+                  "student.reactivated",
+
+                entityType:
+                  "student",
+
+                entityId:
+                  studentId,
+
+                actorUid:
+                  actor.uid || "",
+
+                actorEmail:
+                  actor.email || "",
+
+                actorRole:
+                  actor.actorRole || "",
+
+                schoolId,
+
+                changedFields: [
+                  "isActive",
+                ],
+
+                details: {
+                  entityName:
+                    student.name || "",
+
+                  changes: {
+                    isActive: {
+                      before: false,
+                      after: true,
+                    },
+                  },
+                },
+
+                createdAt:
+                  FieldValue.serverTimestamp(),
+              },
+          );
+
+          await batch.commit();
+
+          return {
+            success: true,
+            schoolId,
+            studentId,
+            active: true,
+            changed: true,
+          };
+        }
+
+        /*
+         * A Student without a linked login account
+         * only needs the academic record archived.
+         */
+        if (!userUid) {
+          if (!previousStudentActive) {
+            return {
+              success: true,
+              schoolId,
+              studentId,
+              active: false,
+              changed: false,
+            };
+          }
+
+          const auditRef =
+            schoolRef
+                .collection("auditLogs")
+                .doc();
+
+          const batch =
+            db.batch();
+
+          batch.update(
+              studentRef,
+              {
+                isActive: false,
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              },
+          );
+
+          batch.set(
+              auditRef,
+              {
+                action:
+                  "student.archived",
+
+                entityType:
+                  "student",
+
+                entityId:
+                  studentId,
+
+                actorUid:
+                  actor.uid || "",
+
+                actorEmail:
+                  actor.email || "",
+
+                actorRole:
+                  actor.actorRole || "",
+
+                schoolId,
+
+                changedFields: [
+                  "isActive",
+                ],
+
+                details: {
+                  entityName:
+                    student.name || "",
+
+                  changes: {
+                    isActive: {
+                      before: true,
+                      after: false,
+                    },
+                  },
+                },
+
+                createdAt:
+                  FieldValue.serverTimestamp(),
+              },
+          );
+
+          await batch.commit();
+
+          return {
+            success: true,
+            schoolId,
+            studentId,
+            active: false,
+            changed: true,
+          };
+        }
+
+        /*
+         * A linked Student must have a complete,
+         * internally consistent account relationship
+         * before archiving. Otherwise we fail rather
+         * than risk leaving login access enabled.
+         */
+        const accountRef =
+          schoolRef
+              .collection(
+                  "studentAccounts",
+              )
+              .doc(userUid);
+
+        const membershipRef =
+          schoolRef
+              .collection("members")
+              .doc(userUid);
+
+        const userRef =
+          db
+              .collection("users")
+              .doc(userUid);
+
+        const [
+          accountDocument,
+          membershipDocument,
+          userDocument,
+        ] =
+          await Promise.all([
+            accountRef.get(),
+            membershipRef.get(),
+            userRef.get(),
+          ]);
+
+        if (!accountDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_MAPPING_MISSING",
+          );
+        }
+
+        const account =
+          accountDocument.data();
+
+        if (
+          String(
+              account.studentId || "",
+          ) !== studentId
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_LINK_MISMATCH",
+          );
+        }
+
+        if (!membershipDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_MEMBERSHIP_REQUIRED",
+          );
+        }
+
+        const membership =
+          membershipDocument.data();
+
+        if (
+          membership.role !==
+            "student"
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_MEMBERSHIP_REQUIRED",
+          );
+        }
+
+        if (
+          membership.userUid &&
+          membership.userUid !==
+            userUid
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_ACCOUNT_LINK_MISMATCH",
+          );
+        }
+
+        if (!userDocument.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "STUDENT_USER_PROFILE_MISSING",
+          );
+        }
+
+        let authUser;
+
+        try {
+          authUser =
+            await getAuth()
+                .getUser(userUid);
+        } catch (error) {
+          if (
+            error.code ===
+              "auth/user-not-found"
+          ) {
+            throw new HttpsError(
+                "failed-precondition",
+                "STUDENT_AUTH_USER_MISSING",
+            );
+          }
+
+          console.error(
+              "Unable to load Student Auth user:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to load Student account.",
+          );
+        }
+
+        const user =
+          userDocument.data();
+
+        const previousUserActive =
+          user.active !== false;
+
+        const previousMembershipActive =
+          membership.active !== false;
+
+        const previousAuthActive =
+          authUser.disabled !== true;
+
+        /*
+         * Even if the academic Student is already
+         * archived, reconcile every access layer to
+         * disabled. This prevents an inconsistent
+         * archived Student from retaining login.
+         */
+        const accessNeedsDisabling =
+          previousUserActive ||
+          previousMembershipActive ||
+          previousAuthActive;
+
+        if (
+          !previousStudentActive &&
+          !accessNeedsDisabling
+        ) {
+          return {
+            success: true,
+            schoolId,
+            studentId,
+            active: false,
+            changed: false,
+          };
+        }
+
+        try {
+          if (previousAuthActive) {
+            await getAuth()
+                .updateUser(
+                    userUid,
+                    {
+                      disabled: true,
+                    },
+                );
+          }
+        } catch (error) {
+          console.error(
+              "Unable to disable Student Auth account:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to disable Student login.",
+          );
+        }
+
+        const auditRef =
+          schoolRef
+              .collection("auditLogs")
+              .doc();
+
+        const batch =
+          db.batch();
+
+        batch.update(
+            studentRef,
+            {
+              isActive: false,
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        batch.update(
+            userRef,
+            {
+              active: false,
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        batch.update(
+            membershipRef,
+            {
+              active: false,
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        /*
+         * Preserve both student.userUid and the
+         * studentAccounts mapping. Archiving revokes
+         * access; it does not unlink identity.
+         */
+        batch.set(
+            auditRef,
+            {
+              action:
+                "student.archived",
+
+              entityType:
+                "student",
+
+              entityId:
+                studentId,
+
+              actorUid:
+                actor.uid || "",
+
+              actorEmail:
+                actor.email || "",
+
+              actorRole:
+                actor.actorRole || "",
+
+              schoolId,
+
+              changedFields: [
+                "isActive",
+              ],
+
+              details: {
+                entityName:
+                  student.name || "",
+
+                changes: {
+                  isActive: {
+                    before:
+                      previousStudentActive,
+                    after: false,
+                  },
+                },
+              },
+
+              createdAt:
+                FieldValue.serverTimestamp(),
+            },
+        );
+
+        try {
+          await batch.commit();
+        } catch (error) {
+          /*
+           * Auth is outside the Firestore batch.
+           * Restore its previous state if the
+           * coordinated Firestore write fails.
+           */
+          if (previousAuthActive) {
+            try {
+              await getAuth()
+                  .updateUser(
+                      userUid,
+                      {
+                        disabled: false,
+                      },
+                  );
+            } catch (
+              rollbackError
+            ) {
+              console.error(
+                  "Unable to restore Student Auth state:",
+                  rollbackError,
+              );
+            }
+          }
+
+          console.error(
+              "Unable to archive Student:",
+              error,
+          );
+
+          throw new HttpsError(
+              "internal",
+              "Unable to archive Student.",
+          );
+        }
+
+        return {
+          success: true,
+          schoolId,
+          studentId,
+          active: false,
+          changed: true,
+        };
+      },
+  );
+
 exports.setStudentAccountActive =
   onCall(
       async (request) => {

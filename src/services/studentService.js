@@ -1,6 +1,13 @@
 // src/services/studentService.js
 
-import { db } from "../firebase-init";
+import {
+  db,
+  functions,
+} from "../firebase-init";
+
+import {
+  httpsCallable,
+} from "firebase/functions";
 
 import {
   collection,
@@ -15,6 +22,12 @@ import {
 import {
   createAuditLogWrite,
 } from "./auditLogService";
+
+const setStudentActiveCallable =
+  httpsCallable(
+    functions,
+    "setStudentActive",
+  );
 
 function getStudentsRef(
   schoolId,
@@ -185,7 +198,6 @@ function getChanges(
     "hiragana",
     "gender_id",
     "country",
-    "isActive",
   ];
 
   const changes = {};
@@ -325,9 +337,6 @@ export async function saveStudent(
     country:
       normalized.country,
 
-    isActive:
-      normalized.isActive,
-
     updatedAt:
       serverTimestamp(),
   };
@@ -335,6 +344,7 @@ export async function saveStudent(
   if (
     !existing.exists()
   ) {
+    payload.isActive = true;
     payload.createdAt =
       serverTimestamp();
   }
@@ -357,20 +367,10 @@ export async function saveStudent(
       changes,
     );
 
-  let action =
+  const action =
     existing.exists()
       ? "student.updated"
       : "student.created";
-
-  if (
-    previous?.isActive ===
-      false &&
-    normalized.isActive ===
-      true
-  ) {
-    action =
-      "student.reactivated";
-  }
 
   const batch =
     writeBatch(db);
@@ -432,104 +432,41 @@ export async function saveStudent(
   return normalized.id;
 }
 
+export async function setStudentActive(
+  schoolId,
+  studentId,
+  active,
+) {
+  const result =
+    await setStudentActiveCallable({
+      schoolId,
+      studentId,
+      active,
+    });
+
+  return result.data;
+}
+
 export async function archiveStudent(
   schoolId,
   studentId,
-  options = {},
 ) {
-  const studentRef =
-    doc(
-      getStudentsRef(
-        schoolId,
-      ),
-      String(
-        studentId,
-      ),
-    );
-
-  const existing =
-    await getDoc(
-      studentRef,
-    );
-
-  if (
-    !existing.exists()
-  ) {
-    throw new Error(
-      `Student ${studentId} does not exist.`,
-    );
-  }
-
-  const student =
-    existing.data();
-
-  if (
-    student.isActive ===
-    false
-  ) {
-    return;
-  }
-
-  const batch =
-    writeBatch(db);
-
-  batch.update(
-    studentRef,
-    {
-      isActive: false,
-
-      updatedAt:
-        serverTimestamp(),
-    },
+  return setStudentActive(
+    schoolId,
+    studentId,
+    false,
   );
+}
 
-  if (
-    options.skipAudit !==
-    true
-  ) {
-    const audit =
-      createAuditLogWrite(
-        schoolId,
-        {
-          action:
-            "student.archived",
-
-          entityType:
-            "student",
-
-          entityId:
-            studentId,
-
-          actorRole:
-            options.actorRole ||
-            "",
-
-          changedFields: [
-            "isActive",
-          ],
-
-          details: {
-            entityName:
-              student.name ||
-              "",
-
-            changes: {
-              isActive: {
-                before: true,
-                after: false,
-              },
-            },
-          },
-        },
-      );
-
-    batch.set(
-      audit.ref,
-      audit.data,
-    );
-  }
-
-  await batch.commit();
+export async function reactivateStudent(
+  schoolId,
+  studentId,
+) {
+  return setStudentActive(
+    schoolId,
+    studentId,
+    true,
+  );
 }
 
 // Kept for compatibility with

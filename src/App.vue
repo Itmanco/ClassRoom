@@ -79,6 +79,7 @@
       :schools="session.schools"
       :active-school="session.activeSchool"
       :is-system-admin="isSystemAdmin"
+      :effective-role="effectiveRole"
       :can-access-admin="canAccessAdmin"
       :can-access-students="canAccessStudents"
       :can-access-classes="canAccessClasses"
@@ -303,6 +304,23 @@ export default {
         this.session.membership?.active !== false &&
         this.session.membership?.role ===
           "school-admin"
+      );
+    },
+
+    effectiveRole() {
+      if (this.isSystemAdmin) {
+        return "system-admin";
+      }
+
+      if (
+        this.session.membership?.active === false
+      ) {
+        return "";
+      }
+
+      return (
+        this.session.membership?.role ||
+        ""
       );
     },
 

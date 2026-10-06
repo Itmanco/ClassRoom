@@ -629,6 +629,12 @@
     "actions": {
       "open": "マイプロフィール",
       "signOut": "ログアウト"
+    },
+    "roles": {
+      "system-admin": "システム管理者",
+      "school-admin": "学校管理者",
+      "teacher": "教師",
+      "student": "生徒"
     }
   },
   "profile": {

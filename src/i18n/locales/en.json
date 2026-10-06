@@ -628,6 +628,12 @@
     "actions": {
       "open": "My Profile",
       "signOut": "Sign out"
+    },
+    "roles": {
+      "system-admin": "System Admin",
+      "school-admin": "School Admin",
+      "teacher": "Teacher",
+      "student": "Student"
     }
   },
   "profile": {

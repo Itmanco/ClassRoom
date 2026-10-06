@@ -151,6 +151,7 @@
       class="profile-card"
       :user="user"
       :profile="profile"
+      :effective-role="effectiveRole"
       :active="currentPage === 'profile'"
       :collapsed="collapsed"
       @open-profile="$emit('open-profile')"
@@ -195,6 +196,11 @@ export default {
     profile: {
       type: Object,
       default: null,
+    },
+
+    effectiveRole: {
+      type: String,
+      default: "",
     },
 
     isSystemAdmin: {

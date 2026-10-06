@@ -21,9 +21,21 @@
       </div>
 
       <div class="user-info">
-        <strong class="user-name">
-          {{ displayName }}
-        </strong>
+        <div class="user-name-row">
+          <strong class="user-name">
+            {{ displayName }}
+          </strong>
+
+          <span
+            v-if="roleIcon"
+            class="session-role-icon"
+            :title="roleLabel"
+            :aria-label="roleLabel"
+            role="img"
+          >
+            {{ roleIcon }}
+          </span>
+        </div>
 
         <span class="user-email">
           {{ email }}
@@ -79,6 +91,11 @@ export default {
       default: null,
     },
 
+    effectiveRole: {
+      type: String,
+      default: "",
+    },
+
     active: {
       type: Boolean,
       default: false,
@@ -110,6 +127,30 @@ export default {
         this.profile?.email ||
         this.user?.email ||
         ""
+      );
+    },
+
+    roleIcon() {
+      const icons = {
+        "system-admin": "🌐",
+        "school-admin": "🛡️",
+        teacher: "👨‍🏫",
+        student: "🎓",
+      };
+
+      return (
+        icons[this.effectiveRole] ||
+        ""
+      );
+    },
+
+    roleLabel() {
+      if (!this.effectiveRole) {
+        return "";
+      }
+
+      return this.$t(
+        `userProfile.roles.${this.effectiveRole}`,
       );
     },
 
@@ -276,5 +317,19 @@ export default {
 
 .compact-sign-out {
   font-size: 1.35rem;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.session-role-icon {
+  flex-shrink: 0;
+  cursor: help;
+  font-size: 1rem;
+  line-height: 1;
 }
 </style>

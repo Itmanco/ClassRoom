@@ -695,6 +695,12 @@
     "eyebrow": "School overview",
     "title": "Dashboard",
     "description": "An overview of the currently selected school.",
+    "studentClasses": {
+      "title": "My Classes",
+      "description": "Your current active classes.",
+      "loading": "Loading your classes...",
+      "empty": "You are not currently enrolled in any active classes."
+    },
     "summary": {
       "students": "Students",
       "classes": "Classes",

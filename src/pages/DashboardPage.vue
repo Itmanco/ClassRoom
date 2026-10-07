@@ -102,6 +102,64 @@
     </section>
 
     <section class="dashboard-grid">
+
+      <article
+        v-if="isStudent"
+        class="dashboard-card"
+      >
+        <h2>
+          {{ $t("dashboard.studentClasses.title") }}
+        </h2>
+
+        <p class="section-description">
+          {{ $t("dashboard.studentClasses.description") }}
+        </p>
+
+        <div
+          v-if="studentClassesLoading"
+          class="empty-state loading-state"
+        >
+          <span>🏫</span>
+
+          <p>
+            {{ $t("dashboard.studentClasses.loading") }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="studentClasses.length === 0"
+          class="empty-state"
+        >
+          <span>🏫</span>
+
+          <p>
+            {{ $t("dashboard.studentClasses.empty") }}
+          </p>
+        </div>
+
+        <div
+          v-else
+          class="student-class-list"
+        >
+          <div
+            v-for="item in studentClasses"
+            :key="item.id"
+            class="student-class-item"
+          >
+            <strong>
+              {{ item.name }}
+            </strong>
+
+            <span v-if="item.room?.name">
+              📍 {{ item.room.name }}
+            </span>
+
+            <span v-if="item.mainTeacher?.displayName">
+              👨‍🏫 {{ item.mainTeacher.displayName }}
+            </span>
+          </div>
+        </div>
+      </article>
       <article class="dashboard-card">
         <h2>
           {{ $t("dashboard.messages.title") }}
@@ -120,7 +178,10 @@
         </div>
       </article>
 
-      <article class="dashboard-card">
+      <article
+        v-if="canViewActivity"
+        class="dashboard-card"
+      >
         <h2>
           {{ $t("dashboard.activity.title") }}
         </h2>
@@ -230,6 +291,10 @@ import {
   getDashboardActivity,
 } from "../services/activityService";
 
+import {
+  getStudentClassInfo,
+} from "../services/studentClassService";
+
 export default {
   name: "DashboardPage",
 
@@ -258,6 +323,8 @@ export default {
       courses: [],
       activity: [],
       activityLoading: false,
+      studentClasses: [],
+      studentClassesLoading: false,
       errorMessage: "",
       unsubscribers: [],
     };
@@ -296,6 +363,10 @@ export default {
       return this.actorRole === "teacher";
     },
 
+    isStudent() {
+      return this.actorRole === "student";
+    },
+
     canViewStudentSummary() {
       return (
         this.actorRole === "system-admin" ||
@@ -324,6 +395,14 @@ export default {
       return (
         this.actorRole === "system-admin" ||
         this.actorRole === "school-admin"
+      );
+    },
+
+    canViewActivity() {
+      return (
+        this.actorRole === "system-admin" ||
+        this.actorRole === "school-admin" ||
+        this.actorRole === "teacher"
       );
     },
 
@@ -366,6 +445,7 @@ export default {
       this.rooms = [];
       this.courses = [];
       this.activity = [];
+      this.studentClasses = [];
       this.errorMessage = "";
 
       if (this.isTeacher && !this.actorUid) {
@@ -435,7 +515,14 @@ export default {
         }
 
         this.unsubscribers = listeners;
-        this.loadActivity();
+
+        if (this.isStudent) {
+          this.loadStudentClasses();
+        }
+
+        if (this.canViewActivity) {
+          this.loadActivity();
+        }
       } catch (error) {
         this.handleLoadError(error);
       }
@@ -451,6 +538,28 @@ export default {
       );
 
       this.unsubscribers = [];
+    },
+
+    async loadStudentClasses() {
+      if (!this.schoolId) {
+        return;
+      }
+
+      this.studentClassesLoading = true;
+
+      try {
+        const result =
+          await getStudentClassInfo(
+            this.schoolId,
+          );
+
+        this.studentClasses =
+          result.classes;
+      } catch (error) {
+        this.handleLoadError(error);
+      } finally {
+        this.studentClassesLoading = false;
+      }
     },
 
     async loadActivity() {
@@ -649,6 +758,27 @@ export default {
 .section-description {
   margin: 0;
   color: #667085;
+}
+
+.student-class-list {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-class-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+}
+
+.student-class-item span {
+  color: #667085;
+  font-size: 0.9rem;
 }
 
 .activity-list {

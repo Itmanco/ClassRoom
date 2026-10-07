@@ -180,12 +180,14 @@ async function run() {
     const assignedTeacherUid = "teacher-assigned";
     const otherTeacherUid = "teacher-other";
     const adminUid = "school-admin";
+    const studentUid = "student-user";
     const studentId = "student-1";
     const mainTeacherUid = "teacher-main";
 
     await seedUser(assignedTeacherUid);
     await seedUser(otherTeacherUid);
     await seedUser(adminUid);
+    await seedUser(studentUid);
     await seedUser(mainTeacherUid);
 
     await seedMembership(
@@ -204,6 +206,12 @@ async function run() {
       schoolId,
       adminUid,
       "school-admin"
+    );
+
+    await seedMembership(
+      schoolId,
+      studentUid,
+      "student"
     );
 
     await seedMembership(
@@ -260,6 +268,11 @@ async function run() {
     const adminDb =
       testEnv
         .authenticatedContext(adminUid)
+        .firestore();
+
+    const studentDb =
+      testEnv
+        .authenticatedContext(studentUid)
         .firestore();
 
     console.log(
@@ -551,6 +564,70 @@ console.log(
 
     console.log(
       "✓ teacher cannot modify enrollment"
+    );
+
+    console.log(
+      "Student: direct enrolled-class read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot directly read enrolled class"
+    );
+
+    console.log(
+      "Student: direct own enrollment read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          studentId
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot directly read own enrollment"
+    );
+
+    console.log(
+      "Student: direct other enrollment read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "enrollments",
+          "student-other"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot directly read another enrollment"
     );
 
     console.log(

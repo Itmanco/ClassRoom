@@ -696,6 +696,12 @@
     "eyebrow": "学校概要",
     "title": "ダッシュボード",
     "description": "現在選択している学校の概要を表示します。",
+    "studentClasses": {
+      "title": "マイクラス",
+      "description": "現在受講しているクラスです。",
+      "loading": "クラス情報を読み込んでいます...",
+      "empty": "現在受講中のクラスはありません。"
+    },
     "summary": {
       "students": "生徒",
       "classes": "クラス",

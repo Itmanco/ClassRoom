@@ -470,6 +470,145 @@ async function requireDashboardActivityAccess(
 }
 
 /**
+ * Verifies an active Student account and resolves the
+ * authenticated user's academic Student record.
+ *
+ * The browser never supplies the studentId. The relationship
+ * is resolved from studentAccounts/{uid}.
+ *
+ * @param {Object} request Callable function request.
+ * @param {string} schoolId School to authorize.
+ * @return {Promise<Object>} Student identity information.
+ */
+async function requireStudentAccess(
+    request,
+    schoolId,
+) {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "Authentication is required.",
+    );
+  }
+
+  const uid = request.auth.uid;
+
+  const userRef =
+    db.collection("users").doc(uid);
+
+  const membershipRef =
+    db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("members")
+        .doc(uid);
+
+  const accountRef =
+    db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("studentAccounts")
+        .doc(uid);
+
+  const [
+    userDocument,
+    membershipDocument,
+    accountDocument,
+  ] = await Promise.all([
+    userRef.get(),
+    membershipRef.get(),
+    accountRef.get(),
+  ]);
+
+  if (
+    !userDocument.exists ||
+    userDocument.data().active === false
+  ) {
+    throw new HttpsError(
+        "permission-denied",
+        "ACCOUNT_INACTIVE",
+    );
+  }
+
+  if (
+    !membershipDocument.exists ||
+    membershipDocument.data().active === false ||
+    membershipDocument.data().role !== "student"
+  ) {
+    throw new HttpsError(
+        "permission-denied",
+        "STUDENT_ACCESS_REQUIRED",
+    );
+  }
+
+  if (!accountDocument.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "STUDENT_ACCOUNT_LINK_REQUIRED",
+    );
+  }
+
+  const account = accountDocument.data();
+
+  const studentId =
+    typeof account.studentId === "string" ?
+      account.studentId.trim() :
+      String(account.studentId || "").trim();
+
+  if (!studentId) {
+    throw new HttpsError(
+        "failed-precondition",
+        "STUDENT_ACCOUNT_LINK_INVALID",
+    );
+  }
+
+  const studentRef =
+    db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("students")
+        .doc(studentId);
+
+  const studentDocument =
+    await studentRef.get();
+
+  if (!studentDocument.exists) {
+    throw new HttpsError(
+        "failed-precondition",
+        "STUDENT_RECORD_MISSING",
+    );
+  }
+
+  const student =
+    studentDocument.data();
+
+  if (student.isActive === false) {
+    throw new HttpsError(
+        "permission-denied",
+        "STUDENT_INACTIVE",
+    );
+  }
+
+  if (
+    typeof student.userUid !== "string" ||
+    student.userUid.trim() !== uid
+  ) {
+    throw new HttpsError(
+        "failed-precondition",
+        "STUDENT_ACCOUNT_LINK_MISMATCH",
+    );
+  }
+
+  return {
+    uid,
+    studentId,
+    student,
+    membership:
+      membershipDocument.data(),
+  };
+}
+
+/**
  * Validates and normalizes a required text value.
  *
  * @param {*} value Value to validate.
@@ -1022,6 +1161,177 @@ exports.getClassTeacherDirectory =
           );
 
         return teachers.filter(Boolean);
+      },
+  );
+
+/**
+ * Returns safe class information for the authenticated Student.
+ *
+ * A Student may have zero, one, or multiple active class
+ * enrollments. Only active enrollments in active classes are
+ * returned.
+ */
+exports.getStudentClassInfo =
+  onCall(
+      async (request) => {
+        const data =
+          request.data || {};
+
+        const schoolId =
+          requireText(
+              data.schoolId,
+              "School ID",
+          );
+
+        const {
+          studentId,
+        } =
+          await requireStudentAccess(
+              request,
+              schoolId,
+          );
+
+        const schoolRef =
+          db
+              .collection("schools")
+              .doc(schoolId);
+
+        const classesSnapshot =
+          await schoolRef
+              .collection("classes")
+              .get();
+
+        const activeClassDocuments =
+          classesSnapshot.docs.filter(
+              (classDocument) =>
+                classDocument.data().active !==
+                  false,
+          );
+
+        const enrolledClasses =
+          (
+            await Promise.all(
+                activeClassDocuments.map(
+                    async (classDocument) => {
+                      const enrollmentDocument =
+                        await classDocument.ref
+                            .collection(
+                                "enrollments",
+                            )
+                            .doc(studentId)
+                            .get();
+
+                      if (
+                        !enrollmentDocument.exists ||
+                        enrollmentDocument.data()
+                            .active === false
+                      ) {
+                        return null;
+                      }
+
+                      const classData =
+                        classDocument.data();
+
+                      const roomId =
+                        typeof classData.roomId ===
+                          "string" ?
+                          classData.roomId.trim() :
+                          "";
+
+                      const mainTeacherUid =
+                        typeof classData
+                            .mainTeacherUid ===
+                          "string" ?
+                          classData
+                              .mainTeacherUid
+                              .trim() :
+                          "";
+
+                      const [
+                        roomDocument,
+                        teacherDocument,
+                      ] =
+                        await Promise.all([
+                          roomId ?
+                            schoolRef
+                                .collection("rooms")
+                                .doc(roomId)
+                                .get() :
+                            Promise.resolve(null),
+
+                          mainTeacherUid ?
+                            db
+                                .collection("users")
+                                .doc(
+                                    mainTeacherUid,
+                                )
+                                .get() :
+                            Promise.resolve(null),
+                        ]);
+
+                      const room =
+                        roomDocument &&
+                        roomDocument.exists ?
+                          roomDocument.data() :
+                          null;
+
+                      const teacher =
+                        teacherDocument &&
+                        teacherDocument.exists ?
+                          teacherDocument.data() :
+                          null;
+
+                      return {
+                        id: classDocument.id,
+                        name:
+                          classData.name || "",
+                        academicYear:
+                          Number(
+                              classData
+                                  .academicYear,
+                          ) || null,
+                        semester:
+                          Number(
+                              classData.semester,
+                          ) || null,
+
+                        room: roomId ? {
+                          id: roomId,
+                          name:
+                            room?.name || "",
+                        } : null,
+
+                        mainTeacher:
+                          mainTeacherUid ? {
+                            displayName:
+                              teacher
+                                  ?.displayName ||
+                              "",
+                          } : null,
+                      };
+                    },
+                ),
+            )
+          )
+              .filter(Boolean)
+              .sort(
+                  (first, second) =>
+                    String(first.name)
+                        .localeCompare(
+                            String(second.name),
+                            undefined,
+                            {
+                              numeric: true,
+                              sensitivity:
+                                "base",
+                            },
+                        ),
+              );
+
+        return {
+          studentId,
+          classes: enrolledClasses,
+        };
       },
   );
 

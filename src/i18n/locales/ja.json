@@ -702,6 +702,15 @@
       "loading": "クラス情報を読み込んでいます...",
       "empty": "現在受講中のクラスはありません。"
     },
+    "studentSeating": {
+      "loading": "座席情報を読み込んでいます...",
+      "assignment": "机 {desk}・座席 {seat}",
+      "empty": "現在、座席は割り当てられていません。",
+      "error": "座席情報を読み込めませんでした。",
+      "viewSeat": "座席を表示",
+      "hideMap": "座席図を閉じる",
+      "yourSeat": "あなたの座席"
+    },
     "summary": {
       "students": "生徒",
       "classes": "クラス",

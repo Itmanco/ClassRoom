@@ -53,3 +53,63 @@ export async function getStudentClassInfo(
         : [],
   };
 }
+
+
+export async function getStudentOwnSeating(
+  schoolId,
+  classId,
+) {
+  const normalizedSchoolId =
+    requireSchoolId(schoolId);
+
+  if (
+    typeof classId !== "string" ||
+    !classId.trim()
+  ) {
+    throw new Error(
+      "A classId is required to access student seating.",
+    );
+  }
+
+  const callable =
+    httpsCallable(
+      functions,
+      "getStudentOwnSeating",
+    );
+
+  const result =
+    await callable({
+      schoolId: normalizedSchoolId,
+      classId: classId.trim(),
+    });
+
+  const data =
+    result?.data &&
+    typeof result.data === "object"
+      ? result.data
+      : {};
+
+  const seating =
+    data.seating &&
+    typeof data.seating === "object"
+      ? data.seating
+      : null;
+
+  return {
+    classId:
+      typeof data.classId === "string"
+        ? data.classId
+        : classId.trim(),
+    seating: seating
+      ? {
+          planDate: seating.planDate,
+          deskNumber: seating.deskNumber,
+          seatNumber: seating.seatNumber,
+          deskCount: seating.deskCount,
+          seatsPerDesk: seating.seatsPerDesk,
+          desksPerRow: seating.desksPerRow,
+          teacherPosition: seating.teacherPosition,
+        }
+      : null,
+  };
+}

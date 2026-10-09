@@ -1336,6 +1336,159 @@ exports.getStudentClassInfo =
   );
 
 /**
+ * Returns only the authenticated Student's own seating
+ * assignment for an actively enrolled class.
+ *
+ * Future-dated and archived plans are excluded.
+ *
+ * @param {Object} request Callable function request.
+ * @return {Promise<Object>} Restricted seating information.
+ */
+exports.getStudentOwnSeating =
+  onCall(
+      async (request) => {
+        const data = request.data || {};
+
+        const schoolId = requireText(
+            data.schoolId,
+            "School ID",
+        );
+
+        const classId = requireText(
+            data.classId,
+            "Class ID",
+        );
+
+        const {studentId} =
+          await requireStudentAccess(
+              request,
+              schoolId,
+          );
+
+        const classRef = db
+            .collection("schools")
+            .doc(schoolId)
+            .collection("classes")
+            .doc(classId);
+
+        const classDocument =
+          await classRef.get();
+
+        if (
+          !classDocument.exists ||
+          classDocument.data().active === false
+        ) {
+          throw new HttpsError(
+              "permission-denied",
+              "STUDENT_CLASS_ACCESS_DENIED",
+          );
+        }
+
+        const enrollmentDocument =
+          await classRef
+              .collection("enrollments")
+              .doc(studentId)
+              .get();
+
+        if (
+          !enrollmentDocument.exists ||
+          enrollmentDocument.data().active === false
+        ) {
+          throw new HttpsError(
+              "permission-denied",
+              "STUDENT_CLASS_ACCESS_DENIED",
+          );
+        }
+
+        const today = new Intl.DateTimeFormat(
+            "en-CA",
+            {
+              timeZone: "Asia/Tokyo",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            },
+        );
+
+        const dateParts = today.formatToParts(
+            new Date(),
+        );
+
+        const dateValues = Object.fromEntries(
+            dateParts.map(
+                ({type, value}) => [type, value],
+            ),
+        );
+
+        const currentDate = [
+          dateValues.year,
+          dateValues.month,
+          dateValues.day,
+        ].join("-");
+
+        const plansSnapshot =
+          await classRef
+              .collection("seatingPlans")
+              .get();
+
+        const eligiblePlans =
+          plansSnapshot.docs
+              .map((document) => ({
+                id: document.id,
+                ...document.data(),
+              }))
+              .filter((plan) =>
+                plan.active !== false &&
+                typeof plan.planDate === "string" &&
+                plan.planDate <= currentDate,
+              )
+              .sort((first, second) =>
+                second.planDate.localeCompare(
+                    first.planDate,
+                ) ||
+                second.id.localeCompare(first.id),
+              );
+
+        const plan = eligiblePlans[0];
+
+        if (!plan) {
+          return {
+            classId,
+            seating: null,
+          };
+        }
+
+        const assignment =
+          (Array.isArray(plan.assignments) ?
+            plan.assignments : [])
+              .find((item) =>
+                String(item.studentId) ===
+                String(studentId),
+              );
+
+        if (!assignment) {
+          return {
+            classId,
+            seating: null,
+          };
+        }
+
+        return {
+          classId,
+          seating: {
+            planDate: plan.planDate,
+            deskNumber: assignment.deskNumber,
+            seatNumber: assignment.seatNumber,
+            deskCount: plan.deskCount,
+            seatsPerDesk: plan.seatsPerDesk,
+            desksPerRow: plan.desksPerRow,
+            teacherPosition: plan.teacherPosition,
+          },
+        };
+      },
+  );
+
+/**
  * Returns recent Dashboard Activity visible to the caller.
  *
  * Activity is selected and filtered server-side according

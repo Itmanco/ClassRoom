@@ -157,6 +157,67 @@
             <span v-if="item.mainTeacher?.displayName">
               👨‍🏫 {{ item.mainTeacher.displayName }}
             </span>
+
+            <div class="student-seating">
+              <span v-if="studentSeatingLoading">
+                {{ $t("dashboard.studentSeating.loading") }}
+              </span>
+
+              <template
+                v-else-if="
+                  studentSeatingByClass[item.id]?.deskNumber != null &&
+                  studentSeatingByClass[item.id]?.seatNumber != null
+                "
+              >
+                <div class="student-seating-summary">
+                  <strong>
+                    🪑
+                    {{
+                      $t("dashboard.studentSeating.assignment", {
+                        desk: studentSeatingByClass[item.id].deskNumber,
+                        seat: studentSeatingByClass[item.id].seatNumber,
+                      })
+                    }}
+                  </strong>
+
+                  <button
+                    type="button"
+                    class="student-seating-toggle"
+                    :aria-expanded="Boolean(expandedSeatingClassIds[item.id])"
+                    @click="toggleStudentSeating(item.id)"
+                  >
+                    {{
+                      expandedSeatingClassIds[item.id]
+                        ? $t("dashboard.studentSeating.hideMap")
+                        : $t("dashboard.studentSeating.viewSeat")
+                    }}
+                    {{ expandedSeatingClassIds[item.id] ? "⌃" : "⌄" }}
+                  </button>
+                </div>
+
+                <StudentSeatingMiniMap
+                  v-if="expandedSeatingClassIds[item.id]"
+                  :seating="studentSeatingByClass[item.id]"
+                />
+              </template>
+
+              <span
+                v-else-if="
+                  !Object.prototype.hasOwnProperty.call(
+                    studentSeatingByClass,
+                    item.id,
+                  )
+                "
+              >
+                {{ $t("dashboard.studentSeating.error") }}
+              </span>
+
+              <span v-else>
+                {{ $t("dashboard.studentSeating.empty") }}
+              </span>
+            </div>
+
+
           </div>
         </div>
       </article>
@@ -293,10 +354,19 @@ import {
 
 import {
   getStudentClassInfo,
+  getStudentOwnSeating,
 } from "../services/studentClassService";
+
+import
+  StudentSeatingMiniMap
+  from "../components/StudentSeatingMiniMap.vue";
 
 export default {
   name: "DashboardPage",
+
+  components: {
+    StudentSeatingMiniMap,
+  },
 
   props: {
     schoolId: {
@@ -325,8 +395,13 @@ export default {
       activityLoading: false,
       studentClasses: [],
       studentClassesLoading: false,
+      studentSeatingByClass: {},
+      studentSeatingLoading: false,
+      studentSeatingError: false,
+      studentLoadVersion: 0,
       errorMessage: "",
       unsubscribers: [],
+      expandedSeatingClassIds: {},
     };
   },
 
@@ -446,7 +521,13 @@ export default {
       this.courses = [];
       this.activity = [];
       this.studentClasses = [];
+      this.studentClassesLoading = false;
+      this.studentSeatingByClass = {};
+      this.studentSeatingLoading = false;
+      this.studentSeatingError = false;
+      this.studentLoadVersion += 1;
       this.errorMessage = "";
+      this.expandedSeatingClassIds = {};
 
       if (this.isTeacher && !this.actorUid) {
         return;
@@ -540,25 +621,90 @@ export default {
       this.unsubscribers = [];
     },
 
+    toggleStudentSeating(classId) {
+      this.expandedSeatingClassIds = {
+        ...this.expandedSeatingClassIds,
+        [classId]: !this.expandedSeatingClassIds[classId],
+      };
+    },
+
     async loadStudentClasses() {
       if (!this.schoolId) {
         return;
       }
 
+      const schoolId = this.schoolId;
+      const loadVersion = this.studentLoadVersion;
+
       this.studentClassesLoading = true;
+      this.studentSeatingLoading = false;
+      this.studentSeatingError = false;
+      this.studentSeatingByClass = {};
 
       try {
-        const result =
-          await getStudentClassInfo(
-            this.schoolId,
-          );
+        const result = await getStudentClassInfo(
+          schoolId,
+        );
 
-        this.studentClasses =
-          result.classes;
+        if (
+          loadVersion !== this.studentLoadVersion ||
+          !this.isStudent
+        ) {
+          return;
+        }
+
+        this.studentClasses = result.classes;
+
+        if (result.classes.length === 0) {
+          return;
+        }
+
+        this.studentSeatingLoading = true;
+
+        const seatingResults = await Promise.allSettled(
+          result.classes.map((item) =>
+            getStudentOwnSeating(
+              schoolId,
+              item.id,
+            ),
+          ),
+        );
+
+        if (
+          loadVersion !== this.studentLoadVersion ||
+          !this.isStudent
+        ) {
+          return;
+        }
+
+        const seatingByClass = {};
+        let hasError = false;
+
+        seatingResults.forEach((result, index) => {
+          const classId = this.studentClasses[index].id;
+
+          if (result.status === "fulfilled") {
+            seatingByClass[classId] =
+              result.value.seating;
+          } else {
+            hasError = true;
+          }
+        });
+
+        this.studentSeatingByClass = seatingByClass;
+        this.studentSeatingError = hasError;
       } catch (error) {
-        this.handleLoadError(error);
+        if (
+          loadVersion === this.studentLoadVersion &&
+          this.isStudent
+        ) {
+          this.handleLoadError(error);
+        }
       } finally {
-        this.studentClassesLoading = false;
+        if (loadVersion === this.studentLoadVersion) {
+          this.studentClassesLoading = false;
+          this.studentSeatingLoading = false;
+        }
       }
     },
 
@@ -780,6 +926,46 @@ export default {
   color: #667085;
   font-size: 0.9rem;
 }
+
+.student-seating {
+  margin-top: 10px;
+}
+
+.student-seating-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.student-seating-summary strong {
+  font-size: 0.9rem;
+  color: #344054;
+}
+
+.student-seating-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 7px;
+  background: #fff;
+  color: #344054;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.student-seating-toggle:hover {
+  background: #f2f4f7;
+}
+
+.student-seating-toggle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 
 .activity-list {
   margin-top: 18px;

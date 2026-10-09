@@ -631,6 +631,28 @@ console.log(
     );
 
     console.log(
+      "Student: direct seating plan read denied"
+    );
+
+    await assertFails(
+      getDoc(
+        doc(
+          studentDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_A",
+          "seatingPlans",
+          "PLAN_A"
+        )
+      )
+    );
+
+    console.log(
+      "✓ student cannot directly read seating plan"
+    );
+
+    console.log(
       "Assigned teacher: seating plan read allowed"
     );
 

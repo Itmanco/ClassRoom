@@ -1,5 +1,3 @@
-import ExcelJS from "exceljs";
-
 function safeFileName(value) {
   return String(value || "seating-plan")
     .replace(/[\\/:*?"<>|]/g, "-")
@@ -350,6 +348,8 @@ export async function exportSeatingPlan({
   mainTeacherName = "",
   mainTeacherLabel = "",
 }) {
+  const exceljsModule = await import("exceljs");
+  const ExcelJS = exceljsModule.default;
   if (!plan) {
     throw new Error(
       "A seating plan is required for export.",

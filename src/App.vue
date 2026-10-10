@@ -231,17 +231,35 @@ import {
 import NavigationMenu from "./components/NavigationMenu.vue";
 import LoginModal from "./components/LoginModal.vue";
 
-import NoSchoolPage from "./pages/NoSchoolPage.vue";
 import DashboardPage from "./pages/DashboardPage.vue";
-import StudentManager from "./pages/StudentManager.vue";
-import CourseManager from "./pages/CourseManager.vue";
-import BuildingManager from "./pages/BuildingManager.vue";
-import RoomManager from "./pages/RoomManager.vue";
-import ClassManager from "./pages/ClassManager.vue";
-import ClassWorkspace from "./pages/ClassWorkspace.vue";
+
+import NoSchoolPage from "./pages/NoSchoolPage.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 import ProfilePage from "./pages/ProfilePage.vue";
-import AdminPage from "./pages/AdminPage.vue";
+
+import {defineAsyncComponent} from "vue";
+
+const StudentManager = defineAsyncComponent(() =>
+  import("./pages/StudentManager.vue"));
+
+const CourseManager = defineAsyncComponent(() =>
+  import("./pages/CourseManager.vue"));
+
+const BuildingManager = defineAsyncComponent(() =>
+  import("./pages/BuildingManager.vue"));
+
+const RoomManager = defineAsyncComponent(() =>
+  import("./pages/RoomManager.vue"));
+
+const ClassManager = defineAsyncComponent(() =>
+  import("./pages/ClassManager.vue"));
+
+const ClassWorkspace = defineAsyncComponent(() =>
+  import("./pages/ClassWorkspace.vue"));
+
+const AdminPage = defineAsyncComponent(() =>
+  import("./pages/AdminPage.vue"));
+
 
 export default {
   name: "App",

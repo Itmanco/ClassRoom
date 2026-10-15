@@ -39,6 +39,39 @@ setGlobalOptions({
 const db = getFirestore();
 
 /**
+ * Validates an IANA time-zone identifier.
+ *
+ * @param {string} value Time-zone identifier.
+ * @return {string} Validated time-zone identifier.
+ */
+function validateSchoolTimeZone(value) {
+  if (
+    typeof value !== "string" ||
+    !value.trim()
+  ) {
+    throw new HttpsError(
+        "invalid-argument",
+        "A school time zone is required.",
+    );
+  }
+
+  const timeZone = value.trim();
+
+  try {
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+    });
+  } catch (error) {
+    throw new HttpsError(
+        "invalid-argument",
+        "Invalid school time zone.",
+    );
+  }
+
+  return timeZone;
+}
+
+/**
  * Verifies that the caller is a system administrator.
  *
  * @param {Object} request Callable function request.
@@ -336,6 +369,129 @@ async function requireClassTeacherDirectoryAccess(
     classData,
   };
 }
+
+
+const AVAILABILITY_DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+/**
+ * Validates a school or room document ID.
+ *
+ * @param {string} value - ID to validate.
+ * @param {string} name - Field name for error messages.
+ * @return {string} The validated ID.
+ */
+function validateAvailabilityId(value, name) {
+  if (
+    typeof value !== "string" ||
+    !value.trim() ||
+    value.includes("/")
+  ) {
+    throw new HttpsError(
+        "invalid-argument",
+        `${name} is invalid.`,
+    );
+  }
+
+  return value.trim();
+}
+
+/**
+ * Validates and normalizes weekly room availability.
+ *
+ * @param {Object} input Room availability configuration.
+ * @param {Object} schoolTimeZone school timezone configuration.
+ * @return {Object} Normalized weekly availability.
+ */
+function validateWeeklyAvailability(input, schoolTimeZone) {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    Array.isArray(input) ||
+    input.timezone !== schoolTimeZone ||
+    !input.weeklyHours ||
+    typeof input.weeklyHours !== "object" ||
+    Array.isArray(input.weeklyHours) ||
+    Object.keys(input).some(
+        (key) => !["timezone", "weeklyHours"].includes(key),
+    ) ||
+    Object.keys(input.weeklyHours).some(
+        (day) => !AVAILABILITY_DAYS.includes(day),
+    )
+  ) {
+    throw new HttpsError(
+        "invalid-argument",
+        "Invalid room availability.",
+    );
+  }
+
+  const weeklyHours = {};
+  const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  for (const day of AVAILABILITY_DAYS) {
+    const windows = input.weeklyHours[day];
+
+    if (!Array.isArray(windows) || windows.length > 20) {
+      throw new HttpsError(
+          "invalid-argument",
+          `Invalid availability for ${day}.`,
+      );
+    }
+
+    const normalized = windows.map((window) => {
+      if (
+        !window ||
+        typeof window !== "object" ||
+        Array.isArray(window) ||
+        Object.keys(window).some(
+            (key) => !["start", "end"].includes(key),
+        ) ||
+        typeof window.start !== "string" ||
+        typeof window.end !== "string" ||
+        !timePattern.test(window.start) ||
+        !timePattern.test(window.end) ||
+        window.start >= window.end
+      ) {
+        throw new HttpsError(
+            "invalid-argument",
+            `Invalid time window for ${day}.`,
+        );
+      }
+
+      return {
+        start: window.start,
+        end: window.end,
+      };
+    });
+
+    normalized.sort(
+        (a, b) => a.start.localeCompare(b.start),
+    );
+
+    for (let i = 1; i < normalized.length; i++) {
+      if (normalized[i].start < normalized[i - 1].end) {
+        throw new HttpsError(
+            "invalid-argument",
+            `Overlapping availability for ${day}.`,
+        );
+      }
+    }
+
+    weeklyHours[day] = normalized;
+  }
+
+  return {
+    timezone: schoolTimeZone,
+    weeklyHours,
+  };
+}
+
 
 /**
  * Verifies that the caller may access Dashboard Activity
@@ -4499,3 +4655,186 @@ exports.setSystemRole =
         };
       },
   );
+
+exports.saveRoomAvailability = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+
+      const roomId = validateAvailabilityId(
+          data.roomId,
+          "Room ID",
+      );
+
+      const actor = await requireSchoolAdmin(
+          request,
+          schoolId,
+      );
+
+      const schoolRef = db
+          .collection("schools")
+          .doc(schoolId);
+
+      const schoolSnapshot = await schoolRef.get();
+
+      if (!schoolSnapshot.exists) {
+        throw new HttpsError(
+            "not-found",
+            "SCHOOL_NOT_FOUND",
+        );
+      }
+
+      const schoolTimeZone = validateSchoolTimeZone(
+          schoolSnapshot.data().timeZone || "Asia/Tokyo",
+      );
+
+      const availability = validateWeeklyAvailability(
+          data.availability,
+          schoolTimeZone,
+      );
+
+      const roomRef = schoolRef
+          .collection("rooms")
+          .doc(roomId);
+
+      const roomSnapshot = await roomRef.get();
+
+      if (
+        !roomSnapshot.exists ||
+        roomSnapshot.data().active === false
+      ) {
+        throw new HttpsError(
+            "failed-precondition",
+            "ROOM_NOT_AVAILABLE",
+        );
+      }
+
+      const availabilityRef = schoolRef
+          .collection("roomAvailability")
+          .doc(roomId);
+
+      const auditRef = schoolRef
+          .collection("auditLogs")
+          .doc();
+
+      const batch = db.batch();
+
+      batch.set(availabilityRef, {
+        ...availability,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      batch.set(auditRef, {
+        action: "roomAvailability.updated",
+        entityType: "roomAvailability",
+        entityId: roomId,
+        schoolId,
+        actorUid: actor.uid,
+        actorRole: actor.role,
+        changedFields: ["weeklyHours"],
+        details: {
+          roomId,
+        },
+        context: {
+          roomId,
+        },
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      return {
+        success: true,
+        roomId,
+      };
+    },
+);
+
+/**
+ * Updates a school's time-zone setting.
+ *
+ * @param {Object} request Callable function request.
+ * @return {Promise<Object>} Updated school time zone.
+ */
+exports.updateSchoolTimeZone = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+
+      const timeZone = validateSchoolTimeZone(
+          data.timeZone,
+      );
+
+      const actor = await requireSchoolAdmin(
+          request,
+          schoolId,
+      );
+
+      const schoolRef = db
+          .collection("schools")
+          .doc(schoolId);
+
+      const auditRef = schoolRef
+          .collection("auditLogs")
+          .doc();
+
+      await db.runTransaction(async (transaction) => {
+        const schoolSnapshot = await transaction.get(
+            schoolRef,
+        );
+
+        if (!schoolSnapshot.exists) {
+          throw new HttpsError(
+              "not-found",
+              "SCHOOL_NOT_FOUND",
+          );
+        }
+
+        const school = schoolSnapshot.data();
+
+        const previousTimeZone =
+          school.timeZone || "Asia/Tokyo";
+
+        if (previousTimeZone === timeZone) {
+          return;
+        }
+
+        transaction.update(schoolRef, {
+          timeZone,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        transaction.set(auditRef, {
+          action: "school.timeZone.updated",
+          entityType: "school",
+          entityId: schoolId,
+          schoolId,
+          actorUid: actor.uid,
+          actorRole: actor.role,
+          changedFields: ["timeZone"],
+          details: {
+            previousTimeZone,
+            timeZone,
+          },
+          context: {
+            schoolId,
+          },
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      });
+
+      return {
+        success: true,
+        schoolId,
+        timeZone,
+      };
+    },
+);

@@ -379,6 +379,36 @@
       "location": "{building} · {floor}階 · 教室番号 {room}",
       "capacitySummary": "机 {desks}台 · 1台あたり{seatsPerDesk}席 · 定員 {capacity}人"
     },
+    "availability": {
+      "title": "教室の週間利用可能時間",
+      "selectRoom": "教室を選択すると利用可能時間が表示されます。",
+      "loading": "利用可能時間を読み込み中...",
+      "notConfigured": "この教室の週間利用可能時間はまだ設定されていません。",
+      "timezone": "タイムゾーン",
+      "unavailable": "利用不可",
+      "roomLabel": "教室",
+      "chooseRoom": "教室を選択",
+      "editTitle": "週間利用可能時間を編集",
+      "startTime": "開始時間",
+      "endTime": "終了時間",
+      "addWindow": "＋ 時間帯を追加",
+      "removeWindow": "削除",
+      "save": "利用可能時間を保存",
+      "saved": "教室の利用可能時間を保存しました。",
+      "manage": "週間利用可能時間",
+      "hide": "利用可能時間を閉じる",
+      "edit": "利用可能時間を編集",
+      "closeEditor": "編集を閉じる",
+      "days": {
+        "monday": "月曜日",
+        "tuesday": "火曜日",
+        "wednesday": "水曜日",
+        "thursday": "木曜日",
+        "friday": "金曜日",
+        "saturday": "土曜日",
+        "sunday": "日曜日"
+      }
+    },
     "messages": {
       "buildingsLoadError": "校舎を読み込めませんでした：{error}",
       "loadError": "教室を読み込めませんでした：{error}",

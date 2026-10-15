@@ -358,6 +358,46 @@
             >
               {{ $t("common.archive") }}
             </button>
+
+            <button
+              v-if="room.active"
+              type="button"
+              @click="toggleRoomAvailability(room.id)"
+            >
+              {{
+                expandedAvailabilityRoomId === room.id
+                  ? $t("rooms.availability.hide")
+                  : $t("rooms.availability.manage")
+              }}
+            </button>
+          </div>
+          <div
+            v-if="expandedAvailabilityRoomId === room.id"
+            class="room-availability-section"
+          >
+            <RoomAvailabilityViewer
+              :school-id="schoolId"
+              :room-id="room.id"
+            />
+
+            <div class="card-actions">
+              <button
+                type="button"
+                @click="toggleAvailabilityEditor"
+              >
+                {{
+                  showAvailabilityEditor
+                    ? $t("rooms.availability.closeEditor")
+                    : $t("rooms.availability.edit")
+                }}
+              </button>
+            </div>
+
+            <RoomAvailabilityEditor
+              v-if="showAvailabilityEditor"
+              :school-id="schoolId"
+              :room-id="room.id"
+            />
           </div>
         </article>
       </div>
@@ -501,6 +541,10 @@ import {
   saveRoom,
   watchRooms,
 } from "../services/roomService";
+import RoomAvailabilityViewer
+ from "../components/RoomAvailabilityViewer.vue";
+import RoomAvailabilityEditor
+ from "../components/RoomAvailabilityEditor.vue";
 
 function createEmptyForm() {
   return {
@@ -519,6 +563,11 @@ function createEmptyForm() {
 
 export default {
   name: "RoomManager",
+
+  components: {
+    RoomAvailabilityViewer,
+    RoomAvailabilityEditor,
+  },
 
   props: {
     schoolId: {
@@ -541,6 +590,8 @@ export default {
       unsubscribeBuildings: null,
       unsubscribeRooms: null,
       previewingRoom: null,
+      expandedAvailabilityRoomId: "",
+      showAvailabilityEditor: false,
     };
   },
 
@@ -597,6 +648,8 @@ export default {
 
   watch: {
     schoolId() {
+      this.expandedAvailabilityRoomId = "";
+      this.showAvailabilityEditor = false;
       this.resetForm();
       this.startListeners();
     },
@@ -789,6 +842,18 @@ export default {
 
     closeRoomPreview() {
       this.previewingRoom = null;
+    },
+
+    toggleRoomAvailability(roomId) {
+      this.expandedAvailabilityRoomId =
+        this.expandedAvailabilityRoomId === roomId
+          ? ""
+          : roomId;
+      this.showAvailabilityEditor = false;
+    },
+
+    toggleAvailabilityEditor() {
+      this.showAvailabilityEditor = !this.showAvailabilityEditor;
     },
   },
 };

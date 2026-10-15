@@ -388,6 +388,20 @@ service cloud.firestore {
       }
 
       // --------------------------------------
+      // Room Availability
+      // --------------------------------------
+
+      match /roomAvailability/{roomId} {
+        allow read:
+          if canAdministerSchool(schoolId)
+            || isTeacher(schoolId);
+
+        // All changes must go through a
+        // validated backend callable function.
+        allow create, update, delete: if false;
+      }
+
+      // --------------------------------------
       // Courses
       // --------------------------------------
 

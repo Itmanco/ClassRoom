@@ -8,7 +8,8 @@
     "lint": "vue-cli-service lint",
     "deploy": "npm run build && gh-pages -d dist",
     "migrate:students": "node scripts/migrateStudents.js",
-    "test:rules": "firebase emulators:exec --only firestore \"node tests/firestore/membership.rules.test.js && node tests/firestore/school-access.rules.test.js && node tests/firestore/role-access.rules.test.js && node tests/firestore/class-access.rules.test.js\""
+    "test:rules": "firebase emulators:exec --only firestore \"node tests/firestore/membership.rules.test.js && node tests/firestore/school-access.rules.test.js && node tests/firestore/role-access.rules.test.js && node tests/firestore/class-access.rules.test.js && node tests/firestore/room-availability.rules.test.js\"",
+    "test:room-availability": "firebase emulators:exec --only firestore \"node tests/firestore/room-availability.rules.test.js && node tests/firestore/room-availability.callable.test.js\""
   },
   "dependencies": {
     "core-js": "^3.8.3",

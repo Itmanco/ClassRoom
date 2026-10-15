@@ -1,6 +1,15 @@
 <template>
-  <AdminSchoolManager
+  <AdminSchoolSettings
     v-if="
+      section === 'settings' &&
+      (isSystemAdmin || isSchoolAdmin)
+    "
+    :school-id="schoolId"
+    @back="section = ''"
+  />
+
+  <AdminSchoolManager
+    v-else-if="
       section === 'schools' &&
       isSystemAdmin
     "
@@ -155,6 +164,25 @@
           }}
         </p>
       </article>
+
+      <article
+        v-if="isSystemAdmin || isSchoolAdmin"
+        class="admin-card"
+      >
+        <h2>⚙️ School Settings</h2>
+
+        <p>
+          Manage your school's time zone and
+          other configuration settings.
+        </p>
+
+        <button
+          type="button"
+          @click="section = 'settings'"
+        >
+          Manage Settings
+        </button>
+      </article>
     </section>
   </div>
 </template>
@@ -163,6 +191,7 @@
 import AdminSchoolManager from "./AdminSchoolManager.vue";
 import AdminUserManager from "./AdminUserManager.vue";
 import AdminAuditLog from "./AdminAuditLog.vue";
+import AdminSchoolSettings from "./AdminSchoolSettings.vue";
 
 export default {
   name: "AdminPage",
@@ -171,6 +200,7 @@ export default {
     AdminSchoolManager,
     AdminUserManager,
     AdminAuditLog,
+    AdminSchoolSettings,
   },
 
   props: {

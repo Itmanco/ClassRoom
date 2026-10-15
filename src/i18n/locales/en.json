@@ -379,6 +379,36 @@
       "location": "{building} · Floor {floor} · Room {room}",
       "capacitySummary": "{desks} desks · {seatsPerDesk} seats per desk · Capacity {capacity}"
     },
+    "availability": {
+      "title": "Weekly Room Availability",
+      "selectRoom": "Select a room to view its availability.",
+      "loading": "Loading availability...",
+      "notConfigured": "Weekly availability has not been configured for this room.",
+      "timezone": "Timezone",
+      "unavailable": "Unavailable",
+      "roomLabel": "Room",
+      "chooseRoom": "Select a room",
+      "editTitle": "Edit Weekly Availability",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "addWindow": "+ Add time window",
+      "removeWindow": "Remove",
+      "save": "Save Availability",
+      "saved": "Room availability saved successfully.",
+      "manage": "Weekly Availability",
+      "hide": "Hide Availability",
+      "edit": "Edit Availability",
+      "closeEditor": "Close Editor",
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
+    },
     "messages": {
       "buildingsLoadError": "Unable to load buildings: {error}",
       "loadError": "Unable to load rooms: {error}",

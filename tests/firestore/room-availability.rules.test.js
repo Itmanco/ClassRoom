@@ -22,7 +22,6 @@ let testEnv;
 
 function availabilityData() {
   return {
-    timezone: "Asia/Tokyo",
     weeklyHours: {
       monday: [
         { start: "09:00", end: "12:00" },

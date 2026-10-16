@@ -409,17 +409,16 @@ function validateAvailabilityId(value, name) {
  * @param {Object} schoolTimeZone school timezone configuration.
  * @return {Object} Normalized weekly availability.
  */
-function validateWeeklyAvailability(input, schoolTimeZone) {
+function validateWeeklyAvailability(input) {
   if (
     !input ||
     typeof input !== "object" ||
     Array.isArray(input) ||
-    input.timezone !== schoolTimeZone ||
     !input.weeklyHours ||
     typeof input.weeklyHours !== "object" ||
     Array.isArray(input.weeklyHours) ||
     Object.keys(input).some(
-        (key) => !["timezone", "weeklyHours"].includes(key),
+        (key) => key !== "weeklyHours",
     ) ||
     Object.keys(input.weeklyHours).some(
         (day) => !AVAILABILITY_DAYS.includes(day),
@@ -487,7 +486,6 @@ function validateWeeklyAvailability(input, schoolTimeZone) {
   }
 
   return {
-    timezone: schoolTimeZone,
     weeklyHours,
   };
 }
@@ -4688,13 +4686,8 @@ exports.saveRoomAvailability = onCall(
         );
       }
 
-      const schoolTimeZone = validateSchoolTimeZone(
-          schoolSnapshot.data().timeZone || "Asia/Tokyo",
-      );
-
       const availability = validateWeeklyAvailability(
           data.availability,
-          schoolTimeZone,
       );
 
       const roomRef = schoolRef

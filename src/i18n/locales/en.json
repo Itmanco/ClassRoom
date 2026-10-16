@@ -801,6 +801,11 @@
         "title": "Activity Log",
         "description": "Review recent administrative and school activity.",
         "action": "View Activity"
+      },
+      "settings": {
+        "title": "School Settings",
+        "description": "Manage your school's time zone and other configuration settings.",
+        "action": "Manage Settings"
       }
     }
   },
@@ -988,7 +993,8 @@
         "created": "Student created",
         "updated": "Student updated",
         "archived": "Student archived",
-        "reactivated": "Student reactivated"
+        "reactivated": "Student reactivated",
+        "accountCreated": "Student account created"
       },
       "user": {
         "created": "User created",
@@ -1019,6 +1025,14 @@
         "created": "Student added to class",
         "reactivated": "Student re-added to class",
         "archived": "Student removed from class"
+      },
+      "roomAvailability": {
+        "updated": "Room availability updated"
+      },
+      "school": {
+        "timeZone": {
+          "updated": "School time zone updated"
+        }
       }
     },
     "entities": {
@@ -1031,7 +1045,8 @@
       "building": "Building",
       "school": "School",
       "seatingPlan": "Seating plan",
-      "enrollment": "Enrollment"
+      "enrollment": "Enrollment",
+      "roomAvailability": "Room availability"
     },
     "details": {
       "action": "Action",
@@ -1077,7 +1092,10 @@
       "academicYear": "Academic year",
       "semester": "Semester",
       "teacherUids": "Assigned teachers",
-      "mainTeacherUid": "Main teacher"
+      "mainTeacherUid": "Main teacher",
+      "weeklyHours": "Weekly availability",
+      "userUid": "User ID",
+      "timeZone": "Time zone"
     },
     "filters": {
       "all": "All",
@@ -1087,6 +1105,21 @@
     "scopes": {
       "system": "System",
       "school": "School"
+    }
+  },
+  "schoolSettings": {
+    "title": "School Settings",
+    "description": "Manage configuration for the selected school.",
+    "schoolId": "School ID",
+    "loading": "Loading school settings...",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "saved": "School time zone updated successfully.",
+    "timeZone": {
+      "title": "School Time Zone",
+      "description": "Set the time zone used for school schedules, room availability, and reservations.",
+      "label": "Time zone",
+      "help": "All school schedules use this time zone. Changing it may affect how future local schedules are interpreted."
     }
   }
 }

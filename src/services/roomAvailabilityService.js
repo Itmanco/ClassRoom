@@ -8,9 +8,6 @@ import {
 
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase-init";
-import {
-  getSchoolTimeZone,
-} from "./schoolSettingsService";
 
 const DAYS = [
   "monday",
@@ -90,7 +87,6 @@ export function validateRoomAvailability(input) {
   }
 
   return {
-    timezone: input.timezone || "Asia/Tokyo",
     weeklyHours,
   };
 }
@@ -143,12 +139,7 @@ export async function saveRoomAvailability(
   roomId,
   availability,
 ) {
-  const schoolTimeZone = await getSchoolTimeZone(schoolId);
-
-  const normalized = validateRoomAvailability({
-    ...availability,
-    timezone: schoolTimeZone,
-  });
+  const normalized = validateRoomAvailability(availability);
 
   const callable = httpsCallable(
     functions,

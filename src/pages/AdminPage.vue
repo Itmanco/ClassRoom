@@ -169,18 +169,15 @@
         v-if="isSystemAdmin || isSchoolAdmin"
         class="admin-card"
       >
-        <h2>⚙️ School Settings</h2>
+        <h2>⚙️ {{ $t("admin.sections.settings.title") }}</h2>
 
-        <p>
-          Manage your school's time zone and
-          other configuration settings.
-        </p>
+        <p>{{ $t("admin.sections.settings.description") }}</p>
 
         <button
           type="button"
           @click="section = 'settings'"
         >
-          Manage Settings
+          {{ $t("admin.sections.settings.action") }}
         </button>
       </article>
     </section>

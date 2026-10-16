@@ -802,6 +802,11 @@
         "title": "操作履歴",
         "description": "最近の管理操作や学校内の変更履歴を確認します。",
         "action": "操作履歴を見る"
+      },
+      "settings": {
+        "title": "学校設定",
+        "description": "学校のタイムゾーンやその他の設定を管理します。",
+        "action": "設定を管理"
       }
     }
   },
@@ -989,7 +994,8 @@
         "created": "学生を作成",
         "updated": "学生情報を更新",
         "archived": "学生をアーカイブ",
-        "reactivated": "学生を再有効化"
+        "reactivated": "学生を再有効化",
+        "accountCreated": "学生アカウントを作成"
       },
       "user": {
         "created": "ユーザーを作成",
@@ -1020,6 +1026,14 @@
         "created": "学生をクラスに追加",
         "reactivated": "学生をクラスに再追加",
         "archived": "学生をクラスから削除"
+      },
+      "roomAvailability": {
+        "updated": "教室の利用可能時間を更新"
+      },
+      "school": {
+        "timeZone": {
+          "updated": "学校のタイムゾーンを更新"
+        }
       }
     },
     "entities": {
@@ -1032,7 +1046,8 @@
       "building": "建物",
       "school": "学校",
       "seatingPlan": "座席表",
-      "enrollment": "在籍登録"
+      "enrollment": "在籍登録",
+      "roomAvailability": "教室の利用可能時間"
     },
     "details": {
       "action": "操作",
@@ -1078,7 +1093,10 @@
       "academicYear": "年度",
       "semester": "学期",
       "teacherUids": "担当教師",
-      "mainTeacherUid": "主担当教師"
+      "mainTeacherUid": "主担当教師",
+      "weeklyHours": "週間利用可能時間",
+      "userUid": "ユーザーID",
+      "timeZone": "タイムゾーン"
     },
     "filters": {
       "all": "すべて",
@@ -1088,6 +1106,21 @@
     "scopes": {
       "system": "システム",
       "school": "学校"
+    }
+  },
+  "schoolSettings": {
+    "title": "学校設定",
+    "description": "選択した学校の設定を管理します。",
+    "schoolId": "学校ID",
+    "loading": "学校設定を読み込み中...",
+    "saving": "保存中...",
+    "save": "変更を保存",
+    "saved": "学校のタイムゾーンを更新しました。",
+    "timeZone": {
+      "title": "学校のタイムゾーン",
+      "description": "授業スケジュール、教室の利用可能時間、予約に使用するタイムゾーンを設定します。",
+      "label": "タイムゾーン",
+      "help": "学校のスケジュールには、このタイムゾーンが使用されます。変更すると、今後のスケジュールの現地時刻の解釈に影響する場合があります。"
     }
   }
 }

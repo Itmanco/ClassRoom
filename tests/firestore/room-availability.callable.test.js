@@ -27,7 +27,6 @@ const availabilityRef = schoolRef
 
 function validAvailability() {
   return {
-    timezone: "Asia/Tokyo",
     weeklyHours: {
       monday: [
         {start: "09:00", end: "12:00"},
@@ -109,6 +108,10 @@ async function run() {
   assert.deepEqual(
       saved.data().weeklyHours.monday,
       validAvailability().weeklyHours.monday,
+  );
+  assert.equal(
+      Object.hasOwn(saved.data(), "timezone"),
+      false,
   );
 
   console.log("✓ School Admin save successful");

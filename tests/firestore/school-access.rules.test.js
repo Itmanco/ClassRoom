@@ -11,6 +11,8 @@ const {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
+  deleteDoc,
 } = require("firebase/firestore");
 
 const PROJECT_ID = "classroom-school-access-test";
@@ -84,6 +86,22 @@ async function run() {
     const schoolA = "school-a";
     const schoolB = "school-b";
 
+    const systemAdminUid = "school-system-admin";
+
+    await seedUser(systemAdminUid, {
+      systemRole: "system-admin",
+    });
+
+    const adminDb = testEnv
+      .authenticatedContext(systemAdminUid)
+      .firestore();
+
+    const protectedSchoolRef = doc(
+      adminDb,
+      "schools",
+      "protected-school"
+    );
+
     await seedUser(userUid);
     await seedMembership(schoolA, userUid);
 
@@ -134,6 +152,81 @@ async function run() {
     console.log(
       "✓ cross-school student read was denied"
     );
+
+    console.log("Test 3: System Admin creates a school");
+
+    await assertSucceeds(
+      setDoc(protectedSchoolRef, {
+        name: "Protected School",
+        country: "Japan",
+        city: "Sapporo",
+        active: true,
+      })
+    );
+
+    console.log("✓ School creation allowed");
+
+    console.log("Test 4: Ordinary school updates remain allowed");
+
+    await assertSucceeds(
+      updateDoc(protectedSchoolRef, {
+        name: "Updated Protected School",
+      })
+    );
+
+    console.log("✓ Ordinary school update allowed");
+
+    console.log("Test 5: Direct time-zone updates denied");
+
+    await assertFails(
+      updateDoc(protectedSchoolRef, {
+        timeZone: "America/Bogota",
+      })
+    );
+
+    console.log("✓ Direct time-zone update denied");
+
+    console.log("Test 6: Direct reservation-lock creation denied");
+
+    await assertFails(
+      updateDoc(protectedSchoolRef, {
+        "scheduling.hasReservationHistory": true,
+      })
+    );
+
+    console.log("✓ Direct reservation-lock creation denied");
+
+    console.log("Test 7: Direct reservation-lock removal denied");
+
+    // Seed the locked state using privileged test setup.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(
+        doc(
+          context.firestore(),
+          "schools",
+          "protected-school"
+        ),
+        {
+          "scheduling.hasReservationHistory": true,
+        }
+      );
+    });
+
+    await assertFails(
+      updateDoc(protectedSchoolRef, {
+        "scheduling.hasReservationHistory": false,
+      })
+    );
+
+    console.log("✓ Direct reservation-lock removal denied");
+
+    console.log("Test 8: School deletion denied");
+
+    await assertFails(
+      deleteDoc(protectedSchoolRef)
+    );
+
+    console.log("✓ Direct school deletion denied");
 
     console.log("");
     console.log("All school access rules tests passed.");

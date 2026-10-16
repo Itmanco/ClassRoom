@@ -4800,6 +4800,15 @@ exports.updateSchoolTimeZone = onCall(
           return;
         }
 
+        const scheduling = school.scheduling || {};
+
+        if (scheduling.hasReservationHistory === true) {
+          throw new HttpsError(
+              "failed-precondition",
+              "SCHOOL_TIME_ZONE_LOCKED",
+          );
+        }
+
         transaction.update(schoolRef, {
           timeZone,
           updatedAt: FieldValue.serverTimestamp(),

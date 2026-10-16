@@ -299,8 +299,26 @@ service cloud.firestore {
                     schoolId
                   );
 
-      allow create, update, delete:
-        if isSystemAdmin();
+      allow create:
+        if isSystemAdmin()
+          && !request.resource.data.keys().hasAny([
+            "scheduling"
+          ]);
+
+      allow update:
+        if isSystemAdmin()
+          && !request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasAny([
+              "scheduling",
+              "timeZone"
+            ]);
+
+      // School documents cannot be deleted directly by clients.
+      // Archiving remains supported.
+      allow delete:
+        if false;
 
       // --------------------------------------
       // Student account links

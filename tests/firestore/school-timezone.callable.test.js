@@ -256,6 +256,60 @@ async function run() {
 
   console.log("✓ Unrelated school fields preserved");
 
+  console.log("Test 14: Reservation history permanently locks time zone");
+
+  await schoolRef.update({
+    "scheduling.hasReservationHistory": true,
+  });
+
+  const beforeBlockedChange = await schoolRef.get();
+  const previousTimeZone = beforeBlockedChange.data().timeZone;
+
+  await expectError(
+    () => callUpdate("tz-school-admin", "Europe/London"),
+    "failed-precondition"
+  );
+
+  const afterBlockedChange = await schoolRef.get();
+
+  assert.equal(
+    afterBlockedChange.data().timeZone,
+    previousTimeZone
+  );
+
+  assert.equal(
+    afterBlockedChange.data().scheduling.hasReservationHistory,
+    true
+  );
+
+  console.log("✓ Reservation history permanently locks time zone");
+
+  console.log("Test 15: Unchanged time zone allowed after lock");
+
+  const lockedSchool = await schoolRef.get();
+  const lockedTimeZone = lockedSchool.data().timeZone;
+
+  const unchangedResult = await callUpdate(
+    "tz-school-admin",
+    lockedTimeZone
+  );
+
+  assert.equal(unchangedResult.success, true);
+
+  const afterUnchanged = await schoolRef.get();
+
+  assert.equal(
+    afterUnchanged.data().timeZone,
+    lockedTimeZone
+  );
+
+  assert.equal(
+    afterUnchanged.data().scheduling.hasReservationHistory,
+    true
+  );
+
+  console.log("✓ Unchanged time zone allowed after lock");
+
   console.log("All school time-zone callable tests passed.");
 }
 

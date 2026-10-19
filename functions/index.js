@@ -30,6 +30,16 @@ const {
     "firebase-admin/firestore",
 );
 
+const {
+  resolveReservationTime,
+} = require("./lib/reservationTime");
+
+const {
+  reservationFitsAvailability,
+} = require("./lib/reservationAvailability");
+
+const {DateTime} = require("luxon");
+
 initializeApp();
 
 setGlobalOptions({
@@ -4714,31 +4724,74 @@ exports.saveRoomAvailability = onCall(
           .collection("auditLogs")
           .doc();
 
-      const batch = db.batch();
+      await db.runTransaction(async (transaction) => {
+        const now = new Date();
 
-      batch.set(availabilityRef, {
-        ...availability,
-        updatedAt: FieldValue.serverTimestamp(),
+        const reservationsQuery = schoolRef
+            .collection("roomReservations")
+            .where("roomId", "==", roomId)
+            .where("status", "==", "active")
+            .where("endsAt", ">", now);
+
+        const reservationsSnapshot =
+            await transaction.get(reservationsQuery);
+
+        const timeZone =
+            schoolSnapshot.data().timeZone || "Asia/Tokyo";
+
+        for (const reservationDoc of reservationsSnapshot.docs) {
+          const reservation = reservationDoc.data();
+
+          const date = DateTime.fromISO(reservation.localDate, {
+            zone: timeZone,
+          });
+
+          if (!date.isValid) {
+            throw new HttpsError(
+                "failed-precondition",
+                "INVALID_EXISTING_RESERVATION_DATE",
+            );
+          }
+
+          const fits = reservationFitsAvailability(
+              {
+                weekday: date.toFormat("cccc").toLowerCase(),
+                startTime: reservation.localStartTime,
+                endTime: reservation.localEndTime,
+              },
+              availability.weeklyHours,
+          );
+
+          if (!fits) {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_AVAILABILITY_CONFLICT",
+            );
+          }
+        }
+
+        transaction.set(availabilityRef, {
+          ...availability,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        transaction.set(auditRef, {
+          action: "roomAvailability.updated",
+          entityType: "roomAvailability",
+          entityId: roomId,
+          schoolId,
+          actorUid: actor.uid,
+          actorRole: actor.role,
+          changedFields: ["weeklyHours"],
+          details: {
+            roomId,
+          },
+          context: {
+            roomId,
+          },
+          createdAt: FieldValue.serverTimestamp(),
+        });
       });
-
-      batch.set(auditRef, {
-        action: "roomAvailability.updated",
-        entityType: "roomAvailability",
-        entityId: roomId,
-        schoolId,
-        actorUid: actor.uid,
-        actorRole: actor.role,
-        changedFields: ["weeklyHours"],
-        details: {
-          roomId,
-        },
-        context: {
-          roomId,
-        },
-        createdAt: FieldValue.serverTimestamp(),
-      });
-
-      await batch.commit();
 
       return {
         success: true,
@@ -4837,6 +4890,231 @@ exports.updateSchoolTimeZone = onCall(
         success: true,
         schoolId,
         timeZone,
+      };
+    },
+);
+
+/**
+ * Creates one dated room reservation.
+ *
+ * @param {Object} request Callable request.
+ * @return {Promise<Object>} Created reservation.
+ */
+exports.createRoomReservation = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+      const classId = validateAvailabilityId(
+          data.classId,
+          "Class ID",
+      );
+      const roomId = validateAvailabilityId(
+          data.roomId,
+          "Room ID",
+      );
+
+      const actor = await requireSchoolAdmin(
+          request,
+          schoolId,
+      );
+
+      const schoolRef = db.collection("schools").doc(schoolId);
+      const classRef = schoolRef.collection("classes").doc(classId);
+      const roomRef = schoolRef.collection("rooms").doc(roomId);
+      const availabilityRef = schoolRef
+          .collection("roomAvailability").doc(roomId);
+
+      const reservationRef = schoolRef
+          .collection("roomReservations").doc();
+
+      const auditRef = schoolRef
+          .collection("auditLogs").doc();
+
+      const result = await db.runTransaction(
+          async (transaction) => {
+            const schoolSnap = await transaction.get(schoolRef);
+            const classSnap = await transaction.get(classRef);
+            const roomSnap = await transaction.get(roomRef);
+            const availabilitySnap =
+              await transaction.get(availabilityRef);
+
+            if (!schoolSnap.exists ||
+                schoolSnap.data().active === false) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "SCHOOL_NOT_AVAILABLE",
+              );
+            }
+
+            if (!classSnap.exists ||
+                classSnap.data().active === false) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_NOT_AVAILABLE",
+              );
+            }
+
+            if (!roomSnap.exists ||
+                roomSnap.data().active === false) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_NOT_AVAILABLE",
+              );
+            }
+
+            if (classSnap.data().roomId !== roomId) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_ROOM_MISMATCH",
+              );
+            }
+
+            if (!availabilitySnap.exists) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_AVAILABILITY_NOT_CONFIGURED",
+              );
+            }
+
+            const timeZone =
+              schoolSnap.data().timeZone || "Asia/Tokyo";
+
+            let resolved;
+
+            try {
+              resolved = resolveReservationTime({
+                localDate: data.localDate,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                timeZone,
+              });
+            } catch (error) {
+              throw new HttpsError(
+                  "invalid-argument",
+                  error.message,
+              );
+            }
+
+            const withinAvailability = reservationFitsAvailability(
+                {
+                  weekday: resolved.weekday,
+                  startTime: resolved.startTime,
+                  endTime: resolved.endTime,
+                },
+                availabilitySnap.data().weeklyHours,
+            );
+
+            if (!withinAvailability) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "OUTSIDE_ROOM_AVAILABILITY",
+              );
+            }
+
+            const dayId = `${roomId}_${resolved.localDate}`;
+
+            const dayRef = schoolRef
+                .collection("roomReservationDays")
+                .doc(dayId);
+
+            const daySnap = await transaction.get(dayRef);
+
+            const existing = daySnap.exists ?
+              daySnap.data().intervals || [] : [];
+
+            if (!Array.isArray(existing) ||
+                existing.length >= 100) {
+              throw new HttpsError(
+                  "resource-exhausted",
+                  "ROOM_DAY_CAPACITY_REACHED",
+              );
+            }
+
+            const overlapping = existing.some(
+                (item) =>
+                  resolved.startsAtMillis < item.endsAtMillis &&
+                  resolved.endsAtMillis > item.startsAtMillis,
+            );
+
+            if (overlapping) {
+              throw new HttpsError(
+                  "already-exists",
+                  "ROOM_RESERVATION_CONFLICT",
+              );
+            }
+
+            const interval = {
+              reservationId: reservationRef.id,
+              startsAtMillis: resolved.startsAtMillis,
+              endsAtMillis: resolved.endsAtMillis,
+            };
+
+            transaction.set(dayRef, {
+              roomId,
+              localDate: resolved.localDate,
+              intervals: [...existing, interval],
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+
+            transaction.set(reservationRef, {
+              classId,
+              roomId,
+              localDate: resolved.localDate,
+              localStartTime: resolved.startTime,
+              localEndTime: resolved.endTime,
+              timeZone,
+              startsAt: new Date(resolved.startsAtMillis),
+              endsAt: new Date(resolved.endsAtMillis),
+              status: "active",
+              seriesId: null,
+              createdByUid: actor.uid,
+              createdAt: FieldValue.serverTimestamp(),
+            });
+
+            transaction.update(schoolRef, {
+              "scheduling.hasReservationHistory": true,
+              "updatedAt": FieldValue.serverTimestamp(),
+            });
+
+            transaction.set(auditRef, {
+              action: "roomReservation.created",
+              entityType: "roomReservation",
+              entityId: reservationRef.id,
+              schoolId,
+              actorUid: actor.uid,
+              actorRole: actor.role,
+              changedFields: ["status"],
+              details: {
+                classId,
+                roomId,
+                localDate: resolved.localDate,
+                startTime: resolved.startTime,
+                endTime: resolved.endTime,
+              },
+              context: {
+                classId,
+                roomId,
+              },
+              createdAt: FieldValue.serverTimestamp(),
+            });
+
+            return {
+              reservationId: reservationRef.id,
+              schoolId,
+              classId,
+              roomId,
+              localDate: resolved.localDate,
+            };
+          },
+      );
+
+      return {
+        success: true,
+        ...result,
       };
     },
 );

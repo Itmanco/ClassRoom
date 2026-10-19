@@ -320,6 +320,41 @@ service cloud.firestore {
       allow delete:
         if false;
 
+    // --------------------------------------
+    // Room reservations
+    // --------------------------------------
+
+    match /roomReservations/{reservationId} {
+      allow read:
+        if canAdministerSchool(schoolId);
+
+      // Reservations are managed by Cloud Functions.
+      allow create, update, delete:
+        if false;
+    }
+
+    // --------------------------------------
+    // Reservation series
+    // --------------------------------------
+
+    match /reservationSeries/{seriesId} {
+      allow read:
+        if canAdministerSchool(schoolId);
+
+      allow create, update, delete:
+        if false;
+    }
+
+    // --------------------------------------
+    // Room/day conflict coordination
+    // --------------------------------------
+
+    match /roomReservationDays/{dayId} {
+      // Internal backend coordination documents.
+      allow read, write:
+        if false;
+    }
+
       // --------------------------------------
       // Student account links
       // --------------------------------------

@@ -38,6 +38,7 @@
       "courses": "科目",
       "buildings": "校舎",
       "rooms": "教室",
+      "reservations": "教室予約",
       "classes": "クラス",
       "enrollments": "受講登録",
       "seatingPlans": "座席表",
@@ -417,6 +418,34 @@
       "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
       "archived": "教室「{code}」をアーカイブしました。",
       "archiveError": "教室をアーカイブできませんでした：{error}"
+    }
+  },
+  "reservations": {
+    "title": "教室予約",
+    "description": "授業で使用する教室の予約を作成・管理します。",
+    "form": {
+      "title": "教室を予約",
+      "class": "クラス",
+      "room": "教室",
+      "date": "日付",
+      "startTime": "開始時刻",
+      "endTime": "終了時刻",
+      "selectClass": "クラスを選択",
+      "loadingRoom": "教室を読み込んでいます...",
+      "create": "予約を作成",
+      "creating": "作成中..."
+    },
+    "messages": {
+      "loadingClasses": "クラスを読み込んでいます...",
+      "noEligibleClasses": "教室が割り当てられた有効なクラスがありません。",
+      "created": "教室の予約を作成しました。",
+      "selectClass": "クラスを選択してください。",
+      "roomNotFound": "割り当てられた教室が見つかりません。",
+      "roomInactive": "割り当てられた教室は無効になっています。",
+      "classesLoadError": "クラスを読み込めませんでした：{error}",
+      "roomsLoadError": "教室を読み込めませんでした：{error}",
+      "createError": "予約を作成できませんでした：{error}",
+      "timeZoneUnavailable": "学校のタイムゾーンを取得できません。"
     }
   },
   "classes": {

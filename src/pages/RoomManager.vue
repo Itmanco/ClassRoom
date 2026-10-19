@@ -985,12 +985,22 @@ button:disabled {
 }
 
 .room-card {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 20px;
   padding: 16px;
   border: 1px solid #ddd;
   border-radius: 10px;
+  align-items: start;
+}
+
+.room-availability-section {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
 }
 
 .room-card.archived {
@@ -1177,10 +1187,21 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .room-card,
+  .room-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .room-title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .room-availability-section {
+    grid-column: 1;
+  }
+
+  .card-actions {
+    flex-wrap: wrap;
   }
 }
 </style>

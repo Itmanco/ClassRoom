@@ -38,6 +38,7 @@
       "courses": "Courses",
       "buildings": "Buildings",
       "rooms": "Rooms",
+      "reservations": "Room Reservations",
       "classes": "Classes",
       "enrollments": "Enrollments",
       "seatingPlans": "Seating Plans",
@@ -417,6 +418,34 @@
       "archiveConfirm": "Archive {code} — {name}?",
       "archived": "Room {code} was archived.",
       "archiveError": "Unable to archive room: {error}"
+    }
+  },
+  "reservations": {
+    "title": "Room Reservations",
+    "description": "Create and manage classroom room reservations.",
+    "form": {
+      "title": "Create reservation",
+      "class": "Class",
+      "room": "Room",
+      "date": "Date",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "selectClass": "Select a class",
+      "loadingRoom": "Loading room...",
+      "create": "Create reservation",
+      "creating": "Creating..."
+    },
+    "messages": {
+      "loadingClasses": "Loading classes...",
+      "noEligibleClasses": "No active classes with an assigned room are available.",
+      "created": "Room reservation created successfully.",
+      "selectClass": "Select a class.",
+      "roomNotFound": "The assigned room could not be found.",
+      "roomInactive": "The assigned room is inactive.",
+      "classesLoadError": "Unable to load classes: {error}",
+      "roomsLoadError": "Unable to load rooms: {error}",
+      "createError": "Unable to create reservation: {error}",
+      "timeZoneUnavailable": "School timezone is not available."
     }
   },
   "classes": {

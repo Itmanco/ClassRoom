@@ -105,6 +105,18 @@
       </button>
 
       <button
+        v-if="canManageSchoolStructure"
+        @click="$emit('change-page', 'reservations')"
+        :class="{ active: currentPage === 'reservations' }"
+        :title="collapsed ? $t('navigation.reservations') : ''"
+      >
+        <span class="nav-icon">📅</span>
+        <span v-if="!collapsed">
+          {{ $t("navigation.reservations") }}
+        </span>
+      </button>
+
+      <button
         v-if="canAccessClasses"
         @click="$emit('change-page', 'classes')"
         :class="{ active: currentPage === 'classes' }"

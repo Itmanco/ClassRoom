@@ -143,6 +143,14 @@
         :school-id="session.activeSchool"
       />
 
+      <RoomReservationManager
+        v-if="
+          currentPage === 'reservations' &&
+          canManageSchoolStructure
+        "
+        :school-id="session.activeSchool"
+      />
+
       <ClassManager
         v-if="
           currentPage === 'classes' &&
@@ -251,6 +259,9 @@ const BuildingManager = defineAsyncComponent(() =>
 const RoomManager = defineAsyncComponent(() =>
   import("./pages/RoomManager.vue"));
 
+const RoomReservationManager = defineAsyncComponent(() =>
+  import("./pages/RoomReservationManager.vue"));
+
 const ClassManager = defineAsyncComponent(() =>
   import("./pages/ClassManager.vue"));
 
@@ -273,6 +284,7 @@ export default {
     CourseManager,
     BuildingManager,
     RoomManager,
+    RoomReservationManager,
     ClassManager,
     ClassWorkspace,
     SettingsPage,
@@ -529,6 +541,7 @@ export default {
           "courses",
           "buildings",
           "rooms",
+          "reservations",
         ].includes(page)
       ) {
         canAccessPage =

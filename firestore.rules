@@ -302,7 +302,8 @@ service cloud.firestore {
       allow create:
         if isSystemAdmin()
           && !request.resource.data.keys().hasAny([
-            "scheduling"
+            "scheduling",
+            "operatingHours"
           ]);
 
       allow update:
@@ -312,7 +313,8 @@ service cloud.firestore {
             .affectedKeys()
             .hasAny([
               "scheduling",
-              "timeZone"
+              "timeZone",
+              "operatingHours"
             ]);
 
       // School documents cannot be deleted directly by clients.

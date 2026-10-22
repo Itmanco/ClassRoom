@@ -152,6 +152,69 @@
         {{ errorMessage }}
       </p>
     </section>
+    <section class="panel">
+      <h2>{{ $t("reservations.list.title") }}</h2>
+
+      <p v-if="loadingReservations">
+        {{ $t("reservations.list.loading") }}
+      </p>
+
+      <p
+        v-else-if="reservationsError"
+        class="error-message"
+      >
+        {{ reservationsError }}
+      </p>
+
+      <p
+        v-else-if="reservations.length === 0"
+        class="empty-state"
+      >
+        {{ $t("reservations.list.empty") }}
+      </p>
+
+      <div
+        v-else
+        class="table-wrapper"
+      >
+        <table class="reservations-table">
+          <thead>
+            <tr>
+              <th>{{ $t("reservations.list.date") }}</th>
+              <th>{{ $t("reservations.list.class") }}</th>
+              <th>{{ $t("reservations.list.room") }}</th>
+              <th>{{ $t("reservations.list.time") }}</th>
+              <th>{{ $t("reservations.list.status") }}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="reservation in reservations"
+              :key="reservation.id"
+            >
+              <td>{{ reservation.localDate }}</td>
+
+              <td>
+                {{ reservationClassLabel(reservation) }}
+              </td>
+
+              <td>
+                {{ reservationRoomLabel(reservation) }}
+              </td>
+
+              <td>
+                {{ reservation.localStartTime }}–{{ reservation.localEndTime }}
+              </td>
+
+              <td>
+                {{ reservation.status }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -166,6 +229,7 @@ import {
 
 import {
   createRoomReservation,
+  watchRoomReservations,
 } from "../services/roomReservationService";
 
 import {
@@ -186,8 +250,12 @@ export default {
     return {
       classes: [],
       rooms: [],
+      reservations: [],
       loadingClasses: false,
       loadingRooms: false,
+      loadingReservations: false,
+      reservationsError: "",
+      unsubscribeReservations: null,
       saving: false,
       message: "",
       errorMessage: "",
@@ -267,6 +335,7 @@ export default {
   beforeUnmount() {
     this.stopClassesListener();
     this.stopRoomsListener();
+    this.stopReservationsListener();
   },
 
   methods: {
@@ -284,10 +353,22 @@ export default {
       }
     },
 
+    stopReservationsListener() {
+      if (this.unsubscribeReservations) {
+        this.unsubscribeReservations();
+        this.unsubscribeReservations = null;
+      }
+    },
+
     startListeners() {
       this.stopClassesListener();
       this.stopRoomsListener();
+      this.stopReservationsListener();
       this.saving = false;
+
+      this.reservations = [];
+      this.loadingReservations = false;
+      this.reservationsError = "";
 
       this.classes = [];
       this.rooms = [];
@@ -314,6 +395,30 @@ export default {
 
       this.loadingClasses = true;
       this.loadingRooms = true;
+
+      this.loadingReservations = true;
+
+      const schoolId = this.schoolId;
+
+      this.unsubscribeReservations = watchRoomReservations(
+        schoolId,
+        (items) => {
+          if (this.schoolId !== schoolId) {
+            return;
+          }
+
+          this.reservations = items;
+          this.loadingReservations = false;
+        },
+        (error) => {
+          if (this.schoolId !== schoolId) {
+            return;
+          }
+
+          this.reservationsError = error.message;
+          this.loadingReservations = false;
+        },
+      );
 
       this.unsubscribeClasses = watchClasses(
         this.schoolId,
@@ -351,6 +456,24 @@ export default {
         item.code ||
         item.id
       );
+    },
+
+    reservationClassLabel(reservation) {
+      const item = this.classes.find(
+        (entry) => entry.id === reservation.classId,
+      );
+
+      return item ? this.classLabel(item) : reservation.classId;
+    },
+
+    reservationRoomLabel(reservation) {
+      const room = this.rooms.find(
+        (entry) => entry.id === reservation.roomId,
+      );
+
+      return room ?
+        `${room.code} — ${room.name}` :
+        reservation.roomId;
     },
 
     async submitReservation() {
@@ -577,6 +700,36 @@ button:disabled {
 
 .reservation-form .full-width {
   grid-column: 1 / -1;
+}
+
+.empty-state {
+  color: #666;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reservations-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.reservations-table th,
+.reservations-table td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.reservations-table th {
+  background: #f6f6f6;
+  font-weight: 600;
+}
+
+.reservations-table td {
+  vertical-align: middle;
 }
 
 @media (max-width: 760px) {

@@ -38,6 +38,11 @@ const {
   reservationFitsAvailability,
 } = require("./lib/reservationAvailability");
 
+const {
+  validateSchoolOperatingHours,
+  reservationFitsSchoolHours,
+} = require("./lib/schoolOperatingHours");
+
 const {DateTime} = require("luxon");
 
 initializeApp();
@@ -4801,6 +4806,138 @@ exports.saveRoomAvailability = onCall(
 );
 
 /**
+ * Saves school-wide weekly operating hours.
+ *
+ * Rejects changes that conflict with future active reservations.
+ *
+ * @param {Object} request Callable function request.
+ * @return {Promise<Object>} Save result.
+ */
+exports.saveSchoolOperatingHours = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+
+      let operatingHours;
+
+      try {
+        operatingHours = validateSchoolOperatingHours(
+            data.operatingHours,
+        );
+      } catch (error) {
+        throw new HttpsError(
+            "invalid-argument",
+            error.message,
+        );
+      }
+
+      const actor = await requireSchoolAdmin(
+          request,
+          schoolId,
+      );
+
+      const schoolRef = db
+          .collection("schools")
+          .doc(schoolId);
+
+      const auditRef = schoolRef
+          .collection("auditLogs")
+          .doc();
+
+      await db.runTransaction(async (transaction) => {
+        const schoolSnapshot = await transaction.get(
+            schoolRef,
+        );
+
+        if (
+          !schoolSnapshot.exists ||
+          schoolSnapshot.data().active === false
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "SCHOOL_NOT_AVAILABLE",
+          );
+        }
+
+        const school = schoolSnapshot.data();
+        const timeZone = school.timeZone || "Asia/Tokyo";
+
+        const reservationsQuery = schoolRef
+            .collection("roomReservations")
+            .where("status", "==", "active")
+            .where("endsAt", ">", new Date());
+
+        const reservationsSnapshot =
+            await transaction.get(reservationsQuery);
+
+        for (const reservationDoc of reservationsSnapshot.docs) {
+          const reservation = reservationDoc.data();
+
+          const date = DateTime.fromISO(
+              reservation.localDate,
+              {zone: timeZone},
+          );
+
+          if (!date.isValid) {
+            throw new HttpsError(
+                "failed-precondition",
+                "INVALID_EXISTING_RESERVATION_DATE",
+            );
+          }
+
+          const fits = reservationFitsSchoolHours(
+              {
+                weekday: date.toFormat("cccc").toLowerCase(),
+                startTime: reservation.localStartTime,
+                endTime: reservation.localEndTime,
+              },
+              operatingHours,
+          );
+
+          if (!fits) {
+            throw new HttpsError(
+                "failed-precondition",
+                "SCHOOL_OPERATING_HOURS_CONFLICT",
+            );
+          }
+        }
+
+        transaction.update(schoolRef, {
+          operatingHours,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        transaction.set(auditRef, {
+          action: "school.operatingHours.updated",
+          entityType: "school",
+          entityId: schoolId,
+          schoolId,
+          actorUid: actor.uid,
+          actorRole: actor.role,
+          changedFields: ["operatingHours"],
+          details: {
+            operatingHours,
+          },
+          context: {
+            schoolId,
+          },
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      });
+
+      return {
+        success: true,
+        schoolId,
+        operatingHours,
+      };
+    },
+);
+
+/**
  * Updates a school's time-zone setting.
  *
  * @param {Object} request Callable function request.
@@ -4925,8 +5062,6 @@ exports.createRoomReservation = onCall(
       const schoolRef = db.collection("schools").doc(schoolId);
       const classRef = schoolRef.collection("classes").doc(classId);
       const roomRef = schoolRef.collection("rooms").doc(roomId);
-      const availabilityRef = schoolRef
-          .collection("roomAvailability").doc(roomId);
 
       const reservationRef = schoolRef
           .collection("roomReservations").doc();
@@ -4939,8 +5074,6 @@ exports.createRoomReservation = onCall(
             const schoolSnap = await transaction.get(schoolRef);
             const classSnap = await transaction.get(classRef);
             const roomSnap = await transaction.get(roomRef);
-            const availabilitySnap =
-              await transaction.get(availabilityRef);
 
             if (!schoolSnap.exists ||
                 schoolSnap.data().active === false) {
@@ -4973,10 +5106,12 @@ exports.createRoomReservation = onCall(
               );
             }
 
-            if (!availabilitySnap.exists) {
+            const operatingHours = schoolSnap.data().operatingHours;
+
+            if (!operatingHours) {
               throw new HttpsError(
                   "failed-precondition",
-                  "ROOM_AVAILABILITY_NOT_CONFIGURED",
+                  "SCHOOL_OPERATING_HOURS_NOT_CONFIGURED",
               );
             }
 
@@ -4999,19 +5134,19 @@ exports.createRoomReservation = onCall(
               );
             }
 
-            const withinAvailability = reservationFitsAvailability(
+            const withinOperatingHours = reservationFitsSchoolHours(
                 {
                   weekday: resolved.weekday,
                   startTime: resolved.startTime,
                   endTime: resolved.endTime,
                 },
-                availabilitySnap.data().weeklyHours,
+                operatingHours,
             );
 
-            if (!withinAvailability) {
+            if (!withinOperatingHours) {
               throw new HttpsError(
                   "failed-precondition",
-                  "OUTSIDE_ROOM_AVAILABILITY",
+                  "OUTSIDE_SCHOOL_OPERATING_HOURS",
               );
             }
 

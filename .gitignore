@@ -32,6 +32,8 @@ school-structure.json
 firestore-debug.log
 
 # Firebase Emulator local data
+firebase-emulator-data/
 emulator-data/
+/backups/
 firebase-debug.log
 emulator-data.zip

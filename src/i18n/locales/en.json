@@ -435,6 +435,16 @@
       "create": "Create reservation",
       "creating": "Creating..."
     },
+    "list": {
+      "title": "Existing Reservations",
+      "loading": "Loading reservations...",
+      "empty": "No reservations have been created yet.",
+      "date": "Date",
+      "class": "Class",
+      "room": "Room",
+      "time": "Time",
+      "status": "Status"
+    },
     "messages": {
       "loadingClasses": "Loading classes...",
       "noEligibleClasses": "No active classes with an assigned room are available.",
@@ -1149,6 +1159,28 @@
       "description": "Set the time zone used for school schedules, room availability, and reservations.",
       "label": "Time zone",
       "help": "All school schedules use this time zone. Changing it may affect how future local schedules are interpreted."
+    },
+    "operatingHours": {
+      "title": "School operating hours",
+      "description": "Set the weekly hours during which rooms may be reserved.",
+      "notConfigured": "Operating hours have not been configured. Reservations cannot be created until you save a schedule.",
+      "open": "Open",
+      "closed": "Closed",
+      "addInterval": "Add time interval",
+      "saved": "School operating hours updated successfully.",
+      "remove": "Remove",
+      "invalid": "Check the time intervals. Each start must be before its end, and intervals cannot overlap.",
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "noMoreTime": "There is no remaining time available for another interval.",
+      "unsavedChanges": "You have unsaved operating-hours changes. Discard them?"
     }
   }
 }

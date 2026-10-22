@@ -2,7 +2,7 @@
 <template>
   <div class="school-settings">
     <header>
-      <button type="button" @click="$emit('back')">
+      <button type="button" @click="handleBack">
         ← {{ $t("common.back") }}
       </button>
 
@@ -67,6 +67,10 @@
         </button>
       </form>
     </section>
+    <SchoolOperatingHoursEditor
+      ref="operatingHoursEditor"
+      :school-id="schoolId"
+    />
   </div>
 </template>
 
@@ -75,6 +79,8 @@ import {
   getSchoolTimeZone,
   updateSchoolTimeZone,
 } from "../services/schoolSettingsService";
+
+import SchoolOperatingHoursEditor from "../components/SchoolOperatingHoursEditor.vue";
 
 const TIME_ZONES = [
   "Asia/Tokyo",
@@ -102,6 +108,10 @@ const TIME_ZONES = [
 
 export default {
   name: "AdminSchoolSettings",
+
+  components: {
+    SchoolOperatingHoursEditor,
+  },
 
   props: {
     schoolId: {
@@ -213,6 +223,16 @@ export default {
       } finally {
         this.saving = false;
       }
+    },
+
+    handleBack() {
+      const editor = this.$refs.operatingHoursEditor;
+
+      if (editor && !editor.confirmDiscardChanges()) {
+        return;
+      }
+
+      this.$emit("back");
     },
   },
 };

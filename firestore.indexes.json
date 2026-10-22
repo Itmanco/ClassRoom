@@ -1,4 +1,3 @@
-
 {
   "indexes": [
     {
@@ -9,6 +8,20 @@
           "fieldPath": "roomId",
           "order": "ASCENDING"
         },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "endsAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "roomReservations",
+      "queryScope": "COLLECTION",
+      "fields": [
         {
           "fieldPath": "status",
           "order": "ASCENDING"

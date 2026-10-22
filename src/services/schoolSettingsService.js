@@ -41,3 +41,36 @@ export async function updateSchoolTimeZone(schoolId, timeZone) {
 
   return result.data;
 }
+
+
+export async function getSchoolOperatingHours(schoolId) {
+  if (!schoolId) {
+    throw new Error("School ID is required.");
+  }
+
+  const school = await getSchool(schoolId);
+
+  if (!school) {
+    throw new Error("School not found.");
+  }
+
+  return school.operatingHours ?? null;
+}
+
+export async function saveSchoolOperatingHours(schoolId, operatingHours) {
+  if (!schoolId) {
+    throw new Error("School ID is required.");
+  }
+
+  const callable = httpsCallable(
+      functions,
+      "saveSchoolOperatingHours",
+  );
+
+  const result = await callable({
+    schoolId,
+    operatingHours,
+  });
+
+  return result.data;
+}

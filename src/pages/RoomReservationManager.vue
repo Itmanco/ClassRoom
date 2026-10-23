@@ -7,136 +7,146 @@
       </div>
     </header>
 
-    <section class="panel">
-      <h2>{{ $t("reservations.form.title") }}</h2>
+    <section class="panel creation-panel"
+      :class="{'creation-panel--expanded': showCreateForm}"
+    >
+      <div class="creation-header">
+        <h2>{{ $t("reservations.form.title") }}</h2>
 
-      <p v-if="loadingClasses">
-        {{ $t("reservations.messages.loadingClasses") }}
-      </p>
-
-      <p
-        v-else-if="eligibleClasses.length === 0"
-        class="notice"
-      >
-        {{ $t("reservations.messages.noEligibleClasses") }}
-      </p>
-
-      <form
-        v-else
-        class="reservation-form"
-        @submit.prevent="submitReservation"
-      >
-        <label>
-          {{ $t("reservations.form.class") }}
-
-          <select
-            v-model="form.classId"
-            :disabled="saving"
-            required
-          >
-            <option disabled value="">
-              {{ $t("reservations.form.selectClass") }}
-            </option>
-
-            <option
-              v-for="item in eligibleClasses"
-              :key="item.id"
-              :value="item.id"
-            >
-              {{ classLabel(item) }}
-            </option>
-          </select>
-        </label>
-
-        <label>
-          {{ $t("reservations.form.room") }}
-
-          <input
-            :value="roomLabel"
-            type="text"
-            disabled
-          />
-        </label>
-
-        <label class="full-width">
-          {{ $t("reservations.form.date") }}
-
-          <input
-            v-model="form.localDate"
-            type="date"
-            :disabled="saving"
-            required
-          />
-        </label>
-
-        <label>
-          {{ $t("reservations.form.startTime") }}
-
-          <input
-            v-model="form.localStartTime"
-            type="time"
-            :disabled="saving"
-            required
-          />
-        </label>
-
-        <label>
-          {{ $t("reservations.form.endTime") }}
-
-          <input
-            v-model="form.localEndTime"
-            type="time"
-            :disabled="saving"
-            required
-          />
-        </label>
-
-        <p class="timezone-info">
-          {{ $t("rooms.availability.timezone") }}:
-
-          <span v-if="loadingTimeZone">
-            ...
-          </span>
-
-          <strong v-else-if="schoolTimeZone">
-            {{ schoolTimeZone }}
-          </strong>
-
-          <span v-else>
-            —
-          </span>
-        </p>
-
-        <p
-          v-if="timeZoneError"
-          class="error-message"
+        <button
+          type="button"
+          class="primary-button"
+          :aria-expanded="showCreateForm"
+          @click="toggleCreateForm"
         >
-          {{ timeZoneError }}
-        </p>
+          {{
+            showCreateForm
+              ? $t("reservations.timeline.hideForm")
+              : $t("reservations.timeline.newReservation")
+          }}
+        </button>
+      </div>
 
-        <div class="form-actions">
-          <button
-            class="primary-button"
-            type="submit"
-            :disabled="
-              saving ||
-              !selectedClass ||
-              !selectedRoom ||
-              selectedRoom.active === false ||
-              loadingTimeZone ||
-              loadingClasses ||
-              loadingRooms ||
-              !schoolTimeZone
-            "
+      <div v-if="showCreateForm" class="creation-content">
+        <form
+          v-if="!loadingClasses && eligibleClasses.length > 0"
+          class="reservation-form"
+          @submit.prevent="submitReservation"
+        >
+          <label>
+            {{ $t("reservations.form.class") }}
+
+            <select
+              v-model="form.classId"
+              :disabled="saving"
+              required
+            >
+              <option disabled value="">
+                {{ $t("reservations.form.selectClass") }}
+              </option>
+
+              <option
+                v-for="item in eligibleClasses"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ classLabel(item) }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            {{ $t("reservations.form.room") }}
+
+            <input
+              :value="roomLabel"
+              type="text"
+              disabled
+            />
+          </label>
+
+          <label class="full-width">
+            {{ $t("reservations.form.date") }}
+
+            <input
+              v-model="form.localDate"
+              type="date"
+              :disabled="saving"
+              required
+            />
+          </label>
+
+          <label>
+            {{ $t("reservations.form.startTime") }}
+
+            <input
+              v-model="form.localStartTime"
+              type="time"
+              step="900"
+              :disabled="saving"
+              required
+            />
+          </label>
+
+          <label>
+            {{ $t("reservations.form.endTime") }}
+
+            <input
+              v-model="form.localEndTime"
+              type="time"
+              step="900"
+              :disabled="saving"
+              required
+            />
+          </label>
+
+          <p class="timezone-info">
+            {{ $t("rooms.availability.timezone") }}:
+
+            <span v-if="loadingTimeZone">
+              ...
+            </span>
+
+            <strong v-else-if="schoolTimeZone">
+              {{ schoolTimeZone }}
+            </strong>
+
+            <span v-else>
+              —
+            </span>
+          </p>
+
+          <p
+            v-if="timeZoneError"
+            class="error-message"
           >
-            {{
-              saving
-                ? $t("reservations.form.creating")
-                : $t("reservations.form.create")
-            }}
-          </button>
-        </div>
-      </form>
+            {{ timeZoneError }}
+          </p>
+
+          <div class="form-actions">
+            <button
+              class="primary-button"
+              type="submit"
+              :disabled="
+                saving ||
+                !selectedClass ||
+                !selectedRoom ||
+                selectedRoom.active === false ||
+                loadingTimeZone ||
+                loadingClasses ||
+                loadingRooms ||
+                !schoolTimeZone
+              "
+            >
+              {{
+                saving
+                  ? $t("reservations.form.creating")
+                  : $t("reservations.form.create")
+              }}
+            </button>
+          </div>
+        </form>
+      </div>
 
       <p
         v-if="message"
@@ -153,66 +163,110 @@
       </p>
     </section>
     <section class="panel">
-      <h2>{{ $t("reservations.list.title") }}</h2>
+      <div class="timeline-toolbar">
+        <h2>{{ $t("reservations.timeline.title") }}</h2>
 
-      <p v-if="loadingReservations">
+        <div class="date-controls">
+          <button type="button" @click="changeDate(-1)">
+            {{ $t("reservations.timeline.previous") }}
+          </button>
+
+          <input
+            v-model="selectedDate"
+            type="date"
+            :disabled="!schoolTimeZone"
+            :aria-label="$t('reservations.timeline.date')"
+          />
+
+          <button type="button" @click="goToToday">
+            {{ $t("reservations.timeline.today") }}
+          </button>
+
+          <button type="button" @click="changeDate(1)">
+            {{ $t("reservations.timeline.next") }}
+          </button>
+        </div>
+      </div>
+
+      <div class="timeline-summary">
+        <span>
+          {{ $t("reservations.timeline.total") }}:
+          <strong>{{ reservations.length }}</strong>
+        </span>
+
+        <span>
+          {{ $t("reservations.timeline.occupied") }}:
+          <strong>{{ occupiedRoomCount }}</strong>
+        </span>
+
+        <span>
+          {{ $t("reservations.timeline.available") }}:
+          <strong>{{ availableRoomCount }}</strong>
+        </span>
+      </div>
+
+      <p v-if="loadingReservations || loadingOperatingHours">
         {{ $t("reservations.list.loading") }}
       </p>
 
-      <p
-        v-else-if="reservationsError"
-        class="error-message"
-      >
+      <p v-else-if="reservationsError" class="error-message">
         {{ reservationsError }}
       </p>
 
-      <p
-        v-else-if="reservations.length === 0"
-        class="empty-state"
-      >
-        {{ $t("reservations.list.empty") }}
+      <p v-else-if="operatingHoursError" class="error-message">
+        {{ operatingHoursError }}
       </p>
 
-      <div
+      <p v-else-if="!operatingHours" class="notice">
+        {{ $t("reservations.timeline.notConfigured") }}
+      </p>
+
+      <p v-else-if="dailyOperatingIntervals.length === 0" class="notice">
+        {{ $t("reservations.timeline.closed") }}
+      </p>
+
+      <RoomReservationTimeline
         v-else
-        class="table-wrapper"
-      >
-        <table class="reservations-table">
-          <thead>
-            <tr>
-              <th>{{ $t("reservations.list.date") }}</th>
-              <th>{{ $t("reservations.list.class") }}</th>
-              <th>{{ $t("reservations.list.room") }}</th>
-              <th>{{ $t("reservations.list.time") }}</th>
-              <th>{{ $t("reservations.list.status") }}</th>
-            </tr>
-          </thead>
+        :rooms="activeRooms"
+        :classes="classes"
+        :reservations="reservations"
+        :operating-intervals="dailyOperatingIntervals"
+        @select-reservation="selectedReservation = $event"
+      />
 
-          <tbody>
-            <tr
-              v-for="reservation in reservations"
-              :key="reservation.id"
-            >
-              <td>{{ reservation.localDate }}</td>
+      <div v-if="selectedReservation" class="reservation-details">
+        <h3>{{ $t("reservations.timeline.details") }}</h3>
 
-              <td>
-                {{ reservationClassLabel(reservation) }}
-              </td>
+        <p>
+          <strong>{{ $t("reservations.list.class") }}:</strong>
+          {{ reservationClassLabel(selectedReservation) }}
+        </p>
 
-              <td>
-                {{ reservationRoomLabel(reservation) }}
-              </td>
+        <p>
+          <strong>{{ $t("reservations.list.room") }}:</strong>
+          {{ reservationRoomLabel(selectedReservation) }}
+        </p>
 
-              <td>
-                {{ reservation.localStartTime }}–{{ reservation.localEndTime }}
-              </td>
+        <p>
+          <strong>{{ $t("reservations.list.date") }}:</strong>
+          {{ selectedReservation.localDate }}
+        </p>
 
-              <td>
-                {{ reservation.status }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <p>
+          <strong>{{ $t("reservations.list.time") }}:</strong>
+          {{ selectedReservation.localStartTime }}–
+          {{ selectedReservation.localEndTime }}
+          ({{ schoolTimeZone }})
+        </p>
+
+        <p>
+          <strong>{{ $t("reservations.list.status") }}:</strong>
+          {{ selectedReservation.status }}
+        </p>
+
+        <button type="button" @click="selectedReservation = null">
+          {{ $t("reservations.timeline.close") }}
+        </button>
       </div>
     </section>
   </div>
@@ -229,15 +283,23 @@ import {
 
 import {
   createRoomReservation,
-  watchRoomReservations,
+  watchDailyRoomReservations,
 } from "../services/roomReservationService";
 
 import {
   getSchoolTimeZone,
+  getSchoolOperatingHours,
 } from "../services/schoolSettingsService";
+
+import RoomReservationTimeline from
+  "../components/RoomReservationTimeline.vue";
 
 export default {
   name: "RoomReservationManager",
+
+  components: {
+    RoomReservationTimeline,
+  },
 
   props: {
     schoolId: {
@@ -264,6 +326,13 @@ export default {
       schoolTimeZone: "",
       loadingTimeZone: true,
       timeZoneError: "",
+      operatingHours: null,
+      loadingOperatingHours: false,
+      operatingHoursError: "",
+      selectedDate: "",
+      showCreateForm: false,
+      selectedReservation: null,
+      reservationListenerVersion: 0,
 
       form: {
         classId: "",
@@ -320,11 +389,68 @@ export default {
 
       return `${this.selectedRoom.code} — ${this.selectedRoom.name}`;
     },
+
+    activeRooms() {
+      return this.rooms.filter((room) => room.active !== false);
+    },
+
+    dailyOperatingIntervals() {
+      if (!this.selectedDate || !this.operatingHours) {
+        return [];
+      }
+
+      const [year, month, day] = this.selectedDate
+        .split("-")
+        .map(Number);
+
+      const weekday = new Date(
+        Date.UTC(year, month - 1, day),
+      ).getUTCDay();
+
+      const keys = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
+
+      return this.operatingHours[keys[weekday]] || [];
+    },
+
+    occupiedRoomCount() {
+      return new Set(
+        this.reservations.map((reservation) => reservation.roomId),
+      ).size;
+    },
+
+    availableRoomCount() {
+      return Math.max(
+        0,
+        this.activeRooms.length - this.occupiedRoomCount,
+      );
+    },
   },
 
   watch: {
     schoolId() {
       this.startListeners();
+    },
+
+    selectedDate() {
+      this.selectedReservation = null;
+
+      if (this.selectedDate && !this.saving) {
+        this.form.localDate = this.selectedDate;
+      }
+
+      this.startDailyReservationsListener();
+    },
+
+    "form.localDate"() {
+      this.suggestReservationTimes();
     },
   },
 
@@ -339,6 +465,90 @@ export default {
   },
 
   methods: {
+    schoolToday() {
+      if (!this.schoolTimeZone) {
+        return "";
+      }
+
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: this.schoolTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+
+      const part = (type) =>
+        parts.find((item) => item.type === type)?.value;
+
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    },
+
+    changeDate(days) {
+      if (!this.selectedDate) {
+        return;
+      }
+
+      const [year, month, day] = this.selectedDate
+        .split("-")
+        .map(Number);
+
+      const date = new Date(Date.UTC(year, month - 1, day));
+      date.setUTCDate(date.getUTCDate() + days);
+
+      this.selectedDate = date.toISOString().slice(0, 10);
+    },
+
+    goToToday() {
+      this.selectedDate = this.schoolToday();
+    },
+
+    startDailyReservationsListener() {
+      this.stopReservationsListener();
+
+      const version = ++this.reservationListenerVersion;
+      const schoolId = this.schoolId;
+      const date = this.selectedDate;
+
+      this.reservations = [];
+      this.reservationsError = "";
+
+      if (!schoolId || !date) {
+        this.loadingReservations = false;
+        return;
+      }
+
+      this.loadingReservations = true;
+
+      this.unsubscribeReservations = watchDailyRoomReservations(
+        schoolId,
+        date,
+        (items) => {
+          if (
+            version !== this.reservationListenerVersion ||
+            this.schoolId !== schoolId ||
+            this.selectedDate !== date
+          ) {
+            return;
+          }
+
+          this.reservations = items;
+          this.loadingReservations = false;
+        },
+        (error) => {
+          if (
+            version !== this.reservationListenerVersion ||
+            this.schoolId !== schoolId ||
+            this.selectedDate !== date
+          ) {
+            return;
+          }
+
+          this.reservationsError = error.message;
+          this.loadingReservations = false;
+        },
+      );
+    },
+
     stopClassesListener() {
       if (this.unsubscribeClasses) {
         this.unsubscribeClasses();
@@ -364,6 +574,13 @@ export default {
       this.stopClassesListener();
       this.stopRoomsListener();
       this.stopReservationsListener();
+      this.reservationListenerVersion += 1;
+      this.selectedDate = "";
+      this.selectedReservation = null;
+      this.showCreateForm = false;
+      this.operatingHours = null;
+      this.operatingHoursError = "";
+      this.loadingOperatingHours = false;
       this.saving = false;
 
       this.reservations = [];
@@ -392,33 +609,10 @@ export default {
       }
 
       this.loadSchoolTimeZone();
+      this.loadOperatingHours();
 
       this.loadingClasses = true;
       this.loadingRooms = true;
-
-      this.loadingReservations = true;
-
-      const schoolId = this.schoolId;
-
-      this.unsubscribeReservations = watchRoomReservations(
-        schoolId,
-        (items) => {
-          if (this.schoolId !== schoolId) {
-            return;
-          }
-
-          this.reservations = items;
-          this.loadingReservations = false;
-        },
-        (error) => {
-          if (this.schoolId !== schoolId) {
-            return;
-          }
-
-          this.reservationsError = error.message;
-          this.loadingReservations = false;
-        },
-      );
 
       this.unsubscribeClasses = watchClasses(
         this.schoolId,
@@ -537,15 +731,12 @@ export default {
           "reservations.messages.created",
         );
 
-        this.form.localDate = "";
+        this.form.localDate = this.selectedDate;
         this.form.localStartTime = "";
         this.form.localEndTime = "";
       } catch (error) {
         if (this.schoolId === schoolId) {
-          this.errorMessage = this.$t(
-            "reservations.messages.createError",
-            {error: error.message},
-          );
+          this.errorMessage = this.reservationErrorMessage(error);
         }
       } finally {
         if (this.schoolId === schoolId) {
@@ -578,6 +769,7 @@ export default {
         }
 
         this.schoolTimeZone = timeZone;
+        this.selectedDate = this.schoolToday();
       } catch (error) {
         if (this.schoolId !== schoolId) {
           return;
@@ -589,6 +781,117 @@ export default {
           this.loadingTimeZone = false;
         }
       }
+    },
+
+    async loadOperatingHours() {
+      const schoolId = this.schoolId;
+
+      this.loadingOperatingHours = true;
+      this.operatingHoursError = "";
+
+      try {
+        const hours = await getSchoolOperatingHours(schoolId);
+
+        if (this.schoolId !== schoolId) {
+          return;
+        }
+
+        this.operatingHours = hours;
+        if (this.showCreateForm && this.form.localDate) {
+          this.suggestReservationTimes();
+        }
+      } catch (error) {
+        if (this.schoolId === schoolId) {
+          this.operatingHoursError = error.message;
+        }
+      } finally {
+        if (this.schoolId === schoolId) {
+          this.loadingOperatingHours = false;
+        }
+      }
+    },
+
+    reservationErrorMessage(error) {
+      const message = error?.message || "";
+
+      const errorTranslations = {
+        OUTSIDE_SCHOOL_OPERATING_HOURS:
+          "reservations.messages.outsideOperatingHours",
+        ROOM_RESERVATION_CONFLICT:
+          "reservations.messages.reservationConflict",
+        SCHOOL_OPERATING_HOURS_NOT_CONFIGURED:
+          "reservations.messages.operatingHoursNotConfigured",
+        "Start time must be before end time.":
+          "reservations.messages.invalidTimeRange",
+      };
+
+      const matchingError = Object.entries(errorTranslations)
+        .find(([code]) => message.includes(code));
+
+      if (matchingError) {
+        return this.$t(matchingError[1]);
+      }
+
+      return this.$t("reservations.messages.createError", {
+        error: message,
+      });
+    },
+
+    toggleCreateForm() {
+      this.showCreateForm = !this.showCreateForm;
+
+      if (this.showCreateForm) {
+        if (this.selectedDate) {
+          this.form.localDate = this.selectedDate;
+        }
+
+        this.suggestReservationTimes();
+
+        this.message = "";
+        this.errorMessage = "";
+      }
+    },
+
+    getOperatingIntervalsForDate(localDate) {
+      if (!localDate || !this.operatingHours) {
+        return [];
+      }
+
+      const [year, month, day] = localDate.split("-").map(Number);
+
+      const weekday = new Date(
+        Date.UTC(year, month - 1, day),
+      ).getUTCDay();
+
+      const weekdayKeys = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
+
+      return [...(this.operatingHours[weekdayKeys[weekday]] || [])]
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    },
+
+    suggestReservationTimes() {
+      const intervals = this.getOperatingIntervalsForDate(
+        this.form.localDate,
+      );
+
+      if (intervals.length === 0) {
+        this.form.localStartTime = "";
+        this.form.localEndTime = "";
+        return;
+      }
+
+      const firstInterval = intervals[0];
+
+      this.form.localStartTime = firstInterval.startTime;
+      this.form.localEndTime = firstInterval.endTime;
     },
   },
 };
@@ -730,6 +1033,94 @@ button:disabled {
 
 .reservations-table td {
   vertical-align: middle;
+}
+
+.timeline-toolbar,
+.date-controls,
+.timeline-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timeline-toolbar {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.timeline-toolbar h2 {
+  margin: 0;
+}
+
+.date-controls input {
+  padding: 9px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+.timeline-summary {
+  margin-bottom: 18px;
+  color: #444;
+}
+
+.timeline-summary span {
+  padding: 8px 12px;
+  background: #f5f7f8;
+  border-radius: 6px;
+}
+
+.creation-content {
+  margin-top: 20px;
+}
+
+.reservation-details {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+/* Compact reservation creation card */
+.creation-panel {
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.creation-panel--expanded {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.creation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.creation-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.creation-header .primary-button {
+  flex-shrink: 0;
+}
+
+.creation-content {
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .creation-header {
+    flex-wrap: wrap;
+  }
+
+  .creation-header .primary-button {
+    width: 100%;
+  }
 }
 
 @media (max-width: 760px) {

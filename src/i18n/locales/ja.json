@@ -32,20 +32,20 @@
     "japanese": "日本語"
   },
   "navigation": {
-      "classroom": "教室管理",
-      "dashboard": "ダッシュボード",
-      "students": "生徒",
-      "courses": "科目",
-      "buildings": "校舎",
-      "rooms": "教室",
-      "reservations": "教室予約",
-      "classes": "クラス",
-      "enrollments": "受講登録",
-      "seatingPlans": "座席表",
-      "settings": "設定",
-      "admin": "管理",
-      "collapse": "ナビゲーションを折りたたむ",
-      "expand": "ナビゲーションを展開する"
+    "classroom": "教室管理",
+    "dashboard": "ダッシュボード",
+    "students": "生徒",
+    "courses": "科目",
+    "buildings": "校舎",
+    "rooms": "教室",
+    "reservations": "教室予約",
+    "classes": "クラス",
+    "enrollments": "受講登録",
+    "seatingPlans": "座席表",
+    "settings": "設定",
+    "admin": "管理",
+    "collapse": "ナビゲーションを折りたたむ",
+    "expand": "ナビゲーションを展開する"
   },
   "noSchool": {
     "title": "学校がまだ割り当てられていません",
@@ -56,39 +56,39 @@
     }
   },
   "login": {
-      "eyebrow": "おかえりなさい",
-      "title": "ログイン",
-      "description": "クラスルーム管理を続けるにはログインしてください。",
-      "fields": {
-        "email": "メールアドレス",
-        "password": "パスワード"
-      },
-      "placeholders": {
-        "email": "メールアドレスを入力",
-        "password": "パスワードを入力"
-      },
-      "actions": {
-        "signIn": "ログイン",
-        "signingIn": "ログイン中...",
-        "showPassword": "パスワードを表示",
-        "hidePassword": "パスワードを非表示"
-      },
-      "securityNote": "Firebase Authenticationを使用して安全に認証します。",
-      "messages": {
-        "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
-        "invalidEmail": "有効なメールアドレスを入力してください。",
-        "userDisabled": "このアカウントは無効になっています。",
-        "tooManyRequests": "ログイン試行回数が多すぎます。しばらく待ってから再度お試しください。",
-        "networkError": "接続できませんでした。インターネット接続を確認して再度お試しください。",
-        "loginError": "ログインできませんでした。もう一度お試しください。"
-      },
-      "brand": {
-        "eyebrow": "クラスルームワークスペース",
-        "description": "生徒、クラス、座席表をひとつのワークスペースで管理できます。",
-        "students": "生徒情報を管理",
-        "classes": "クラスと登録生徒を管理",
-        "seating": "座席表を作成・管理"
-      }
+    "eyebrow": "おかえりなさい",
+    "title": "ログイン",
+    "description": "クラスルーム管理を続けるにはログインしてください。",
+    "fields": {
+      "email": "メールアドレス",
+      "password": "パスワード"
+    },
+    "placeholders": {
+      "email": "メールアドレスを入力",
+      "password": "パスワードを入力"
+    },
+    "actions": {
+      "signIn": "ログイン",
+      "signingIn": "ログイン中...",
+      "showPassword": "パスワードを表示",
+      "hidePassword": "パスワードを非表示"
+    },
+    "securityNote": "Firebase Authenticationを使用して安全に認証します。",
+    "messages": {
+      "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+      "invalidEmail": "有効なメールアドレスを入力してください。",
+      "userDisabled": "このアカウントは無効になっています。",
+      "tooManyRequests": "ログイン試行回数が多すぎます。しばらく待ってから再度お試しください。",
+      "networkError": "接続できませんでした。インターネット接続を確認して再度お試しください。",
+      "loginError": "ログインできませんでした。もう一度お試しください。"
+    },
+    "brand": {
+      "eyebrow": "クラスルームワークスペース",
+      "description": "生徒、クラス、座席表をひとつのワークスペースで管理できます。",
+      "students": "生徒情報を管理",
+      "classes": "クラスと登録生徒を管理",
+      "seating": "座席表を作成・管理"
+    }
   },
   "planningEngine": {
     "title": "インテリジェント座席プランナー",
@@ -144,12 +144,12 @@
     }
   },
   "settings": {
-      "title": "設定",
-      "description": "アプリケーションの設定を管理します。",
-      "language": {
-        "title": "アプリケーションの言語",
-        "description": "教室管理アプリ全体で使用する言語を選択します。"
-      }
+    "title": "設定",
+    "description": "アプリケーションの設定を管理します。",
+    "language": {
+      "title": "アプリケーションの言語",
+      "description": "教室管理アプリ全体で使用する言語を選択します。"
+    }
   },
   "students": {
     "title": "生徒管理",
@@ -445,6 +445,23 @@
       "time": "時間",
       "status": "ステータス"
     },
+    "timeline": {
+      "title": "教室予約の日別タイムライン",
+      "room": "教室",
+      "date": "予約日",
+      "previous": "前日",
+      "today": "今日",
+      "next": "翌日",
+      "total": "予約件数",
+      "occupied": "予約のある教室",
+      "available": "予約のない教室",
+      "details": "予約詳細",
+      "close": "閉じる",
+      "newReservation": "＋ 新規予約",
+      "hideForm": "フォームを閉じる",
+      "closed": "この日は休校日です。",
+      "notConfigured": "学校の営業時間が設定されていません。"
+    },
     "messages": {
       "loadingClasses": "クラスを読み込んでいます...",
       "noEligibleClasses": "教室が割り当てられた有効なクラスがありません。",
@@ -455,7 +472,11 @@
       "classesLoadError": "クラスを読み込めませんでした：{error}",
       "roomsLoadError": "教室を読み込めませんでした：{error}",
       "createError": "予約を作成できませんでした：{error}",
-      "timeZoneUnavailable": "学校のタイムゾーンを取得できません。"
+      "timeZoneUnavailable": "学校のタイムゾーンを取得できません。",
+      "outsideOperatingHours": "選択した予約時間は学校の営業時間外です。営業時間内の時間を選択してください。",
+      "reservationConflict": "選択した時間帯はすでにこの教室が予約されています。別の時間帯または利用可能な教室を選択してください。",
+      "operatingHoursNotConfigured": "学校の営業時間が設定されていません。予約を作成する前に、学校管理者に営業時間の設定を依頼してください。",
+      "invalidTimeRange": "開始時刻は終了時刻より前に設定してください。予約時間を確認してください。"
     }
   },
   "classes": {
@@ -469,7 +490,9 @@
       "academicYear": "年度",
       "semester": "学期",
       "teachers": "担当教師",
-      "mainTeacher": "主担当"
+      "mainTeacher": "主担当",
+      "startDate": "開始日",
+      "endDate": "終了日"
     },
     "form": {
       "addTitle": "クラスを追加",
@@ -571,7 +594,6 @@
   "seatingPlans": {
     "title": "座席表管理",
     "description": "クラスに所属する生徒と教室から新しい座席表を作成します。",
-
     "fields": {
       "class": "クラス",
       "title": "タイトル",
@@ -581,27 +603,22 @@
       "mainTeacher": "メイン講師",
       "activeEnrollments": "所属中の生徒"
     },
-
     "placeholders": {
       "class": "クラスを選択",
       "title": "8月座席表",
       "notAssigned": "未設定",
       "emptySeat": "空席"
     },
-
     "seats": {
       "position": "机 {desk} · 座席 {seat}"
     },
-
     "form": {
       "new": "新しい座席表",
       "edit": "座席表を編集",
       "cancelEdit": "編集をキャンセル",
       "capacityWarning": "このクラスの生徒数が教室の定員を超えています。",
       "assignmentHelp": "各生徒を1つ以下の座席に割り当てます。"
-
     },
-
     "actions": {
       "fill": "自動配置",
       "clear": "クリア",
@@ -610,7 +627,6 @@
       "exportExcel": "Excelに出力",
       "reactivate": "再有効化"
     },
-
     "list": {
       "title": "保存済み座席表",
       "loading": "座席表を読み込んでいます...",
@@ -619,7 +635,6 @@
       "summary": "使用中 {active}件 · アーカイブ済み {archived}件",
       "planSummary": "{date} · {assigned}人を配置 · {room}"
     },
-
     "classroom": {
       "front": "教室前方",
       "whiteboard": "ホワイトボード",
@@ -627,7 +642,6 @@
       "seat": "席 {number}",
       "teacherDesk": "講師席"
     },
-
     "messages": {
       "saved": "座席表を保存しました。",
       "updated": "座席表を更新しました。",
@@ -1034,7 +1048,9 @@
         "updated": "学生情報を更新",
         "archived": "学生をアーカイブ",
         "reactivated": "学生を再有効化",
-        "accountCreated": "学生アカウントを作成"
+        "accountCreated": "学生アカウントを作成",
+        "accountEnabled": "生徒アカウントを有効化",
+        "accountDisabled": "生徒アカウントを無効化"
       },
       "user": {
         "created": "ユーザーを作成",
@@ -1072,7 +1088,13 @@
       "school": {
         "timeZone": {
           "updated": "学校のタイムゾーンを更新"
+        },
+        "operatingHours": {
+          "updated": "学校の営業時間を更新"
         }
+      },
+      "roomReservation": {
+        "created": "教室予約を作成"
       }
     },
     "entities": {
@@ -1086,7 +1108,8 @@
       "school": "学校",
       "seatingPlan": "座席表",
       "enrollment": "在籍登録",
-      "roomAvailability": "教室の利用可能時間"
+      "roomAvailability": "教室の利用可能時間",
+      "roomReservation": "教室予約"
     },
     "details": {
       "action": "操作",
@@ -1135,7 +1158,12 @@
       "mainTeacherUid": "主担当教師",
       "weeklyHours": "週間利用可能時間",
       "userUid": "ユーザーID",
-      "timeZone": "タイムゾーン"
+      "timeZone": "タイムゾーン",
+      "status": "ステータス",
+      "operatingHours": "営業時間",
+      "accountActive": "アカウント有効状態",
+      "startDate": "開始日",
+      "endDate": "終了日"
     },
     "filters": {
       "all": "すべて",

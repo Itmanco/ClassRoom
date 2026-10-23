@@ -117,6 +117,26 @@
           </select>
         </label>
 
+        <label>
+          {{ $t("classes.fields.startDate") }}
+
+          <input
+            v-model="form.startDate"
+            type="date"
+            :max="form.endDate || undefined"
+          />
+        </label>
+
+        <label>
+          {{ $t("classes.fields.endDate") }}
+
+          <input
+            v-model="form.endDate"
+            type="date"
+            :min="form.startDate || undefined"
+          />
+        </label>
+
         <div class="teacher-assignment full">
           <div class="assigned-teachers-panel">
             <div class="assigned-teachers-header">
@@ -590,6 +610,8 @@ function emptyForm() {
     active: true,
     teacherUids: [],
     mainTeacherUid: "",
+    startDate: "",
+    endDate: "",
   };
 }
 
@@ -1039,6 +1061,8 @@ export default {
         roomId: item.roomId,
         academicYear: item.academicYear,
         semester: item.semester,
+        startDate: item.startDate || "",
+        endDate: item.endDate || "",
         active: item.active !== false,
         teacherUids: Array.isArray(item.teacherUids)
           ? [...item.teacherUids]
@@ -1101,6 +1125,14 @@ export default {
         ) {
           this.errorMessage = this.$t(
             "classes.messages.mainTeacherNotAssigned",
+          );
+        } else if (error.code === "CLASS_PERIOD_INCOMPLETE") {
+          this.errorMessage = this.$t(
+            "classes.messages.periodIncomplete",
+          );
+        } else if (error.code === "CLASS_PERIOD_INVALID_RANGE") {
+          this.errorMessage = this.$t(
+            "classes.messages.periodInvalidRange",
           );
         } else {
           this.errorMessage = this.$t(

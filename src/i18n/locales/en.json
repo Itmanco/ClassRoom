@@ -32,20 +32,20 @@
     "japanese": "Japanese"
   },
   "navigation": {
-      "classroom": "Classroom",
-      "dashboard": "Dashboard",
-      "students": "Students",
-      "courses": "Courses",
-      "buildings": "Buildings",
-      "rooms": "Rooms",
-      "reservations": "Room Reservations",
-      "classes": "Classes",
-      "enrollments": "Enrollments",
-      "seatingPlans": "Seating Plans",
-      "settings": "Settings",
-      "admin": "Admin",
-      "collapse": "Collapse navigation",
-      "expand": "Expand navigation"
+    "classroom": "Classroom",
+    "dashboard": "Dashboard",
+    "students": "Students",
+    "courses": "Courses",
+    "buildings": "Buildings",
+    "rooms": "Rooms",
+    "reservations": "Room Reservations",
+    "classes": "Classes",
+    "enrollments": "Enrollments",
+    "seatingPlans": "Seating Plans",
+    "settings": "Settings",
+    "admin": "Admin",
+    "collapse": "Collapse navigation",
+    "expand": "Expand navigation"
   },
   "noSchool": {
     "title": "No school assigned yet",
@@ -144,12 +144,12 @@
     }
   },
   "settings": {
-      "title": "Settings",
-      "description": "Manage your application preferences.",
-      "language": {
-        "title": "Application language",
-        "description": "Choose the language used throughout Classroom Manager."
-      }
+    "title": "Settings",
+    "description": "Manage your application preferences.",
+    "language": {
+      "title": "Application language",
+      "description": "Choose the language used throughout Classroom Manager."
+    }
   },
   "students": {
     "title": "Student Management",
@@ -445,6 +445,23 @@
       "time": "Time",
       "status": "Status"
     },
+    "timeline": {
+      "title": "Daily Room Timeline",
+      "room": "Room",
+      "date": "Reservation date",
+      "previous": "Previous",
+      "today": "Today",
+      "next": "Next",
+      "total": "Reservations",
+      "occupied": "Rooms with reservations",
+      "available": "Rooms without reservations",
+      "details": "Reservation Details",
+      "close": "Close",
+      "newReservation": "+ New Reservation",
+      "hideForm": "Hide Form",
+      "closed": "The school is closed on this day.",
+      "notConfigured": "School operating hours have not been configured."
+    },
     "messages": {
       "loadingClasses": "Loading classes...",
       "noEligibleClasses": "No active classes with an assigned room are available.",
@@ -455,7 +472,11 @@
       "classesLoadError": "Unable to load classes: {error}",
       "roomsLoadError": "Unable to load rooms: {error}",
       "createError": "Unable to create reservation: {error}",
-      "timeZoneUnavailable": "School timezone is not available."
+      "timeZoneUnavailable": "School timezone is not available.",
+      "outsideOperatingHours": "This reservation is outside the school's operating hours. Please choose a time within the school's opening hours.",
+      "reservationConflict": "This room is already reserved during the selected time. Please choose another time or an available room.",
+      "operatingHoursNotConfigured": "School operating hours have not been configured. Please ask a school administrator to configure them before creating reservations.",
+      "invalidTimeRange": "The start time must be earlier than the end time. Please check the reservation times."
     }
   },
   "classes": {
@@ -469,7 +490,9 @@
       "academicYear": "Academic year",
       "semester": "Semester",
       "teachers": "Assigned Teachers",
-      "mainTeacher": "Main Teacher"
+      "mainTeacher": "Main Teacher",
+      "startDate": "Start date",
+      "endDate": "End date"
     },
     "form": {
       "addTitle": "Add class",
@@ -571,7 +594,6 @@
   "seatingPlans": {
     "title": "Seating Plan Management",
     "description": "Create new seating plans from a class's enrolled students and assigned room.",
-
     "fields": {
       "class": "Class",
       "title": "Title",
@@ -581,18 +603,15 @@
       "activeEnrollments": "Active enrollments",
       "mainTeacher": "Main Teacher"
     },
-
     "placeholders": {
       "class": "Select a class",
       "title": "August seating plan",
       "notAssigned": "Not assigned",
       "emptySeat": "Empty"
     },
-
     "seats": {
       "position": "Desk {desk} · Seat {seat}"
     },
-
     "form": {
       "new": "New seating plan",
       "edit": "Edit seating plan",
@@ -600,7 +619,6 @@
       "capacityWarning": "This class has more active students than the room can seat.",
       "assignmentHelp": "Assign each enrolled student to no more than one seat."
     },
-
     "actions": {
       "fill": "Fill automatically",
       "clear": "Clear",
@@ -609,7 +627,6 @@
       "exportExcel": "Export Excel",
       "reactivate": "Reactivate"
     },
-
     "list": {
       "title": "Saved plans",
       "loading": "Loading seating plans...",
@@ -618,7 +635,6 @@
       "summary": "{active} active · {archived} archived",
       "planSummary": "{date} · {assigned} assigned · {room}"
     },
-
     "classroom": {
       "front": "Front of classroom",
       "whiteboard": "Whiteboard",
@@ -626,7 +642,6 @@
       "seat": "Seat {number}",
       "teacherDesk": "Teacher"
     },
-
     "messages": {
       "saved": "Seating plan saved.",
       "updated": "Seating plan updated.",
@@ -1033,7 +1048,9 @@
         "updated": "Student updated",
         "archived": "Student archived",
         "reactivated": "Student reactivated",
-        "accountCreated": "Student account created"
+        "accountCreated": "Student account created",
+        "accountEnabled": "Student account enabled",
+        "accountDisabled": "Student account disabled"
       },
       "user": {
         "created": "User created",
@@ -1071,7 +1088,13 @@
       "school": {
         "timeZone": {
           "updated": "School time zone updated"
+        },
+        "operatingHours": {
+          "updated": "School operating hours updated"
         }
+      },
+      "roomReservation": {
+        "created": "Room reservation created"
       }
     },
     "entities": {
@@ -1085,7 +1108,8 @@
       "school": "School",
       "seatingPlan": "Seating plan",
       "enrollment": "Enrollment",
-      "roomAvailability": "Room availability"
+      "roomAvailability": "Room availability",
+      "roomReservation": "Room reservation"
     },
     "details": {
       "action": "Action",
@@ -1134,7 +1158,12 @@
       "mainTeacherUid": "Main teacher",
       "weeklyHours": "Weekly availability",
       "userUid": "User ID",
-      "timeZone": "Time zone"
+      "timeZone": "Time zone",
+      "status": "Status",
+      "operatingHours": "Operating hours",
+      "accountActive": "Account enabled",
+      "startDate": "Start date",
+      "endDate": "End date"
     },
     "filters": {
       "all": "All",

@@ -32,6 +32,30 @@ function normalizeClassCode(code) {
   return normalized;
 }
 
+function normalizeOptionalDate(value, fieldName) {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    throw new Error(`${fieldName} must use YYYY-MM-DD format.`);
+  }
+
+  const parsed = new Date(`${value}T00:00:00Z`);
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== value
+  ) {
+    throw new Error(`${fieldName} must be a valid date.`);
+  }
+
+  return value;
+}
+
 function validateClass(classItem) {
   if (!classItem || typeof classItem !== "object") throw new Error("A class is required.");
   const code = normalizeClassCode(classItem.code);
@@ -40,6 +64,32 @@ function validateClass(classItem) {
   const roomId = typeof classItem.roomId === "string" ? classItem.roomId.trim() : "";
   const academicYear = Number(classItem.academicYear);
   const semester = Number(classItem.semester);
+
+  const startDate = normalizeOptionalDate(
+    classItem.startDate,
+    "Start date",
+  );
+
+  const endDate = normalizeOptionalDate(
+    classItem.endDate,
+    "End date",
+  );
+
+  if (Boolean(startDate) !== Boolean(endDate)) {
+    const error = new Error(
+      "Both start date and end date are required when defining a class period.",
+    );
+    error.code = "CLASS_PERIOD_INCOMPLETE";
+    throw error;
+  }
+
+  if (startDate && endDate && startDate > endDate) {
+    const error = new Error(
+      "Class start date must not be after its end date.",
+    );
+    error.code = "CLASS_PERIOD_INVALID_RANGE";
+    throw error;
+  }
 
   if (!name) throw new Error("A class name is required.");
   if (!courseId) throw new Error("A course is required.");
@@ -91,6 +141,8 @@ function validateClass(classItem) {
     active: classItem.active !== false,
     teacherUids,
     mainTeacherUid,
+    startDate,
+    endDate,
   };
 }
 

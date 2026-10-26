@@ -425,6 +425,9 @@
     "description": "Create and manage classroom room reservations.",
     "form": {
       "title": "Create reservation",
+      "reservationType": "Reservation type",
+      "single": "Single reservation",
+      "weekly": "Weekly recurring reservation",
       "class": "Class",
       "room": "Room",
       "date": "Date",
@@ -433,7 +436,10 @@
       "selectClass": "Select a class",
       "loadingRoom": "Loading room...",
       "create": "Create reservation",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "classPeriod": "Class period",
+      "weekdays": "Repeat on",
+      "weeklyNotice": "All occurrences must be available and within school operating hours. A maximum of 60 reservations can be created per series."
     },
     "list": {
       "title": "Existing Reservations",
@@ -476,7 +482,23 @@
       "outsideOperatingHours": "This reservation is outside the school's operating hours. Please choose a time within the school's opening hours.",
       "reservationConflict": "This room is already reserved during the selected time. Please choose another time or an available room.",
       "operatingHoursNotConfigured": "School operating hours have not been configured. Please ask a school administrator to configure them before creating reservations.",
-      "invalidTimeRange": "The start time must be earlier than the end time. Please check the reservation times."
+      "invalidTimeRange": "The start time must be earlier than the end time. Please check the reservation times.",
+      "classPeriodRequired": "This class needs a start date and end date before weekly reservations can be created.",
+      "selectWeekday": "Select at least one weekday.",
+      "weeklyCreated": "Weekly reservation series created successfully ({count} reservations).",
+      "invalidClassPeriod": "The selected class has an invalid start or end date. Please update the class period before creating weekly reservations.",
+      "invalidWeekdays": "The selected weekdays are invalid. Please select one or more valid weekdays.",
+      "seriesTooLarge": "This weekly reservation series exceeds the maximum of 60 occurrences. Please shorten the class period or select fewer weekdays.",
+      "noOccurrences": "No reservation dates match the selected weekdays within the class period."
+    },
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
     }
   },
   "classes": {
@@ -1094,7 +1116,8 @@
         }
       },
       "roomReservation": {
-        "created": "Room reservation created"
+        "created": "Room reservation created",
+        "seriesCreated": "Weekly room reservation series created"
       }
     },
     "entities": {

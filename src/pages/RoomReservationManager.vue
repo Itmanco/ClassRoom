@@ -33,6 +33,24 @@
           class="reservation-form"
           @submit.prevent="submitReservation"
         >
+          <div class="full-width">
+            <label for="reservation-mode">
+              {{ $t("reservations.form.reservationType") }}
+            </label>
+
+            <select
+              id="reservation-mode"
+              v-model="reservationMode"
+              :disabled="saving"
+            >
+              <option value="single">
+                {{ $t("reservations.form.single") }}
+              </option>
+              <option value="weekly">
+                {{ $t("reservations.form.weekly") }}
+              </option>
+            </select>
+          </div>
           <label>
             {{ $t("reservations.form.class") }}
 
@@ -65,7 +83,10 @@
             />
           </label>
 
-          <label class="full-width">
+          <label
+            v-if="reservationMode === 'single'"
+            class="full-width"
+          >
             {{ $t("reservations.form.date") }}
 
             <input
@@ -75,6 +96,43 @@
               required
             />
           </label>
+
+          <div
+            v-if="reservationMode === 'weekly'"
+            class="full-width"
+          >
+            <p>
+              {{ $t("reservations.form.classPeriod") }}:
+              <strong v-if="selectedClass?.startDate && selectedClass?.endDate">
+                {{ selectedClass.startDate }} — {{ selectedClass.endDate }}
+              </strong>
+              <span v-else>
+                {{ $t("reservations.messages.classPeriodRequired") }}
+              </span>
+            </p>
+
+            <fieldset class="weekday-fieldset" :disabled="saving">
+              <legend>
+                {{ $t("reservations.form.weekdays") }}
+              </legend>
+
+              <label
+                v-for="day in weekdayOptions"
+                :key="day.value"
+              >
+                <input
+                  v-model="selectedWeekdays"
+                  type="checkbox"
+                  :value="day.value"
+                />
+                {{ $t(`reservations.weekdays.${day.key}`) }}
+              </label>
+            </fieldset>
+
+            <p>
+              {{ $t("reservations.form.weeklyNotice") }}
+            </p>
+          </div>
 
           <label>
             {{ $t("reservations.form.startTime") }}
@@ -125,25 +183,29 @@
 
           <div class="form-actions">
             <button
-              class="primary-button"
-              type="submit"
-              :disabled="
-                saving ||
-                !selectedClass ||
-                !selectedRoom ||
-                selectedRoom.active === false ||
-                loadingTimeZone ||
-                loadingClasses ||
-                loadingRooms ||
-                !schoolTimeZone
-              "
-            >
-              {{
-                saving
-                  ? $t("reservations.form.creating")
-                  : $t("reservations.form.create")
-              }}
-            </button>
+            class="primary-button"
+            type="submit"
+            :disabled="
+              saving ||
+              !selectedClass ||
+              !selectedRoom ||
+              selectedRoom.active === false ||
+              loadingTimeZone ||
+              loadingClasses ||
+              loadingRooms ||
+              !schoolTimeZone ||
+              (reservationMode === 'weekly' &&
+                (!selectedClass.startDate ||
+                  !selectedClass.endDate ||
+                  selectedWeekdays.length === 0))
+            "
+          >
+            {{
+              saving
+                ? $t("reservations.form.creating")
+                : $t("reservations.form.create")
+            }}
+          </button>
           </div>
         </form>
       </div>
@@ -283,6 +345,7 @@ import {
 
 import {
   createRoomReservation,
+  createWeeklyRoomReservations,
   watchDailyRoomReservations,
 } from "../services/roomReservationService";
 
@@ -333,6 +396,19 @@ export default {
       showCreateForm: false,
       selectedReservation: null,
       reservationListenerVersion: 0,
+
+      reservationMode: "single",
+      selectedWeekdays: [],
+
+      weekdayOptions: [
+        {value: 1, key: "monday"},
+        {value: 2, key: "tuesday"},
+        {value: 3, key: "wednesday"},
+        {value: 4, key: "thursday"},
+        {value: 5, key: "friday"},
+        {value: 6, key: "saturday"},
+        {value: 7, key: "sunday"},
+      ],
 
       form: {
         classId: "",
@@ -450,7 +526,22 @@ export default {
     },
 
     "form.localDate"() {
-      this.suggestReservationTimes();
+      if (this.reservationMode === "single") {
+        this.suggestReservationTimes();
+      }
+    },
+
+    reservationMode(newMode) {
+      this.message = "";
+      this.errorMessage = "";
+
+      if (newMode === "single") {
+        this.form.localDate = this.selectedDate;
+        this.suggestReservationTimes();
+      } else {
+        this.form.localStartTime = "";
+        this.form.localEndTime = "";
+      }
     },
   },
 
@@ -705,6 +796,24 @@ export default {
         return;
       }
 
+      const isWeekly = this.reservationMode === "weekly";
+
+      if (isWeekly) {
+        if (!this.selectedClass.startDate || !this.selectedClass.endDate) {
+          this.errorMessage = this.$t(
+            "reservations.messages.classPeriodRequired",
+          );
+          return;
+        }
+
+        if (this.selectedWeekdays.length === 0) {
+          this.errorMessage = this.$t(
+            "reservations.messages.selectWeekday",
+          );
+          return;
+        }
+      }
+
       const schoolId = this.schoolId;
 
       const reservation = {
@@ -718,22 +827,43 @@ export default {
       this.saving = true;
 
       try {
-        await createRoomReservation(
-          schoolId,
-          reservation,
-        );
+        let result;
+
+        if (isWeekly) {
+          result = await createWeeklyRoomReservations(
+            schoolId,
+            {
+              classId: reservation.classId,
+              roomId: reservation.roomId,
+              weekdays: [...this.selectedWeekdays],
+              localStartTime: reservation.localStartTime,
+              localEndTime: reservation.localEndTime,
+            },
+          );
+        } else {
+          result = await createRoomReservation(
+            schoolId,
+            reservation,
+          );
+        }
 
         if (this.schoolId !== schoolId) {
           return;
         }
 
-        this.message = this.$t(
-          "reservations.messages.created",
-        );
+        this.message = isWeekly
+          ? this.$t("reservations.messages.weeklyCreated", {
+            count: result.occurrenceCount,
+          })
+          : this.$t("reservations.messages.created");
 
         this.form.localDate = this.selectedDate;
         this.form.localStartTime = "";
         this.form.localEndTime = "";
+
+        if (isWeekly) {
+          this.selectedWeekdays = [];
+        }
       } catch (error) {
         if (this.schoolId === schoolId) {
           this.errorMessage = this.reservationErrorMessage(error);
@@ -797,7 +927,10 @@ export default {
         }
 
         this.operatingHours = hours;
-        if (this.showCreateForm && this.form.localDate) {
+        if (this.showCreateForm &&
+          this.reservationMode === "single" &&
+          this.form.localDate
+        ) {
           this.suggestReservationTimes();
         }
       } catch (error) {
@@ -821,6 +954,14 @@ export default {
           "reservations.messages.reservationConflict",
         SCHOOL_OPERATING_HOURS_NOT_CONFIGURED:
           "reservations.messages.operatingHoursNotConfigured",
+        INVALID_CLASS_PERIOD:
+          "reservations.messages.invalidClassPeriod",
+        INVALID_RESERVATION_WEEKDAYS:
+          "reservations.messages.invalidWeekdays",
+        RESERVATION_SERIES_TOO_LARGE:
+          "reservations.messages.seriesTooLarge",
+        NO_RESERVATION_OCCURRENCES:
+          "reservations.messages.noOccurrences",
         "Start time must be before end time.":
           "reservations.messages.invalidTimeRange",
       };
@@ -845,7 +986,9 @@ export default {
           this.form.localDate = this.selectedDate;
         }
 
-        this.suggestReservationTimes();
+        if (this.reservationMode === "single") {
+          this.suggestReservationTimes();
+        }
 
         this.message = "";
         this.errorMessage = "";
@@ -949,6 +1092,38 @@ export default {
   border: 1px solid #bbb;
   border-radius: 6px;
   font: inherit;
+}
+
+.weekday-fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.weekday-fieldset legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.reservation-form .weekday-fieldset label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.reservation-form .weekday-fieldset input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #42b883;
 }
 
 .reservation-form input:disabled {

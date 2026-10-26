@@ -425,6 +425,9 @@
     "description": "授業で使用する教室の予約を作成・管理します。",
     "form": {
       "title": "教室を予約",
+      "reservationType": "予約の種類",
+      "single": "単発予約",
+      "weekly": "毎週の定期予約",
       "class": "クラス",
       "room": "教室",
       "date": "日付",
@@ -433,7 +436,10 @@
       "selectClass": "クラスを選択",
       "loadingRoom": "教室を読み込んでいます...",
       "create": "予約を作成",
-      "creating": "作成中..."
+      "creating": "作成中...",
+      "classPeriod": "クラスの期間",
+      "weekdays": "繰り返す曜日",
+      "weeklyNotice": "すべての予約日が空いており、学校の営業時間内である必要があります。1つの定期予約で作成できる予約は最大60件です。"
     },
     "list": {
       "title": "予約一覧",
@@ -476,7 +482,23 @@
       "outsideOperatingHours": "選択した予約時間は学校の営業時間外です。営業時間内の時間を選択してください。",
       "reservationConflict": "選択した時間帯はすでにこの教室が予約されています。別の時間帯または利用可能な教室を選択してください。",
       "operatingHoursNotConfigured": "学校の営業時間が設定されていません。予約を作成する前に、学校管理者に営業時間の設定を依頼してください。",
-      "invalidTimeRange": "開始時刻は終了時刻より前に設定してください。予約時間を確認してください。"
+      "invalidTimeRange": "開始時刻は終了時刻より前に設定してください。予約時間を確認してください。",
+      "classPeriodRequired": "定期予約を作成するには、クラスの開始日と終了日を設定してください。",
+      "selectWeekday": "少なくとも1つの曜日を選択してください。",
+      "weeklyCreated": "定期予約を作成しました（{count}件）。",
+      "invalidClassPeriod": "選択したクラスの開始日または終了日が正しくありません。定期予約を作成する前にクラスの期間を修正してください。",
+      "invalidWeekdays": "選択した曜日が正しくありません。有効な曜日を1つ以上選択してください。",
+      "seriesTooLarge": "定期予約の件数が上限の60件を超えています。クラスの期間を短くするか、選択する曜日を減らしてください。",
+      "noOccurrences": "クラスの期間内に、選択した曜日に該当する予約日がありません。"
+    },
+    "weekdays": {
+      "monday": "月曜日",
+      "tuesday": "火曜日",
+      "wednesday": "水曜日",
+      "thursday": "木曜日",
+      "friday": "金曜日",
+      "saturday": "土曜日",
+      "sunday": "日曜日"
     }
   },
   "classes": {
@@ -1094,7 +1116,8 @@
         }
       },
       "roomReservation": {
-        "created": "教室予約を作成"
+        "created": "教室予約を作成",
+        "seriesCreated": "教室の定期予約を作成"
       }
     },
     "entities": {

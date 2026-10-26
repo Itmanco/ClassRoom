@@ -157,6 +157,8 @@ function getClassChanges(
     "roomId",
     "academicYear",
     "semester",
+    "startDate",
+    "endDate",
     "teacherUids",
     "mainTeacherUid",
     "active",

@@ -86,6 +86,59 @@ export async function createRoomReservation(
   return result.data;
 }
 
+export async function createWeeklyRoomReservations(
+  schoolId,
+  {
+    classId,
+    roomId,
+    weekdays,
+    localStartTime,
+    localEndTime,
+  },
+) {
+  if (
+    !Array.isArray(weekdays) ||
+    weekdays.length === 0 ||
+    weekdays.length > 7 ||
+    new Set(weekdays).size !== weekdays.length ||
+    weekdays.some(
+      (day) => !Number.isInteger(day) || day < 1 || day > 7,
+    )
+  ) {
+    throw new Error("INVALID_RESERVATION_WEEKDAYS");
+  }
+
+  const normalizedStart = requireTime(
+    localStartTime,
+    "Start time",
+  );
+
+  const normalizedEnd = requireTime(
+    localEndTime,
+    "End time",
+  );
+
+  if (normalizedStart >= normalizedEnd) {
+    throw new Error("INVALID_RESERVATION_TIME");
+  }
+
+  const callable = httpsCallable(
+    functions,
+    "createWeeklyRoomReservations",
+  );
+
+  const result = await callable({
+    schoolId: requireId(schoolId, "School ID"),
+    classId: requireId(classId, "Class ID"),
+    roomId: requireId(roomId, "Room ID"),
+    weekdays: [...weekdays].sort((a, b) => a - b),
+    startTime: normalizedStart,
+    endTime: normalizedEnd,
+  });
+
+  return result.data;
+}
+
 export function watchRoomReservations(
   schoolId,
   onData,

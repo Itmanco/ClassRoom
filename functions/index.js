@@ -35,6 +35,10 @@ const {
 } = require("./lib/reservationTime");
 
 const {
+  generateWeeklyReservationDates,
+} = require("./lib/weeklyReservationDates");
+
+const {
   reservationFitsAvailability,
 } = require("./lib/reservationAvailability");
 
@@ -5243,6 +5247,290 @@ exports.createRoomReservation = onCall(
               classId,
               roomId,
               localDate: resolved.localDate,
+            };
+          },
+      );
+
+      return {
+        success: true,
+        ...result,
+      };
+    },
+);
+
+/**
+ * Creates an atomic series of weekly room reservations.
+ *
+ * @param {Object} request Callable request.
+ * @return {Promise<Object>} Created reservation series.
+ */
+exports.createWeeklyRoomReservations = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+      const classId = validateAvailabilityId(
+          data.classId,
+          "Class ID",
+      );
+      const roomId = validateAvailabilityId(
+          data.roomId,
+          "Room ID",
+      );
+
+      const actor = await requireSchoolAdmin(
+          request,
+          schoolId,
+      );
+
+      const schoolRef = db.collection("schools").doc(schoolId);
+      const classRef = schoolRef.collection("classes").doc(classId);
+      const roomRef = schoolRef.collection("rooms").doc(roomId);
+
+      const reservationsRef = schoolRef.collection(
+          "roomReservations",
+      );
+      const daysRef = schoolRef.collection(
+          "roomReservationDays",
+      );
+
+      // Stable IDs across transaction retries.
+      const seriesId = reservationsRef.doc().id;
+      const auditRef = schoolRef.collection("auditLogs").doc();
+
+      const result = await db.runTransaction(
+          async (transaction) => {
+            // All transaction reads must precede writes.
+            const [schoolSnap, classSnap, roomSnap] =
+              await Promise.all([
+                transaction.get(schoolRef),
+                transaction.get(classRef),
+                transaction.get(roomRef),
+              ]);
+
+            if (
+              !schoolSnap.exists ||
+              schoolSnap.data().active === false
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "SCHOOL_NOT_AVAILABLE",
+              );
+            }
+
+            if (
+              !classSnap.exists ||
+              classSnap.data().active === false
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_NOT_AVAILABLE",
+              );
+            }
+
+            if (
+              !roomSnap.exists ||
+              roomSnap.data().active === false
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_NOT_AVAILABLE",
+              );
+            }
+
+            const classData = classSnap.data();
+            const schoolData = schoolSnap.data();
+
+            if (classData.roomId !== roomId) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_ROOM_MISMATCH",
+              );
+            }
+
+            if (!schoolData.operatingHours) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "SCHOOL_OPERATING_HOURS_NOT_CONFIGURED",
+              );
+            }
+
+            if (!classData.startDate || !classData.endDate) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_PERIOD_NOT_CONFIGURED",
+              );
+            }
+
+            let dates;
+
+            try {
+              dates = generateWeeklyReservationDates({
+                startDate: classData.startDate,
+                endDate: classData.endDate,
+                weekdays: data.weekdays,
+              });
+            } catch (error) {
+              throw new HttpsError(
+                  "invalid-argument",
+                  error.message,
+              );
+            }
+
+            const timeZone =
+              schoolData.timeZone || "Asia/Tokyo";
+
+            const occurrences = dates.map((localDate) => {
+              let resolved;
+
+              try {
+                resolved = resolveReservationTime({
+                  localDate,
+                  startTime: data.startTime,
+                  endTime: data.endTime,
+                  timeZone,
+                });
+              } catch (error) {
+                throw new HttpsError(
+                    "invalid-argument",
+                    error.message,
+                );
+              }
+
+              if (!reservationFitsSchoolHours(
+                  {
+                    weekday: resolved.weekday,
+                    startTime: resolved.startTime,
+                    endTime: resolved.endTime,
+                  },
+                  schoolData.operatingHours,
+              )) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "OUTSIDE_SCHOOL_OPERATING_HOURS",
+                );
+              }
+
+              return {
+                ...resolved,
+                dayRef: daysRef.doc(`${roomId}_${localDate}`),
+                reservationRef: reservationsRef.doc(),
+              };
+            });
+
+            // Read every affected day before writing anything.
+            const daySnapshots = await Promise.all(
+                occurrences.map(
+                    (item) => transaction.get(item.dayRef),
+                ),
+            );
+
+            // Validate the entire series before creating documents.
+            occurrences.forEach((item, index) => {
+              const daySnap = daySnapshots[index];
+
+              const existing = daySnap.exists ?
+                daySnap.data().intervals || [] : [];
+
+              if (
+                !Array.isArray(existing) ||
+                existing.length >= 100
+              ) {
+                throw new HttpsError(
+                    "resource-exhausted",
+                    "ROOM_DAY_CAPACITY_REACHED",
+                );
+              }
+
+              const overlapping = existing.some(
+                  (interval) =>
+                    item.startsAtMillis < interval.endsAtMillis &&
+                    item.endsAtMillis > interval.startsAtMillis,
+              );
+
+              if (overlapping) {
+                throw new HttpsError(
+                    "already-exists",
+                    "ROOM_RESERVATION_CONFLICT",
+                );
+              }
+
+              item.existingIntervals = existing;
+            });
+
+            // All validations passed. Begin transaction writes.
+            for (const item of occurrences) {
+              transaction.set(item.dayRef, {
+                roomId,
+                localDate: item.localDate,
+                intervals: [
+                  ...item.existingIntervals,
+                  {
+                    reservationId: item.reservationRef.id,
+                    startsAtMillis: item.startsAtMillis,
+                    endsAtMillis: item.endsAtMillis,
+                  },
+                ],
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+
+              transaction.set(item.reservationRef, {
+                classId,
+                roomId,
+                localDate: item.localDate,
+                localStartTime: item.startTime,
+                localEndTime: item.endTime,
+                timeZone,
+                startsAt: new Date(item.startsAtMillis),
+                endsAt: new Date(item.endsAtMillis),
+                status: "active",
+                seriesId,
+                createdByUid: actor.uid,
+                createdAt: FieldValue.serverTimestamp(),
+              });
+            }
+
+            transaction.update(schoolRef, {
+              "scheduling.hasReservationHistory": true,
+              "updatedAt": FieldValue.serverTimestamp(),
+            });
+
+            transaction.set(auditRef, {
+              action: "roomReservation.seriesCreated",
+              entityType: "roomReservation",
+              entityId: seriesId,
+              schoolId,
+              actorUid: actor.uid,
+              actorRole: actor.role,
+              changedFields: ["status"],
+              details: {
+                seriesId,
+                classId,
+                roomId,
+                startDate: classData.startDate,
+                endDate: classData.endDate,
+                weekdays: data.weekdays,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                occurrenceCount: occurrences.length,
+              },
+              context: {
+                classId,
+                roomId,
+              },
+              createdAt: FieldValue.serverTimestamp(),
+            });
+
+            return {
+              seriesId,
+              schoolId,
+              classId,
+              roomId,
+              occurrenceCount: occurrences.length,
+              dates,
             };
           },
       );

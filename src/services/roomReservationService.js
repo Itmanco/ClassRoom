@@ -139,6 +139,38 @@ export async function createWeeklyRoomReservations(
   return result.data;
 }
 
+/**
+ * Cancels one reservation or the selected occurrence and all
+ * subsequent future occurrences in the same weekly series.
+ *
+ * @param {string} schoolId School identifier.
+ * @param {string} reservationId Reservation identifier.
+ * @param {"single"|"future-series"} scope Cancellation scope.
+ * @return {Promise<Object>} Cancellation result.
+ */
+export async function cancelRoomReservations(
+  schoolId,
+  reservationId,
+  scope = "single",
+) {
+  if (!["single", "future-series"].includes(scope)) {
+    throw new Error("INVALID_CANCELLATION_SCOPE");
+  }
+
+  const callable = httpsCallable(
+    functions,
+    "cancelRoomReservations",
+  );
+
+  const result = await callable({
+    schoolId: requireId(schoolId, "School ID"),
+    reservationId: requireId(reservationId, "Reservation ID"),
+    scope,
+  });
+
+  return result.data;
+}
+
 export function watchRoomReservations(
   schoolId,
   onData,
@@ -219,4 +251,61 @@ export function watchDailyRoomReservations(
       },
       onError,
   );
+}
+
+/**
+ * Updates the time of one reservation or the selected occurrence
+ * and subsequent active occurrences in the same weekly series.
+ *
+ * @param {string} schoolId School identifier.
+ * @param {string} reservationId Reservation identifier.
+ * @param {"single"|"future-series"} scope Update scope.
+ * @param {string} startTime New start time in HH:mm format.
+ * @param {string} endTime New end time in HH:mm format.
+ * @param {string} localDate Original reservation date (YYYY-MM-DD).
+ * @return {Promise<Object>} Update result.
+ */
+export async function updateRoomReservations(
+    schoolId,
+    reservationId,
+    scope,
+    startTime,
+    endTime,
+    localDate,
+) {
+  if (!["single", "future-series"].includes(scope)) {
+    throw new Error("INVALID_UPDATE_SCOPE");
+  }
+
+  const normalizedStart = requireTime(
+      startTime,
+      "Start time",
+  );
+
+  const normalizedEnd = requireTime(
+      endTime,
+      "End time",
+  );
+
+  if (normalizedStart >= normalizedEnd) {
+    throw new Error("INVALID_RESERVATION_TIME");
+  }
+
+  const callable = httpsCallable(
+      functions,
+      "updateRoomReservations",
+  );
+
+  const result = await callable({
+    schoolId: requireId(schoolId, "School ID"),
+    reservationId: requireId(reservationId, "Reservation ID"),
+    scope,
+    startTime: normalizedStart,
+    endTime: normalizedEnd,
+    ...(scope === "single" ?
+      {localDate: requireDate(localDate)} :
+      {}),
+  });
+
+  return result.data;
 }

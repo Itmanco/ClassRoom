@@ -499,6 +499,28 @@
       "friday": "Friday",
       "saturday": "Saturday",
       "sunday": "Sunday"
+    },
+    "cancellation": {
+      "title": "Cancel reservation",
+      "single": "This occurrence only",
+      "futureSeries": "This and all future occurrences",
+      "submit": "Cancel reservation",
+      "confirmSingle": "Cancel the reservation on {date}, {startTime}–{endTime}? This action cannot be undone.",
+      "confirmFutureSeries": "Cancel the reservation on {date}, {startTime}–{endTime} and all subsequent future occurrences in this weekly series? Earlier occurrences and historical reservations will be preserved. This action cannot be undone.",
+      "success": "Successfully cancelled {count} reservation(s)."
+    },
+    "editing": {
+      "title": "Edit reservation",
+      "open": "Edit reservation",
+      "single": "This occurrence only",
+      "futureSeries": "This and all future occurrences",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "discard": "Discard changes",
+      "invalidTime": "Start time must be before end time.",
+      "confirmSingle": "Change the reservation on {date} to {startTime}–{endTime}?",
+      "confirmFutureSeries": "Change the reservation on {date} and all subsequent active occurrences in this weekly series to {startTime}–{endTime}? Earlier and cancelled occurrences will remain unchanged.",
+      "success": "Successfully updated {count} reservation(s)."
     }
   },
   "classes": {

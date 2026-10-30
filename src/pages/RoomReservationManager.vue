@@ -293,10 +293,10 @@
         :classes="classes"
         :reservations="reservations"
         :operating-intervals="dailyOperatingIntervals"
-        @select-reservation="selectedReservation = $event"
+        @select-reservation="selectReservation"
       />
 
-      <div v-if="selectedReservation" class="reservation-details">
+      <div v-if="selectedReservation" class="reservation-async confirmReservationCancellation() {details">
         <h3>{{ $t("reservations.timeline.details") }}</h3>
 
         <p>
@@ -326,7 +326,155 @@
           {{ selectedReservation.status }}
         </p>
 
-        <button type="button" @click="selectedReservation = null">
+        <div
+          v-if="canEditSelectedReservation"
+          class="reservation-editing"
+        >
+          <h4>{{ $t("reservations.editing.title") }}</h4>
+
+          <button
+            v-if="!editingReservation"
+            type="button"
+            class="primary-button"
+            :disabled="cancellingReservation || savingReservationEdit"
+            @click="startReservationEdit"
+          >
+            {{ $t("reservations.editing.open") }}
+          </button>
+
+          <form
+            v-else
+            class="reservation-form"
+            @submit.prevent="submitReservationEdit"
+          >
+            <div class="full-width">
+              <label class="cancellation-option">
+                <input
+                  v-model="editScope"
+                  type="radio"
+                  value="single"
+                  :disabled="savingReservationEdit"
+                />
+                {{ $t("reservations.editing.single") }}
+              </label>
+
+              <label
+                v-if="selectedReservationHasSeries"
+                class="cancellation-option"
+              >
+                <input
+                  v-model="editScope"
+                  type="radio"
+                  value="future-series"
+                  :disabled="savingReservationEdit"
+                />
+                {{ $t("reservations.editing.futureSeries") }}
+              </label>
+            </div>
+
+            <label>
+              {{ $t("reservations.form.startTime") }}
+              <input
+                v-model="editForm.startTime"
+                type="time"
+                step="900"
+                :disabled="savingReservationEdit"
+                required
+              />
+            </label>
+
+            <label>
+              {{ $t("reservations.form.endTime") }}
+              <input
+                v-model="editForm.endTime"
+                type="time"
+                step="900"
+                :disabled="savingReservationEdit"
+                required
+              />
+            </label>
+
+            <p class="timezone-info full-width">
+              {{ $t("rooms.availability.timezone") }}:
+              <strong>{{ schoolTimeZone }}</strong>
+            </p>
+
+            <div class="form-actions full-width">
+              <button
+                type="submit"
+                class="primary-button"
+                :disabled="savingReservationEdit"
+              >
+                {{
+                  savingReservationEdit
+                    ? $t("reservations.editing.saving")
+                    : $t("reservations.editing.save")
+                }}
+              </button>
+
+              <button
+                type="button"
+                :disabled="savingReservationEdit"
+                @click="editingReservation = false"
+              >
+                {{ $t("reservations.editing.discard") }}
+              </button>
+            </div>
+          </form>
+
+          <p v-if="editError" class="error-message">
+            {{ editError }}
+          </p>
+        </div>
+
+        <div
+          v-if="canCancelSelectedReservation && !editingReservation"
+          class="reservation-cancellation"
+        >
+          <h4>{{ $t("reservations.cancellation.title") }}</h4>
+
+          <label class="cancellation-option">
+            <input
+              v-model="cancellationScope"
+              type="radio"
+              value="single"
+              :disabled="cancellingReservation"
+            />
+            {{ $t("reservations.cancellation.single") }}
+          </label>
+
+          <label
+            v-if="selectedReservationHasSeries"
+            class="cancellation-option"
+          >
+            <input
+              v-model="cancellationScope"
+              type="radio"
+              value="future-series"
+              :disabled="cancellingReservation"
+            />
+            {{ $t("reservations.cancellation.futureSeries") }}
+          </label>
+
+          <button
+            type="button"
+            class="cancel-reservation-button"
+            :disabled="cancellingReservation"
+            @click="confirmReservationCancellation"
+          >
+            {{ $t("reservations.cancellation.submit") }}
+          </button>
+        </div>
+
+        <p v-if="cancellationError" class="error-message">
+          {{ cancellationError }}
+        </p>
+
+        <button
+          type="button"
+          :disabled="cancellingReservation || savingReservationEdit"
+          @click="selectedReservation = null"
+        >
           {{ $t("reservations.timeline.close") }}
         </button>
       </div>
@@ -346,6 +494,8 @@ import {
 import {
   createRoomReservation,
   createWeeklyRoomReservations,
+  cancelRoomReservations,
+  updateRoomReservations,
   watchDailyRoomReservations,
 } from "../services/roomReservationService";
 
@@ -396,6 +546,19 @@ export default {
       showCreateForm: false,
       selectedReservation: null,
       reservationListenerVersion: 0,
+
+      cancellingReservation: false,
+      cancellationScope: "single",
+      cancellationError: "",
+
+      editingReservation: false,
+      savingReservationEdit: false,
+      editScope: "single",
+      editError: "",
+      editForm: {
+        startTime: "",
+        endTime: "",
+      },
 
       reservationMode: "single",
       selectedWeekdays: [],
@@ -508,6 +671,33 @@ export default {
         this.activeRooms.length - this.occupiedRoomCount,
       );
     },
+
+    canCancelSelectedReservation() {
+      const reservation = this.selectedReservation;
+
+      if (
+        !reservation ||
+        reservation.status !== "active"
+      ) {
+        return false;
+      }
+
+      const startsAt = reservation.startsAt?.toDate?.();
+
+      return startsAt instanceof Date &&
+        Number.isFinite(startsAt.getTime()) &&
+        startsAt.getTime() > Date.now();
+    },
+
+    canEditSelectedReservation() {
+      return this.canCancelSelectedReservation;
+    },
+
+    selectedReservationHasSeries() {
+      return Boolean(
+        this.selectedReservation?.seriesId,
+      );
+    },
   },
 
   watch: {
@@ -517,6 +707,11 @@ export default {
 
     selectedDate() {
       this.selectedReservation = null;
+      this.cancellationScope = "single";
+      this.cancellationError = "";
+      this.editingReservation = false;
+      this.editScope = "single";
+      this.editError = "";
 
       if (this.selectedDate && !this.saving) {
         this.form.localDate = this.selectedDate;
@@ -556,6 +751,220 @@ export default {
   },
 
   methods: {
+    selectReservation(reservation) {
+      if (this.cancellingReservation || this.savingReservationEdit) {
+        return;
+      }
+
+      this.selectedReservation = reservation;
+      this.cancellationScope = "single";
+      this.cancellationError = "";
+
+      this.editingReservation = false;
+      this.editScope = "single";
+      this.editError = "";
+
+      this.editForm = {
+        startTime: reservation.localStartTime,
+        endTime: reservation.localEndTime,
+      };
+    },
+
+    startReservationEdit() {
+      if (
+        !this.canEditSelectedReservation ||
+        this.cancellingReservation ||
+        this.savingReservationEdit
+      ) {
+        return;
+      }
+
+      const reservation = this.selectedReservation;
+
+      this.editForm = {
+        startTime: reservation.localStartTime,
+        endTime: reservation.localEndTime,
+      };
+
+      this.editScope = "single";
+      this.editError = "";
+      this.cancellationError = "";
+      this.editingReservation = true;
+    },
+
+    async submitReservationEdit() {
+      if (
+        !this.editingReservation ||
+        !this.canEditSelectedReservation ||
+        !this.selectedReservation ||
+        this.savingReservationEdit ||
+        this.cancellingReservation
+      ) {
+        return;
+      }
+
+      const reservation = this.selectedReservation;
+      const schoolId = this.schoolId;
+      const reservationId = reservation.id;
+      const scope = this.editScope;
+      const startTime = this.editForm.startTime;
+      const endTime = this.editForm.endTime;
+
+      if (
+        !schoolId ||
+        !reservationId ||
+        !["single", "future-series"].includes(scope) ||
+        (scope === "future-series" && !reservation.seriesId)
+      ) {
+        return;
+      }
+
+      if (
+        !startTime ||
+        !endTime ||
+        startTime >= endTime
+      ) {
+        this.editError = this.$t(
+          "reservations.editing.invalidTime",
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        this.$t(
+          scope === "future-series" ?
+            "reservations.editing.confirmFutureSeries" :
+            "reservations.editing.confirmSingle",
+          {
+            date: reservation.localDate,
+            startTime,
+            endTime,
+          },
+        ),
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      this.savingReservationEdit = true;
+      this.editError = "";
+      this.message = "";
+
+      try {
+        const result = await updateRoomReservations(
+          schoolId,
+          reservationId,
+          scope,
+          startTime,
+          endTime,
+          reservation.localDate,
+        );
+
+        if (this.schoolId !== schoolId) {
+          return;
+        }
+
+        this.editingReservation = false;
+        this.selectedReservation = null;
+        this.editScope = "single";
+
+        this.message = this.$t(
+          "reservations.editing.success",
+          {count: result.updatedCount},
+        );
+      } catch (error) {
+        if (this.schoolId === schoolId) {
+          this.editError = error.message || String(error);
+        }
+      } finally {
+        this.savingReservationEdit = false;
+      }
+    },
+
+    async confirmReservationCancellation() {
+      if (
+        !this.canCancelSelectedReservation ||
+        !this.selectedReservation ||
+        this.savingReservationEdit ||
+        this.editingReservation
+      ) {
+        return;
+      }
+
+      const scope = this.cancellationScope;
+
+      if (
+        scope !== "single" &&
+        scope !== "future-series"
+      ) {
+        return;
+      }
+
+      if (
+        scope === "future-series" &&
+        !this.selectedReservationHasSeries
+      ) {
+        return;
+      }
+
+      const reservation = this.selectedReservation;
+      const schoolId = this.schoolId;
+      const reservationId = reservation.id;
+
+      if (!schoolId || !reservationId) {
+        return;
+      }
+
+      const confirmed = window.confirm(
+        this.$t(
+          scope === "future-series" ?
+            "reservations.cancellation.confirmFutureSeries" :
+            "reservations.cancellation.confirmSingle",
+          {
+            date: reservation.localDate,
+            startTime: reservation.localStartTime,
+            endTime: reservation.localEndTime,
+          },
+        ),
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      this.cancellingReservation = true;
+      this.cancellationError = "";
+      this.message = "";
+
+      try {
+        const result = await cancelRoomReservations(
+          schoolId,
+          reservationId,
+          scope,
+        );
+
+        if (this.schoolId !== schoolId) {
+          return;
+        }
+
+        this.selectedReservation = null;
+        this.cancellationScope = "single";
+
+        this.message = this.$t(
+          "reservations.cancellation.success",
+          {count: result.cancelledCount},
+        );
+      } catch (error) {
+        if (this.schoolId === schoolId) {
+          this.cancellationError =
+            error.message || String(error);
+        }
+      } finally {
+        this.cancellingReservation = false;
+      }
+    },
+
     schoolToday() {
       if (!this.schoolTimeZone) {
         return "";
@@ -1286,6 +1695,42 @@ button:disabled {
 
 .creation-content {
   margin-top: 20px;
+}
+
+.reservation-cancellation {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #e4c7c7;
+  border-radius: 8px;
+  background: #fff9f9;
+}
+
+.reservation-cancellation h4 {
+  margin: 0 0 12px;
+  color: #8b2525;
+}
+
+.cancellation-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.cancellation-option input {
+  margin: 0;
+  accent-color: #b42318;
+}
+
+.cancel-reservation-button {
+  margin-top: 8px;
+  background: #b42318;
+  color: white;
+}
+
+.cancel-reservation-button:hover:not(:disabled) {
+  background: #912018;
 }
 
 @media (max-width: 480px) {

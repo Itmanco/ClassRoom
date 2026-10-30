@@ -499,6 +499,28 @@
       "friday": "金曜日",
       "saturday": "土曜日",
       "sunday": "日曜日"
+    },
+    "cancellation": {
+      "title": "予約のキャンセル",
+      "single": "この予約のみ",
+      "futureSeries": "この予約と以降のすべての予約",
+      "submit": "予約をキャンセル",
+      "confirmSingle": "{date} {startTime}～{endTime} の予約をキャンセルしますか？この操作は取り消せません。",
+      "confirmFutureSeries": "{date} {startTime}～{endTime} の予約と、同じ定期予約に含まれる以降の予約をすべてキャンセルしますか？以前の予約と過去の履歴は保持されます。この操作は取り消せません。",
+      "success": "{count}件の予約をキャンセルしました。"
+    },
+    "editing": {
+      "title": "予約の編集",
+      "open": "予約を編集",
+      "single": "この予約のみ",
+      "futureSeries": "この予約と以降のすべての予約",
+      "save": "変更を保存",
+      "saving": "保存中...",
+      "discard": "変更を破棄",
+      "invalidTime": "開始時刻は終了時刻より前にしてください。",
+      "confirmSingle": "{date} の予約時刻を {startTime}～{endTime} に変更しますか？",
+      "confirmFutureSeries": "{date} の予約と、同じ定期予約に含まれる以降の有効な予約をすべて {startTime}～{endTime} に変更しますか？以前の予約とキャンセル済みの予約は変更されません。",
+      "success": "{count} 件の予約を更新しました。"
     }
   },
   "classes": {

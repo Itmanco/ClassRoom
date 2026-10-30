@@ -5110,6 +5110,26 @@ exports.createRoomReservation = onCall(
               );
             }
 
+            const classData = classSnap.data();
+
+            if (!classData.startDate || !classData.endDate) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "CLASS_PERIOD_NOT_CONFIGURED",
+              );
+            }
+
+            if (
+              typeof data.localDate !== "string" ||
+              data.localDate < classData.startDate ||
+              data.localDate > classData.endDate
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "RESERVATION_OUTSIDE_CLASS_PERIOD",
+              );
+            }
+
             const operatingHours = schoolSnap.data().operatingHours;
 
             if (!operatingHours) {
@@ -5135,6 +5155,13 @@ exports.createRoomReservation = onCall(
               throw new HttpsError(
                   "invalid-argument",
                   error.message,
+              );
+            }
+
+            if (resolved.startsAtMillis <= Date.now()) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_ALREADY_STARTED",
               );
             }
 
@@ -5400,6 +5427,13 @@ exports.createWeeklyRoomReservations = onCall(
                 );
               }
 
+              if (resolved.startsAtMillis <= Date.now()) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "ROOM_RESERVATION_ALREADY_STARTED",
+                );
+              }
+
               if (!reservationFitsSchoolHours(
                   {
                     weekday: resolved.weekday,
@@ -5534,6 +5568,1024 @@ exports.createWeeklyRoomReservations = onCall(
             };
           },
       );
+
+      return {
+        success: true,
+        ...result,
+      };
+    },
+);
+
+/**
+ * Cancels one future reservation or the selected occurrence and
+ * subsequent future occurrences of its weekly series.
+ *
+ * @param {Object} request Callable request.
+ * @return {Promise<Object>} Cancellation result.
+ */
+exports.cancelRoomReservations = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+
+      const reservationId = validateAvailabilityId(
+          data.reservationId,
+          "Reservation ID",
+      );
+
+      const scope = data.scope;
+
+      if (!["single", "future-series"].includes(scope)) {
+        throw new HttpsError(
+            "invalid-argument",
+            "INVALID_CANCELLATION_SCOPE",
+        );
+      }
+
+      const actor = await requireSchoolAdmin(request, schoolId);
+
+      const schoolRef = db.collection("schools").doc(schoolId);
+      const reservationsRef = schoolRef.collection("roomReservations");
+      const reservationRef = reservationsRef.doc(reservationId);
+      const auditRef = schoolRef.collection("auditLogs").doc();
+
+      const result = await db.runTransaction(
+          async (transaction) => {
+            const selectedSnap = await transaction.get(reservationRef);
+
+            if (!selectedSnap.exists) {
+              throw new HttpsError(
+                  "not-found",
+                  "ROOM_RESERVATION_NOT_FOUND",
+              );
+            }
+
+            const selected = selectedSnap.data();
+
+            if (selected.status !== "active") {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_NOT_ACTIVE",
+              );
+            }
+
+            const cutoffMillis = selected.startsAt?.toMillis?.();
+            const nowMillis = Date.now();
+
+            if (
+              !Number.isFinite(cutoffMillis) ||
+              cutoffMillis <= nowMillis
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_ALREADY_STARTED",
+              );
+            }
+
+            if (scope === "future-series" && !selected.seriesId) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_HAS_NO_SERIES",
+              );
+            }
+
+            let affected = [{
+              ref: reservationRef,
+              id: reservationId,
+              data: selected,
+            }];
+
+            if (scope === "future-series") {
+              const seriesQuery = reservationsRef
+                  .where("seriesId", "==", selected.seriesId);
+
+              const seriesSnap = await transaction.get(seriesQuery);
+
+              affected = seriesSnap.docs
+                  .filter((doc) => {
+                    const reservation = doc.data();
+                    const startsAtMillis =
+                      reservation.startsAt?.toMillis?.();
+
+                    return reservation.status === "active" &&
+                      Number.isFinite(startsAtMillis) &&
+                      startsAtMillis >= cutoffMillis &&
+                      startsAtMillis > nowMillis;
+                  })
+                  .map((doc) => ({
+                    ref: doc.ref,
+                    id: doc.id,
+                    data: doc.data(),
+                  }));
+
+              if (!affected.some((item) => item.id === reservationId)) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "ROOM_RESERVATION_SERIES_MISMATCH",
+                );
+              }
+            }
+
+            const dayGroups = new Map();
+
+            for (const item of affected) {
+              const dayId =
+                `${item.data.roomId}_${item.data.localDate}`;
+
+              if (!dayGroups.has(dayId)) {
+                dayGroups.set(dayId, {
+                  ref: schoolRef
+                      .collection("roomReservationDays")
+                      .doc(dayId),
+                  reservationIds: new Set(),
+                });
+              }
+
+              dayGroups.get(dayId).reservationIds.add(item.id);
+            }
+
+            const dayUpdates = [];
+
+            // Complete all Firestore reads before performing writes.
+            for (const group of dayGroups.values()) {
+              const daySnap = await transaction.get(group.ref);
+
+              if (!daySnap.exists) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "ROOM_RESERVATION_INDEX_MISSING",
+                );
+              }
+
+              const intervals = daySnap.data().intervals;
+
+              if (!Array.isArray(intervals)) {
+                throw new HttpsError(
+                    "failed-precondition",
+                    "ROOM_RESERVATION_INDEX_INVALID",
+                );
+              }
+
+              for (const id of group.reservationIds) {
+                const count = intervals.filter(
+                    (interval) => interval.reservationId === id,
+                ).length;
+
+                if (count !== 1) {
+                  throw new HttpsError(
+                      "failed-precondition",
+                      "ROOM_RESERVATION_INDEX_MISMATCH",
+                  );
+                }
+              }
+
+              dayUpdates.push({
+                ref: group.ref,
+                intervals: intervals.filter(
+                    (interval) =>
+                      !group.reservationIds.has(interval.reservationId),
+                ),
+              });
+            }
+
+            for (const update of dayUpdates) {
+              transaction.update(update.ref, {
+                intervals: update.intervals,
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+
+            for (const item of affected) {
+              transaction.update(item.ref, {
+                status: "cancelled",
+                cancelledAt: FieldValue.serverTimestamp(),
+                cancelledByUid: actor.uid,
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+
+            transaction.set(auditRef, {
+              action: scope === "single" ?
+                "roomReservation.cancelled" :
+                "roomReservation.seriesCancelled",
+              entityType: "roomReservation",
+              entityId: reservationId,
+              schoolId,
+              actorUid: actor.uid,
+              actorRole: actor.role,
+              changedFields: ["status"],
+              details: {
+                scope,
+                classId: selected.classId,
+                roomId: selected.roomId,
+                seriesId: selected.seriesId || null,
+                localDate: selected.localDate,
+                startTime: selected.localStartTime,
+                endTime: selected.localEndTime,
+                cancelledCount: affected.length,
+                reservationIds: affected.map((item) => item.id),
+              },
+              context: {
+                classId: selected.classId,
+                roomId: selected.roomId,
+              },
+              createdAt: FieldValue.serverTimestamp(),
+            });
+
+            return {
+              schoolId,
+              reservationId,
+              scope,
+              cancelledCount: affected.length,
+            };
+          },
+      );
+
+      return {
+        success: true,
+        ...result,
+      };
+    },
+);
+
+/**
+ * Updates one future room reservation atomically.
+ *
+ * @param {Object} request Callable request.
+ * @return {Promise<Object>} Update result.
+ */
+exports.updateRoomReservations = onCall(
+    async (request) => {
+      const data = request.data || {};
+
+      const schoolId = validateAvailabilityId(
+          data.schoolId,
+          "School ID",
+      );
+
+      const reservationId = validateAvailabilityId(
+          data.reservationId,
+          "Reservation ID",
+      );
+
+      const scope = data.scope;
+
+      if (!["single", "future-series"].includes(scope)) {
+        throw new HttpsError(
+            "invalid-argument",
+            "INVALID_UPDATE_SCOPE",
+        );
+      }
+
+      const actor = await requireSchoolAdmin(request, schoolId);
+
+      const schoolRef = db.collection("schools").doc(schoolId);
+      const reservationsRef = schoolRef.collection("roomReservations");
+      const reservationRef = reservationsRef.doc(reservationId);
+      const daysRef = schoolRef.collection("roomReservationDays");
+      const auditRef = schoolRef.collection("auditLogs").doc();
+
+      if (scope === "future-series") {
+        const result = await db.runTransaction(async (transaction) => {
+          const [schoolSnap, selectedSnap] = await Promise.all([
+            transaction.get(schoolRef),
+            transaction.get(reservationRef),
+          ]);
+
+          if (!schoolSnap.exists || schoolSnap.data().active === false) {
+            throw new HttpsError(
+                "failed-precondition",
+                "SCHOOL_NOT_AVAILABLE",
+            );
+          }
+
+          if (!selectedSnap.exists) {
+            throw new HttpsError(
+                "not-found",
+                "ROOM_RESERVATION_NOT_FOUND",
+            );
+          }
+
+          const selected = selectedSnap.data();
+          const nowMillis = Date.now();
+          const cutoffMillis = selected.startsAt?.toMillis?.();
+
+          if (selected.status !== "active") {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_RESERVATION_NOT_ACTIVE",
+            );
+          }
+
+          if (
+            !Number.isFinite(cutoffMillis) ||
+            cutoffMillis <= nowMillis
+          ) {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_RESERVATION_ALREADY_STARTED",
+            );
+          }
+
+          if (!selected.seriesId) {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_RESERVATION_HAS_NO_SERIES",
+            );
+          }
+
+          const seriesQuery = reservationsRef
+              .where("seriesId", "==", selected.seriesId);
+
+          const seriesSnap = await transaction.get(seriesQuery);
+
+          const affected = seriesSnap.docs
+              .filter((doc) => {
+                const reservation = doc.data();
+                const startsAtMillis = reservation.startsAt?.toMillis?.();
+
+                return reservation.status === "active" &&
+                  Number.isFinite(startsAtMillis) &&
+                  startsAtMillis >= cutoffMillis &&
+                  startsAtMillis > nowMillis;
+              })
+              .map((doc) => ({
+                ref: doc.ref,
+                id: doc.id,
+                data: doc.data(),
+              }));
+
+          if (!affected.some((item) => item.id === reservationId)) {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_RESERVATION_SERIES_MISMATCH",
+            );
+          }
+
+          if (affected.length > 60) {
+            throw new HttpsError(
+                "resource-exhausted",
+                "ROOM_RESERVATION_SERIES_TOO_LARGE",
+            );
+          }
+
+          const classRef = schoolRef.collection("classes")
+              .doc(selected.classId);
+
+          const roomRef = schoolRef.collection("rooms")
+              .doc(selected.roomId);
+
+          const [classSnap, roomSnap] = await Promise.all([
+            transaction.get(classRef),
+            transaction.get(roomRef),
+          ]);
+
+          if (!classSnap.exists || classSnap.data().active === false) {
+            throw new HttpsError(
+                "failed-precondition",
+                "CLASS_NOT_AVAILABLE",
+            );
+          }
+
+          if (!roomSnap.exists || roomSnap.data().active === false) {
+            throw new HttpsError(
+                "failed-precondition",
+                "ROOM_NOT_AVAILABLE",
+            );
+          }
+
+          const classData = classSnap.data();
+          const schoolData = schoolSnap.data();
+
+          if (classData.roomId !== selected.roomId) {
+            throw new HttpsError(
+                "failed-precondition",
+                "CLASS_ROOM_MISMATCH",
+            );
+          }
+
+          if (!classData.startDate || !classData.endDate) {
+            throw new HttpsError(
+                "failed-precondition",
+                "CLASS_PERIOD_NOT_CONFIGURED",
+            );
+          }
+
+          if (!schoolData.operatingHours) {
+            throw new HttpsError(
+                "failed-precondition",
+                "SCHOOL_OPERATING_HOURS_NOT_CONFIGURED",
+            );
+          }
+
+          // All affected occurrences must belong to the same class and room.
+          for (const item of affected) {
+            if (
+              item.data.classId !== selected.classId ||
+              item.data.roomId !== selected.roomId
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_SERIES_MISMATCH",
+              );
+            }
+          }
+
+          // Time validation and atomic writes will be added next.
+          const timeZone = schoolData.timeZone || "Asia/Tokyo";
+
+          const updates = affected.map((item) => {
+            let resolved;
+
+            try {
+              resolved = resolveReservationTime({
+                localDate: item.data.localDate,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                timeZone,
+              });
+            } catch (error) {
+              throw new HttpsError(
+                  "invalid-argument",
+                  error.message,
+              );
+            }
+
+            if (
+              resolved.localDate < classData.startDate ||
+              resolved.localDate > classData.endDate
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "RESERVATION_OUTSIDE_CLASS_PERIOD",
+              );
+            }
+
+            if (resolved.startsAtMillis <= nowMillis) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_ALREADY_STARTED",
+              );
+            }
+
+            if (!reservationFitsSchoolHours(
+                {
+                  weekday: resolved.weekday,
+                  startTime: resolved.startTime,
+                  endTime: resolved.endTime,
+                },
+                schoolData.operatingHours,
+            )) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "OUTSIDE_SCHOOL_OPERATING_HOURS",
+              );
+            }
+
+            return {
+              ...item,
+              resolved,
+              dayId: `${selected.roomId}_${resolved.localDate}`,
+            };
+          });
+
+          // Each occurrence keeps its original date and room.
+          const dayIds = [...new Set(updates.map((item) => item.dayId))];
+
+          const dayEntries = await Promise.all(
+              dayIds.map(async (dayId) => {
+                const ref = daysRef.doc(dayId);
+                const snap = await transaction.get(ref);
+
+                return {
+                  dayId,
+                  ref,
+                  snap,
+                };
+              }),
+          );
+
+          const dayIndexes = new Map(
+              dayEntries.map((entry) => [entry.dayId, entry]),
+          );
+
+          // Validate every original interval before making any changes.
+          for (const item of updates) {
+            if (
+              item.data.localDate !== item.resolved.localDate ||
+              item.dayId !== `${item.data.roomId}_${item.data.localDate}`
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_INDEX_MISMATCH",
+              );
+            }
+            const entry = dayIndexes.get(item.dayId);
+
+            if (!entry.snap.exists) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_INDEX_MISSING",
+              );
+            }
+
+            const intervals = entry.snap.data().intervals;
+
+            if (!Array.isArray(intervals)) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_INDEX_INVALID",
+              );
+            }
+
+            const matchingIntervals = intervals.filter(
+                (interval) => interval.reservationId === item.id,
+            );
+
+            if (matchingIntervals.length !== 1) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_INDEX_MISMATCH",
+              );
+            }
+
+            const originalStartMillis = item.data.startsAt?.toMillis?.();
+            const originalEndMillis = item.data.endsAt?.toMillis?.();
+
+            if (
+              !Number.isFinite(originalStartMillis) ||
+              !Number.isFinite(originalEndMillis) ||
+              matchingIntervals[0].startsAtMillis !== originalStartMillis ||
+              matchingIntervals[0].endsAtMillis !== originalEndMillis
+            ) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "ROOM_RESERVATION_INDEX_MISMATCH",
+              );
+            }
+          }
+
+          // Validate conflicts and capacity for every affected day.
+          const updatesByDay = new Map();
+
+          for (const item of updates) {
+            if (!updatesByDay.has(item.dayId)) {
+              updatesByDay.set(item.dayId, []);
+            }
+
+            updatesByDay.get(item.dayId).push(item);
+          }
+
+          const proposedDayIntervals = new Map();
+
+          for (const [dayId, dayUpdates] of updatesByDay) {
+            const entry = dayIndexes.get(dayId);
+            const existingIntervals = entry.snap.data().intervals;
+
+            const affectedIds = new Set(dayUpdates.map((item) => item.id));
+
+            // Exclude only reservations being updated on this day.
+            const unchangedIntervals = existingIntervals.filter(
+                (interval) => !affectedIds.has(interval.reservationId),
+            );
+
+            const proposedIntervals = dayUpdates.map((item) => ({
+              reservationId: item.id,
+              startsAtMillis: item.resolved.startsAtMillis,
+              endsAtMillis: item.resolved.endsAtMillis,
+            }));
+
+            const combinedIntervals = [
+              ...unchangedIntervals,
+              ...proposedIntervals,
+            ];
+
+            if (combinedIntervals.length > 100) {
+              throw new HttpsError(
+                  "resource-exhausted",
+                  "ROOM_DAY_CAPACITY_REACHED",
+              );
+            }
+
+            // eslint-disable-next-line max-len
+            // Check all pairs, including two updated reservations on the same day.
+            for (let i = 0; i < combinedIntervals.length; i++) {
+              for (let j = i + 1; j < combinedIntervals.length; j++) {
+                const first = combinedIntervals[i];
+                const second = combinedIntervals[j];
+
+                const overlaps =
+                  first.startsAtMillis < second.endsAtMillis &&
+                  first.endsAtMillis > second.startsAtMillis;
+
+                if (overlaps) {
+                  throw new HttpsError(
+                      "already-exists",
+                      "ROOM_RESERVATION_CONFLICT",
+                  );
+                }
+              }
+            }
+
+            proposedDayIntervals.set(dayId, combinedIntervals);
+          }
+
+          // All transaction reads and validations are complete.
+          // Apply the validated day-index changes atomically.
+          for (const [dayId, intervals] of proposedDayIntervals) {
+            const entry = dayIndexes.get(dayId);
+
+            transaction.update(entry.ref, {
+              intervals,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          }
+
+          // eslint-disable-next-line max-len
+          // Update every affected reservation without changing its date or room.
+          for (const item of updates) {
+            transaction.update(item.ref, {
+              localStartTime: item.resolved.startTime,
+              localEndTime: item.resolved.endTime,
+              timeZone,
+              startsAt: new Date(item.resolved.startsAtMillis),
+              endsAt: new Date(item.resolved.endsAtMillis),
+              updatedAt: FieldValue.serverTimestamp(),
+              updatedByUid: actor.uid,
+            });
+          }
+
+          const affectedReservationIds = updates.map((item) => item.id);
+
+          const occurrenceChanges = updates.map((item) => ({
+            reservationId: item.id,
+            localDate: item.data.localDate,
+            before: {
+              startTime: item.data.localStartTime,
+              endTime: item.data.localEndTime,
+            },
+            after: {
+              startTime: item.resolved.startTime,
+              endTime: item.resolved.endTime,
+            },
+          }));
+
+          transaction.set(auditRef, {
+            action: "roomReservation.updated",
+            entityType: "roomReservation",
+            entityId: reservationId,
+            schoolId,
+            actorUid: actor.uid,
+            actorRole: actor.role,
+            changedFields: [
+              "localStartTime",
+              "localEndTime",
+              "startsAt",
+              "endsAt",
+            ],
+            details: {
+              scope: "future-series",
+              classId: selected.classId,
+              roomId: selected.roomId,
+              seriesId: selected.seriesId,
+              affectedReservationIds,
+              occurrenceChanges,
+              updatedCount: updates.length,
+            },
+            context: {
+              classId: selected.classId,
+              roomId: selected.roomId,
+            },
+            createdAt: FieldValue.serverTimestamp(),
+          });
+
+          return {
+            schoolId,
+            reservationId,
+            scope: "future-series",
+            updatedCount: updates.length,
+          };
+        });
+
+        return {
+          success: true,
+          ...result,
+        };
+      }
+
+      const result = await db.runTransaction(async (transaction) => {
+        const [schoolSnap, reservationSnap] = await Promise.all([
+          transaction.get(schoolRef),
+          transaction.get(reservationRef),
+        ]);
+
+        if (!schoolSnap.exists || schoolSnap.data().active === false) {
+          throw new HttpsError(
+              "failed-precondition",
+              "SCHOOL_NOT_AVAILABLE",
+          );
+        }
+
+        if (!reservationSnap.exists) {
+          throw new HttpsError(
+              "not-found",
+              "ROOM_RESERVATION_NOT_FOUND",
+          );
+        }
+
+        const original = reservationSnap.data();
+
+        if (original.status !== "active") {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_NOT_ACTIVE",
+          );
+        }
+
+        const nowMillis = Date.now();
+        const originalStartMillis = original.startsAt?.toMillis?.();
+
+        if (
+          !Number.isFinite(originalStartMillis) ||
+          originalStartMillis <= nowMillis
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_ALREADY_STARTED",
+          );
+        }
+
+        const classRef = schoolRef.collection("classes")
+            .doc(original.classId);
+
+        const classSnap = await transaction.get(classRef);
+
+        if (!classSnap.exists || classSnap.data().active === false) {
+          throw new HttpsError(
+              "failed-precondition",
+              "CLASS_NOT_AVAILABLE",
+          );
+        }
+
+        const classData = classSnap.data();
+        const roomId = original.roomId;
+
+        if (classData.roomId !== roomId) {
+          throw new HttpsError(
+              "failed-precondition",
+              "CLASS_ROOM_MISMATCH",
+          );
+        }
+
+        const roomRef = schoolRef.collection("rooms").doc(roomId);
+        const roomSnap = await transaction.get(roomRef);
+
+        if (!roomSnap.exists || roomSnap.data().active === false) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_NOT_AVAILABLE",
+          );
+        }
+
+        if (!classData.startDate || !classData.endDate) {
+          throw new HttpsError(
+              "failed-precondition",
+              "CLASS_PERIOD_NOT_CONFIGURED",
+          );
+        }
+
+        const schoolData = schoolSnap.data();
+
+        if (!schoolData.operatingHours) {
+          throw new HttpsError(
+              "failed-precondition",
+              "SCHOOL_OPERATING_HOURS_NOT_CONFIGURED",
+          );
+        }
+
+        const timeZone = schoolData.timeZone || "Asia/Tokyo";
+
+        let resolved;
+
+        try {
+          resolved = resolveReservationTime({
+            localDate: data.localDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            timeZone,
+          });
+        } catch (error) {
+          throw new HttpsError(
+              "invalid-argument",
+              error.message,
+          );
+        }
+
+        if (
+          resolved.localDate < classData.startDate ||
+          resolved.localDate > classData.endDate
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "RESERVATION_OUTSIDE_CLASS_PERIOD",
+          );
+        }
+
+        if (resolved.startsAtMillis <= nowMillis) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_ALREADY_STARTED",
+          );
+        }
+
+        if (!reservationFitsSchoolHours(
+            {
+              weekday: resolved.weekday,
+              startTime: resolved.startTime,
+              endTime: resolved.endTime,
+            },
+            schoolData.operatingHours,
+        )) {
+          throw new HttpsError(
+              "failed-precondition",
+              "OUTSIDE_SCHOOL_OPERATING_HOURS",
+          );
+        }
+
+        const oldDayId = `${roomId}_${original.localDate}`;
+        const newDayId = `${roomId}_${resolved.localDate}`;
+
+        const oldDayRef = daysRef.doc(oldDayId);
+        const newDayRef = daysRef.doc(newDayId);
+
+        // Read all affected indexes before writing.
+        const oldDaySnap = await transaction.get(oldDayRef);
+
+        const newDaySnap = oldDayId === newDayId ?
+          oldDaySnap :
+          await transaction.get(newDayRef);
+
+        if (!oldDaySnap.exists) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_INDEX_MISSING",
+          );
+        }
+
+        const oldIntervals = oldDaySnap.data().intervals;
+
+        if (!Array.isArray(oldIntervals)) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_INDEX_INVALID",
+          );
+        }
+
+        const originalIntervals = oldIntervals.filter(
+            (interval) => interval.reservationId === reservationId,
+        );
+
+        if (originalIntervals.length !== 1) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_INDEX_MISMATCH",
+          );
+        }
+
+        const originalInterval = originalIntervals[0];
+        const originalEndMillis = original.endsAt?.toMillis?.();
+
+        if (
+          originalInterval.startsAtMillis !== originalStartMillis ||
+          originalInterval.endsAtMillis !== originalEndMillis
+        ) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_INDEX_MISMATCH",
+          );
+        }
+
+        const newIntervals = newDaySnap.exists ?
+          newDaySnap.data().intervals : [];
+
+        if (!Array.isArray(newIntervals)) {
+          throw new HttpsError(
+              "failed-precondition",
+              "ROOM_RESERVATION_INDEX_INVALID",
+          );
+        }
+
+        const availableIntervals = newIntervals.filter(
+            (interval) => interval.reservationId !== reservationId,
+        );
+
+        if (availableIntervals.length >= 100) {
+          throw new HttpsError(
+              "resource-exhausted",
+              "ROOM_DAY_CAPACITY_REACHED",
+          );
+        }
+
+        const overlapping = availableIntervals.some(
+            (interval) =>
+              resolved.startsAtMillis < interval.endsAtMillis &&
+              resolved.endsAtMillis > interval.startsAtMillis,
+        );
+
+        if (overlapping) {
+          throw new HttpsError(
+              "already-exists",
+              "ROOM_RESERVATION_CONFLICT",
+          );
+        }
+
+        const updatedInterval = {
+          reservationId,
+          startsAtMillis: resolved.startsAtMillis,
+          endsAtMillis: resolved.endsAtMillis,
+        };
+
+        if (oldDayId === newDayId) {
+          transaction.update(oldDayRef, {
+            intervals: [...availableIntervals, updatedInterval],
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          transaction.update(oldDayRef, {
+            intervals: oldIntervals.filter(
+                (interval) => interval.reservationId !== reservationId,
+            ),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+
+          transaction.set(newDayRef, {
+            roomId,
+            localDate: resolved.localDate,
+            intervals: [...availableIntervals, updatedInterval],
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        transaction.update(reservationRef, {
+          localDate: resolved.localDate,
+          localStartTime: resolved.startTime,
+          localEndTime: resolved.endTime,
+          timeZone,
+          startsAt: new Date(resolved.startsAtMillis),
+          endsAt: new Date(resolved.endsAtMillis),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedByUid: actor.uid,
+        });
+
+        transaction.set(auditRef, {
+          action: "roomReservation.updated",
+          entityType: "roomReservation",
+          entityId: reservationId,
+          schoolId,
+          actorUid: actor.uid,
+          actorRole: actor.role,
+          changedFields: [
+            "localDate",
+            "localStartTime",
+            "localEndTime",
+            "startsAt",
+            "endsAt",
+          ],
+          details: {
+            scope: "single",
+            classId: original.classId,
+            roomId,
+            seriesId: original.seriesId || null,
+            before: {
+              localDate: original.localDate,
+              startTime: original.localStartTime,
+              endTime: original.localEndTime,
+            },
+            after: {
+              localDate: resolved.localDate,
+              startTime: resolved.startTime,
+              endTime: resolved.endTime,
+            },
+            updatedCount: 1,
+          },
+          context: {
+            classId: original.classId,
+            roomId,
+          },
+          createdAt: FieldValue.serverTimestamp(),
+        });
+
+        return {
+          schoolId,
+          reservationId,
+          scope: "single",
+          updatedCount: 1,
+        };
+      });
 
       return {
         success: true,

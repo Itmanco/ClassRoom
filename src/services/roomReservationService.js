@@ -43,6 +43,13 @@ function requireTime(value, fieldName) {
   return value;
 }
 
+function validateReservationNotes(value) {
+  if (typeof value !== "string" || value.length > 1000) {
+    throw new Error("INVALID_RESERVATION_NOTES");
+  }
+  return value;
+}
+
 export async function createRoomReservation(
   schoolId,
   {
@@ -51,6 +58,7 @@ export async function createRoomReservation(
     localDate,
     localStartTime,
     localEndTime,
+    notes = "",
   },
 ) {
   const normalizedStart = requireTime(
@@ -81,6 +89,7 @@ export async function createRoomReservation(
     localDate: requireDate(localDate),
     startTime: normalizedStart,
     endTime: normalizedEnd,
+    notes: validateReservationNotes(notes),
   });
 
   return result.data;
@@ -94,6 +103,7 @@ export async function createWeeklyRoomReservations(
     weekdays,
     localStartTime,
     localEndTime,
+    notes = "",
   },
 ) {
   if (
@@ -134,6 +144,7 @@ export async function createWeeklyRoomReservations(
     weekdays: [...weekdays].sort((a, b) => a - b),
     startTime: normalizedStart,
     endTime: normalizedEnd,
+    notes: validateReservationNotes(notes),
   });
 
   return result.data;
@@ -272,6 +283,7 @@ export async function updateRoomReservations(
     startTime,
     endTime,
     localDate,
+    notes,
 ) {
   if (!["single", "future-series"].includes(scope)) {
     throw new Error("INVALID_UPDATE_SCOPE");
@@ -302,10 +314,38 @@ export async function updateRoomReservations(
     scope,
     startTime: normalizedStart,
     endTime: normalizedEnd,
+    ...(notes === undefined ? {} : {notes: validateReservationNotes(notes)}),
     ...(scope === "single" ?
       {localDate: requireDate(localDate)} :
       {}),
   });
 
   return result.data;
+}
+
+/** Watch one class's reservations for one calendar month, including cancellations. */
+export function watchClassMonthlyRoomReservations(
+  schoolId, classId, firstDate, lastDate, onData, onError,
+) {
+  const normalizedSchoolId = requireId(schoolId, "School ID");
+  const normalizedClassId = requireId(classId, "Class ID");
+  const first = requireDate(firstDate);
+  const last = requireDate(lastDate);
+  if (first > last) throw new Error("INVALID_DATE_RANGE");
+
+  const reservationsRef = collection(
+    db, "schools", normalizedSchoolId, "roomReservations",
+  );
+  const monthlyQuery = query(
+    reservationsRef,
+    where("classId", "==", normalizedClassId),
+    where("localDate", ">=", first),
+    where("localDate", "<=", last),
+    orderBy("localDate", "asc"),
+  );
+  return onSnapshot(monthlyQuery, (snapshot) => {
+    onData(snapshot.docs.map((document) => ({
+      id: document.id, ...document.data(),
+    })));
+  }, onError);
 }

@@ -17,6 +17,7 @@ function generateWeeklyReservationDates({
   startDate,
   endDate,
   weekdays,
+  minDate,
 }) {
   if (
     typeof startDate !== "string" ||
@@ -40,6 +41,30 @@ function generateWeeklyReservationDates({
     throw new Error("INVALID_CLASS_PERIOD");
   }
 
+  let firstDate = start;
+
+  if (minDate !== undefined) {
+    if (
+      typeof minDate !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(minDate)
+    ) {
+      throw new Error("INVALID_MIN_DATE");
+    }
+
+    const minimum = DateTime.fromISO(minDate, {zone: "UTC"});
+
+    if (
+      !minimum.isValid ||
+      minimum.toISODate() !== minDate
+    ) {
+      throw new Error("INVALID_MIN_DATE");
+    }
+
+    if (minimum > firstDate) {
+      firstDate = minimum;
+    }
+  }
+
   if (
     !Array.isArray(weekdays) ||
     weekdays.length === 0 ||
@@ -56,7 +81,7 @@ function generateWeeklyReservationDates({
   const dates = [];
 
   for (
-    let current = start;
+    let current = firstDate;
     current <= end;
     current = current.plus({days: 1})
   ) {

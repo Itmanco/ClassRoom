@@ -5036,6 +5036,20 @@ exports.updateSchoolTimeZone = onCall(
 );
 
 /**
+ * Validates optional reservation notes.
+ *
+ * @param {unknown} value Reservation notes.
+ * @return {string|undefined} Validated notes or undefined.
+ */
+function validateReservationNotes(value) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length > 1000) {
+    throw new HttpsError("invalid-argument", "INVALID_RESERVATION_NOTES");
+  }
+  return value;
+}
+
+/**
  * Creates one dated room reservation.
  *
  * @param {Object} request Callable request.
@@ -5044,6 +5058,7 @@ exports.updateSchoolTimeZone = onCall(
 exports.createRoomReservation = onCall(
     async (request) => {
       const data = request.data || {};
+      const notes = validateReservationNotes(data.notes);
 
       const schoolId = validateAvailabilityId(
           data.schoolId,
@@ -5237,6 +5252,7 @@ exports.createRoomReservation = onCall(
               endsAt: new Date(resolved.endsAtMillis),
               status: "active",
               seriesId: null,
+              notes: notes ?? "",
               createdByUid: actor.uid,
               createdAt: FieldValue.serverTimestamp(),
             });
@@ -5294,6 +5310,7 @@ exports.createRoomReservation = onCall(
 exports.createWeeklyRoomReservations = onCall(
     async (request) => {
       const data = request.data || {};
+      const notes = validateReservationNotes(data.notes);
 
       const schoolId = validateAvailabilityId(
           data.schoolId,
@@ -5392,6 +5409,13 @@ exports.createWeeklyRoomReservations = onCall(
               );
             }
 
+            const timeZone =
+              schoolData.timeZone || "Asia/Tokyo";
+
+            const today = DateTime.now()
+                .setZone(timeZone)
+                .toISODate();
+
             let dates;
 
             try {
@@ -5399,6 +5423,7 @@ exports.createWeeklyRoomReservations = onCall(
                 startDate: classData.startDate,
                 endDate: classData.endDate,
                 weekdays: data.weekdays,
+                minDate: today,
               });
             } catch (error) {
               throw new HttpsError(
@@ -5407,10 +5432,9 @@ exports.createWeeklyRoomReservations = onCall(
               );
             }
 
-            const timeZone =
-              schoolData.timeZone || "Asia/Tokyo";
+            const nowMillis = Date.now();
 
-            const occurrences = dates.map((localDate) => {
+            const occurrences = dates.flatMap((localDate) => {
               let resolved;
 
               try {
@@ -5427,11 +5451,8 @@ exports.createWeeklyRoomReservations = onCall(
                 );
               }
 
-              if (resolved.startsAtMillis <= Date.now()) {
-                throw new HttpsError(
-                    "failed-precondition",
-                    "ROOM_RESERVATION_ALREADY_STARTED",
-                );
+              if (resolved.startsAtMillis <= nowMillis) {
+                return [];
               }
 
               if (!reservationFitsSchoolHours(
@@ -5448,12 +5469,19 @@ exports.createWeeklyRoomReservations = onCall(
                 );
               }
 
-              return {
+              return [{
                 ...resolved,
                 dayRef: daysRef.doc(`${roomId}_${localDate}`),
                 reservationRef: reservationsRef.doc(),
-              };
+              }];
             });
+
+            if (occurrences.length === 0) {
+              throw new HttpsError(
+                  "failed-precondition",
+                  "NO_FUTURE_RESERVATION_OCCURRENCES",
+              );
+            }
 
             // Read every affected day before writing anything.
             const daySnapshots = await Promise.all(
@@ -5522,6 +5550,7 @@ exports.createWeeklyRoomReservations = onCall(
                 endsAt: new Date(item.endsAtMillis),
                 status: "active",
                 seriesId,
+                notes: notes ?? "",
                 createdByUid: actor.uid,
                 createdAt: FieldValue.serverTimestamp(),
               });
@@ -5564,7 +5593,7 @@ exports.createWeeklyRoomReservations = onCall(
               classId,
               roomId,
               occurrenceCount: occurrences.length,
-              dates,
+              dates: occurrences.map((item) => item.localDate),
             };
           },
       );
@@ -5821,6 +5850,7 @@ exports.cancelRoomReservations = onCall(
 exports.updateRoomReservations = onCall(
     async (request) => {
       const data = request.data || {};
+      const notes = validateReservationNotes(data.notes);
 
       const schoolId = validateAvailabilityId(
           data.schoolId,
@@ -6209,6 +6239,7 @@ exports.updateRoomReservations = onCall(
           // Update every affected reservation without changing its date or room.
           for (const item of updates) {
             transaction.update(item.ref, {
+              ...(notes === undefined ? {} : {notes}),
               localStartTime: item.resolved.startTime,
               localEndTime: item.resolved.endTime,
               timeZone,
@@ -6531,6 +6562,7 @@ exports.updateRoomReservations = onCall(
         }
 
         transaction.update(reservationRef, {
+          ...(notes === undefined ? {} : {notes}),
           localDate: resolved.localDate,
           localStartTime: resolved.startTime,
           localEndTime: resolved.endTime,

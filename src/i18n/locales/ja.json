@@ -1,4 +1,25 @@
 {
+  "reservationCalendar": {
+      "title": "クラスの予約カレンダー",
+      "viewReservations": "予約を見る",
+      "previousMonth": "前の月",
+      "nextMonth": "次の月",
+      "previousYear": "前年",
+      "nextYear": "翌年",
+      "today": "今日",
+      "more": "件追加",
+      "close": "閉じる",
+      "loading": "予約を読み込み中…",
+      "loadError": "予約を読み込めませんでした",
+      "upcoming": "今後",
+      "past": "過去",
+      "cancelled": "キャンセル済み",
+      "weeklySeries": "毎週の予約",
+      "selectDate": "日付を選択",
+      "notes": "予約メモ",
+      "noNotes": "メモはありません。",
+      "noReservations": "この日に表示する予約はありません。"
+    },
   "app": {
     "name": "教室管理"
   },
@@ -424,6 +445,9 @@
     "title": "教室予約",
     "description": "授業で使用する教室の予約を作成・管理します。",
     "form": {
+      "notes": "予約メモ",
+      "notesPlaceholder": "連絡事項・必要な備品など（任意）",
+      "noNotes": "メモはありません。",
       "title": "教室を予約",
       "reservationType": "予約の種類",
       "single": "単発予約",
@@ -489,7 +513,10 @@
       "invalidClassPeriod": "選択したクラスの開始日または終了日が正しくありません。定期予約を作成する前にクラスの期間を修正してください。",
       "invalidWeekdays": "選択した曜日が正しくありません。有効な曜日を1つ以上選択してください。",
       "seriesTooLarge": "定期予約の件数が上限の60件を超えています。クラスの期間を短くするか、選択する曜日を減らしてください。",
-      "noOccurrences": "クラスの期間内に、選択した曜日に該当する予約日がありません。"
+      "noOccurrences": "クラスの期間内に、選択した曜日に該当する予約日がありません。",
+      "outsideClassPeriod": "選択した日付はクラスの開講期間外です。クラスの開始日から終了日までの範囲で予約してください。",
+      "reservationAlreadyStarted": "予約開始時刻を過ぎています。未来の日時を選択してください。",
+      "invalidReservationTime": "選択した予約時間は利用できません。学校の営業時間内で有効な時間を選択してください。"
     },
     "weekdays": {
       "monday": "月曜日",
@@ -521,6 +548,17 @@
       "confirmSingle": "{date} の予約時刻を {startTime}～{endTime} に変更しますか？",
       "confirmFutureSeries": "{date} の予約と、同じ定期予約に含まれる以降の有効な予約をすべて {startTime}～{endTime} に変更しますか？以前の予約とキャンセル済みの予約は変更されません。",
       "success": "{count} 件の予約を更新しました。"
+    },
+    "requirements": {
+      "title": "予約を作成できません。以下の設定をご確認ください。",
+      "noSchool": "予約を作成する前に学校を選択してください。",
+      "loading": "予約作成に必要な設定を確認しています...",
+      "timeZone": "学校のタイムゾーンを読み込めませんでした。",
+      "operatingHoursError": "学校の営業時間を読み込めませんでした。もう一度お試しください。",
+      "operatingHours": "予約を作成する前に学校の営業時間を設定してください。",
+      "noOpenHours": "少なくとも1日は営業時間を設定してください。",
+      "noRooms": "少なくとも1つの教室を作成するか、有効にしてください。",
+      "noClasses": "有効な教室が割り当てられたクラスを作成してください。"
     }
   },
   "classes": {

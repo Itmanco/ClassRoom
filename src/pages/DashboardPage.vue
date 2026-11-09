@@ -371,7 +371,7 @@ export default {
   props: {
     schoolId: {
       type: String,
-      required: true,
+      default: null,
     },
 
     actorRole: {
@@ -528,6 +528,9 @@ export default {
       this.studentLoadVersion += 1;
       this.errorMessage = "";
       this.expandedSeatingClassIds = {};
+      if (!this.schoolId) {
+        return;
+      }
 
       if (this.isTeacher && !this.actorUid) {
         return;

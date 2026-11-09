@@ -1,4 +1,25 @@
 {
+  "reservationCalendar": {
+      "title": "Class Reservations",
+      "viewReservations": "View Reservations",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "today": "Today",
+      "more": "more",
+      "close": "Close",
+      "loading": "Loading reservations…",
+      "loadError": "Unable to load reservations",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "cancelled": "Cancelled",
+      "weeklySeries": "Weekly series",
+      "selectDate": "Select a date",
+      "notes": "Reservation Notes",
+      "noNotes": "No notes added.",
+      "noReservations": "No visible reservations for this date."
+    },
   "app": {
     "name": "Classroom Manager"
   },
@@ -424,6 +445,9 @@
     "title": "Room Reservations",
     "description": "Create and manage classroom room reservations.",
     "form": {
+      "notes": "Reservation Notes",
+      "notesPlaceholder": "Instructions, equipment, or comments (optional)",
+      "noNotes": "No notes added.",
       "title": "Create reservation",
       "reservationType": "Reservation type",
       "single": "Single reservation",
@@ -489,7 +513,10 @@
       "invalidClassPeriod": "The selected class has an invalid start or end date. Please update the class period before creating weekly reservations.",
       "invalidWeekdays": "The selected weekdays are invalid. Please select one or more valid weekdays.",
       "seriesTooLarge": "This weekly reservation series exceeds the maximum of 60 occurrences. Please shorten the class period or select fewer weekdays.",
-      "noOccurrences": "No reservation dates match the selected weekdays within the class period."
+      "noOccurrences": "No reservation dates match the selected weekdays within the class period.",
+      "outsideClassPeriod": "The selected date is outside the class period. Please choose a date between the class start and end dates.",
+      "reservationAlreadyStarted": "The reservation start time has already passed. Please select a future date and time.",
+      "invalidReservationTime": "The selected reservation time is no longer available. Please choose a valid time within school operating hours."
     },
     "weekdays": {
       "monday": "Monday",
@@ -521,6 +548,17 @@
       "confirmSingle": "Change the reservation on {date} to {startTime}–{endTime}?",
       "confirmFutureSeries": "Change the reservation on {date} and all subsequent active occurrences in this weekly series to {startTime}–{endTime}? Earlier and cancelled occurrences will remain unchanged.",
       "success": "Successfully updated {count} reservation(s)."
+    },
+    "requirements": {
+      "title": "Reservation creation is unavailable. Please check the following requirements:",
+      "noSchool": "Select a school before creating a reservation.",
+      "loading": "Checking reservation requirements...",
+      "timeZone": "The school time zone could not be loaded.",
+      "operatingHoursError": "Unable to load school operating hours. Please try again.",
+      "operatingHours": "Configure school operating hours before creating reservations.",
+      "noOpenHours": "Configure at least one day with open operating hours.",
+      "noRooms": "Create or activate at least one room.",
+      "noClasses": "Create an active class assigned to an active room."
     }
   },
   "classes": {

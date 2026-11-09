@@ -397,6 +397,14 @@
           
           <button
             v-if="canManageClasses"
+            type="button"
+            @click="reservationCalendarClass = item"
+          >
+            {{ $t("reservationCalendar.viewReservations") }}
+          </button>
+
+          <button
+            v-if="canManageClasses"
             @click="editClass(item)"
           >
             {{ $t("common.edit") }}
@@ -574,10 +582,19 @@
         </div>
       </div>
     </div>
+    <ClassReservationCalendar
+      v-if="canManageClasses && reservationCalendarClass"
+      :key="`${schoolId}-${reservationCalendarClass.id}`"
+      :school-id="schoolId"
+      :class-item="reservationCalendarClass"
+      :rooms="rooms"
+      @close="reservationCalendarClass = null"
+    />
   </div>
 </template>
 
 <script>
+import ClassReservationCalendar from "../components/ClassReservationCalendar.vue";
 import {
   archiveClass,
   saveClass,
@@ -617,6 +634,7 @@ function emptyForm() {
 
 export default {
   name: "ClassManager",
+  components: {ClassReservationCalendar},
 
   props: {
     schoolId: {
@@ -639,6 +657,7 @@ export default {
   data() {
     return {
       classes: [],
+      reservationCalendarClass: null,
       courses: [],
       rooms: [],
       teachers: [],
@@ -761,11 +780,13 @@ export default {
 
   watch: {
     schoolId() {
+      this.reservationCalendarClass = null;
       this.resetForm();
       this.startListeners();
     },
 
     actorRole() {
+      this.reservationCalendarClass = null;
       this.resetForm();
       this.startListeners();
     },

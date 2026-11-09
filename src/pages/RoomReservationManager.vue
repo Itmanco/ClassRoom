@@ -16,6 +16,7 @@
         <button
           type="button"
           class="primary-button"
+          :disabled="!canCreateReservation"
           :aria-expanded="showCreateForm"
           @click="toggleCreateForm"
         >
@@ -25,6 +26,25 @@
               : $t("reservations.timeline.newReservation")
           }}
         </button>
+      </div>
+
+      <div
+        v-if="!canCreateReservation"
+        class="reservation-requirements notice"
+        role="status"
+      >
+        <p>
+          {{ $t("reservations.requirements.title") }}
+        </p>
+
+        <ul>
+          <li
+            v-for="issue in reservationCreationIssues"
+            :key="issue"
+          >
+            {{ $t(issue) }}
+          </li>
+        </ul>
       </div>
 
       <div v-if="showCreateForm" class="creation-content">
@@ -92,7 +112,8 @@
             <input
               v-model="form.localDate"
               type="date"
-              :disabled="saving"
+              :min="schoolTodayDate"
+              :disabled="saving || !schoolTimeZone"
               required
             />
           </label>
@@ -137,11 +158,11 @@
           <label>
             {{ $t("reservations.form.startTime") }}
 
-            <input
+            <TimeSelect24
               v-model="form.localStartTime"
-              type="time"
-              step="900"
-              :disabled="saving"
+              :label="$t('reservations.form.startTime')"
+              :allowed-times="creationAllowedStartTimes"
+              :disabled="saving || creationAllowedStartTimes.length === 0"
               required
             />
           </label>
@@ -149,12 +170,23 @@
           <label>
             {{ $t("reservations.form.endTime") }}
 
-            <input
+            <TimeSelect24
               v-model="form.localEndTime"
-              type="time"
-              step="900"
-              :disabled="saving"
+              :label="$t('reservations.form.endTime')"
+              :allowed-times="creationAllowedEndTimes"
+              :disabled="saving || creationAllowedEndTimes.length === 0"
               required
+            />
+          </label>
+
+          <label class="full-width">
+            {{ $t("reservations.form.notes") }}
+            <textarea
+              v-model="form.notes"
+              :disabled="saving"
+              maxlength="1000"
+              rows="3"
+              :placeholder="$t('reservations.form.notesPlaceholder')"
             />
           </label>
 
@@ -326,6 +358,11 @@
           {{ selectedReservation.status }}
         </p>
 
+        <p class="reservation-notes">
+          <strong>{{ $t("reservations.form.notes") }}:</strong>
+          <span class="reservation-notes-text">{{ selectedReservation.notes || $t("reservations.form.noNotes") }}</span>
+        </p>
+
         <div
           v-if="canEditSelectedReservation"
           class="reservation-editing"
@@ -374,23 +411,40 @@
 
             <label>
               {{ $t("reservations.form.startTime") }}
-              <input
+              <TimeSelect24
                 v-model="editForm.startTime"
-                type="time"
-                step="900"
-                :disabled="savingReservationEdit"
+                :label="$t('reservations.form.startTime')"
+                :allowed-times="allowedEditStartTimes"
+                :disabled="
+                  savingReservationEdit ||
+                  allowedEditStartTimes.length === 0
+                "
                 required
               />
             </label>
 
             <label>
               {{ $t("reservations.form.endTime") }}
-              <input
+              <TimeSelect24
                 v-model="editForm.endTime"
-                type="time"
-                step="900"
-                :disabled="savingReservationEdit"
+                :label="$t('reservations.form.endTime')"
+                :allowed-times="allowedEditEndTimes"
+                :disabled="
+                  savingReservationEdit ||
+                  allowedEditEndTimes.length === 0
+                "
                 required
+              />
+            </label>
+
+            <label class="full-width">
+              {{ $t("reservations.form.notes") }}
+              <textarea
+                v-model="editForm.notes"
+                :disabled="savingReservationEdit"
+                maxlength="1000"
+                rows="3"
+                :placeholder="$t('reservations.form.notesPlaceholder')"
               />
             </label>
 
@@ -507,11 +561,14 @@ import {
 import RoomReservationTimeline from
   "../components/RoomReservationTimeline.vue";
 
+import TimeSelect24 from "../components/TimeSelect24.vue";
+
 export default {
   name: "RoomReservationManager",
 
   components: {
     RoomReservationTimeline,
+    TimeSelect24,
   },
 
   props: {
@@ -537,6 +594,8 @@ export default {
       unsubscribeClasses: null,
       unsubscribeRooms: null,
       schoolTimeZone: "",
+      schoolCurrentTime: null,
+      schoolClockInterval: null,
       loadingTimeZone: true,
       timeZoneError: "",
       operatingHours: null,
@@ -558,6 +617,7 @@ export default {
       editForm: {
         startTime: "",
         endTime: "",
+        notes: "",
       },
 
       reservationMode: "single",
@@ -578,11 +638,295 @@ export default {
         localDate: "",
         localStartTime: "",
         localEndTime: "",
+        notes: "",
       },
     };
   },
 
   computed: {
+    schoolTodayDate() {
+      return this.schoolCurrentTime?.date || this.schoolToday();
+    },
+
+    allowedStartTimes() {
+      if (this.reservationMode !== "single") {
+        return [];
+      }
+
+      const intervals = this.getOperatingIntervalsForDate(
+        this.form.localDate,
+      );
+
+      const allowed = new Set();
+
+      for (const interval of intervals) {
+        const [startHour, startMinute] =
+          interval.startTime.split(":").map(Number);
+
+        const [endHour, endMinute] =
+          interval.endTime.split(":").map(Number);
+
+        const opening = startHour * 60 + startMinute;
+        const closing = endHour * 60 + endMinute;
+
+        const firstSlot = Math.ceil(opening / 5) * 5;
+        const lastSlot = closing - 30;
+
+        for (
+          let minute = firstSlot;
+          minute <= lastSlot;
+          minute += 5
+        ) {
+          const hour = Math.floor(minute / 60);
+          const minutes = minute % 60;
+
+          allowed.add(
+            `${String(hour).padStart(2, "0")}:` +
+            `${String(minutes).padStart(2, "0")}`,
+          );
+        }
+      }
+
+      const now = this.schoolCurrentTime;
+
+      if (now && this.form.localDate < now.date) {
+        return [];
+      }
+
+      if (now && this.form.localDate === now.date) {
+        const [hour, minute] = now.time.split(":").map(Number);
+        const currentMinutes = hour * 60 + minute;
+
+        return [...allowed]
+          .filter((time) => {
+            const [slotHour, slotMinute] = time.split(":").map(Number);
+            return slotHour * 60 + slotMinute > currentMinutes;
+          })
+          .sort();
+      }
+
+      return [...allowed].sort();
+    },
+
+    allowedEndTimes() {
+      if (this.reservationMode !== "single") {
+        return [];
+      }
+
+      const startTime = this.form.localStartTime;
+
+      if (!startTime || !this.allowedStartTimes.includes(startTime)) {
+        return [];
+      }
+
+      const [startHour, startMinute] = startTime.split(":").map(Number);
+      const start = startHour * 60 + startMinute;
+
+      const intervals = this.getOperatingIntervalsForDate(
+        this.form.localDate,
+      );
+
+      const allowed = new Set();
+
+      for (const interval of intervals) {
+        const [openHour, openMinute] =
+          interval.startTime.split(":").map(Number);
+
+        const [closeHour, closeMinute] =
+          interval.endTime.split(":").map(Number);
+
+        const opening = openHour * 60 + openMinute;
+        const closing = closeHour * 60 + closeMinute;
+
+        if (start < opening || start >= closing) {
+          continue;
+        }
+
+        const firstEnd = start + 15;
+        const lastEnd = Math.floor(closing / 5) * 5;
+
+        for (
+          let minute = firstEnd;
+          minute <= lastEnd;
+          minute += 5
+        ) {
+          allowed.add(
+            `${String(Math.floor(minute / 60)).padStart(2, "0")}:` +
+            `${String(minute % 60).padStart(2, "0")}`,
+          );
+        }
+      }
+
+      return [...allowed].sort();
+    },
+
+    allowedEditStartTimes() {
+      const reservation = this.selectedReservation;
+
+      if (!reservation || !this.schoolTimeZone) {
+        return [];
+      }
+
+      const intervals = this.getOperatingIntervalsForDate(
+        reservation.localDate,
+      );
+
+      const now = this.schoolCurrentTime;
+      const allowed = new Set();
+
+      for (const interval of intervals) {
+        const [startHour, startMinute] =
+          interval.startTime.split(":").map(Number);
+        const [endHour, endMinute] =
+          interval.endTime.split(":").map(Number);
+
+        const opening = startHour * 60 + startMinute;
+        const closing = endHour * 60 + endMinute;
+
+        const firstSlot = Math.ceil(opening / 5) * 5;
+        const lastSlot = closing - 30;
+
+        for (let minute = firstSlot; minute <= lastSlot; minute += 5) {
+          if (now && reservation.localDate <= now.date) {
+            if (reservation.localDate < now.date) {
+              continue;
+            }
+
+            const [nowHour, nowMinute] = now.time.split(":").map(Number);
+
+            if (minute <= nowHour * 60 + nowMinute) {
+              continue;
+            }
+          }
+
+          allowed.add(
+            `${String(Math.floor(minute / 60)).padStart(2, "0")}:` +
+            `${String(minute % 60).padStart(2, "0")}`,
+          );
+        }
+      }
+
+      return [...allowed].sort();
+    },
+
+    allowedEditEndTimes() {
+      const reservation = this.selectedReservation;
+
+      if (!reservation || !this.schoolTimeZone) {
+        return [];
+      }
+
+      const startTime = this.editForm.startTime;
+
+      if (!startTime || !this.allowedEditStartTimes.includes(startTime)) {
+        return [];
+      }
+
+      const [startHour, startMinute] = startTime.split(":").map(Number);
+      const start = startHour * 60 + startMinute;
+
+      const intervals = this.getOperatingIntervalsForDate(
+        reservation.localDate,
+      );
+
+      const allowed = new Set();
+
+      for (const interval of intervals) {
+        const [openHour, openMinute] =
+          interval.startTime.split(":").map(Number);
+        const [closeHour, closeMinute] =
+          interval.endTime.split(":").map(Number);
+
+        const opening = openHour * 60 + openMinute;
+        const closing = closeHour * 60 + closeMinute;
+
+        if (start < opening || start >= closing) {
+          continue;
+        }
+
+        const firstEnd = start + 15;
+        const lastEnd = Math.floor(closing / 5) * 5;
+
+        for (
+          let minute = firstEnd;
+          minute <= lastEnd;
+          minute += 5
+        ) {
+          allowed.add(
+            `${String(Math.floor(minute / 60)).padStart(2, "0")}:` +
+            `${String(minute % 60).padStart(2, "0")}`,
+          );
+        }
+      }
+
+      return [...allowed].sort();
+    },
+
+    reservationCreationIssues() {
+      if (!this.schoolId) {
+        return ["reservations.requirements.noSchool"];
+      }
+
+      if (
+        this.loadingClasses ||
+        this.loadingRooms ||
+        this.loadingTimeZone ||
+        this.loadingOperatingHours
+      ) {
+        return ["reservations.requirements.loading"];
+      }
+
+      const issues = [];
+
+      if (!this.schoolTimeZone || this.timeZoneError) {
+        issues.push("reservations.requirements.timeZone");
+      }
+
+      if (this.operatingHoursError) {
+        issues.push("reservations.requirements.operatingHoursError");
+      } else if (!this.operatingHours) {
+        issues.push("reservations.requirements.operatingHours");
+      } else {
+        const hasOpenHours = Object.values(
+          this.operatingHours,
+        ).some(
+          (intervals) =>
+            Array.isArray(intervals) &&
+            intervals.some(
+              (interval) =>
+                interval.startTime &&
+                interval.endTime &&
+                interval.startTime < interval.endTime,
+            ),
+        );
+
+        if (!hasOpenHours) {
+          issues.push("reservations.requirements.noOpenHours");
+        }
+      }
+
+      if (this.activeRooms.length === 0) {
+        issues.push("reservations.requirements.noRooms");
+      }
+
+      const activeRoomIds = new Set(
+        this.activeRooms.map((room) => room.id),
+      );
+
+      const hasEligibleClass = this.eligibleClasses.some(
+        (item) => activeRoomIds.has(item.roomId),
+      );
+
+      if (!hasEligibleClass) {
+        issues.push("reservations.requirements.noClasses");
+      }
+
+      return issues;
+    },
+
+    canCreateReservation() {
+      return this.reservationCreationIssues.length === 0;
+    },
     eligibleClasses() {
       return this.classes.filter(
         (item) =>
@@ -698,9 +1042,223 @@ export default {
         this.selectedReservation?.seriesId,
       );
     },
+
+    creationAllowedStartTimes() {
+      return this.reservationMode === "weekly" ?
+        this.allowedWeeklyStartTimes : this.allowedStartTimes;
+    },
+
+    creationAllowedEndTimes() {
+      return this.reservationMode === "weekly" ?
+        this.allowedWeeklyEndTimes : this.allowedEndTimes;
+    },
+
+    weeklyReservationDates() {
+      const selectedClass = this.selectedClass;
+      const now = this.schoolCurrentTime;
+
+      if (
+        !selectedClass?.startDate ||
+        !selectedClass?.endDate ||
+        !now ||
+        this.selectedWeekdays.length === 0
+      ) {
+        return [];
+      }
+
+      const startDate =
+        selectedClass.startDate > now.date ?
+          selectedClass.startDate : now.date;
+
+      const endDate = selectedClass.endDate;
+
+      if (startDate > endDate) {
+        return [];
+      }
+
+      const selected = new Set(
+        this.selectedWeekdays.map(Number),
+      );
+
+      const dates = [];
+      const current = new Date(`${startDate}T00:00:00Z`);
+      const last = new Date(`${endDate}T00:00:00Z`);
+
+      if (
+        Number.isNaN(current.getTime()) ||
+        Number.isNaN(last.getTime())
+      ) {
+        return [];
+      }
+
+      while (current <= last && dates.length <= 60) {
+        const weekday = current.getUTCDay() || 7;
+
+        if (selected.has(weekday)) {
+          dates.push(current.toISOString().slice(0, 10));
+        }
+
+        current.setUTCDate(current.getUTCDate() + 1);
+      }
+
+      return dates;
+    },
+
+    allowedWeeklyStartTimes() {
+      if (
+        !this.operatingHours ||
+        !this.selectedWeekdays.length ||
+        !this.weeklyReservationDates.length ||
+        this.weeklyReservationDates.length > 60
+      ) {
+        return [];
+      }
+
+      const weekdayKeys = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+
+      const allowed = new Set();
+
+      for (let minute = 0; minute < 1440; minute += 5) {
+        const startTime =
+          `${String(Math.floor(minute / 60)).padStart(2, "0")}:` +
+          `${String(minute % 60).padStart(2, "0")}`;
+
+        const validEveryDay = this.selectedWeekdays.every((day) => {
+          const key = weekdayKeys[Number(day) - 1];
+          const intervals = this.operatingHours[key] || [];
+
+          return intervals.some((interval) => {
+            const [openHour, openMinute] =
+              interval.startTime.split(":").map(Number);
+
+            const [closeHour, closeMinute] =
+              interval.endTime.split(":").map(Number);
+
+            const opening = openHour * 60 + openMinute;
+            const closing = closeHour * 60 + closeMinute;
+
+            return minute >= opening && minute + 30 <= closing;
+          });
+        });
+
+        if (validEveryDay) {
+          allowed.add(startTime);
+        }
+      }
+
+      return [...allowed].sort();
+    },
+
+    allowedWeeklyEndTimes() {
+      const startTime = this.form.localStartTime;
+
+      if (
+        !startTime ||
+        !this.allowedWeeklyStartTimes.includes(startTime)
+      ) {
+        return [];
+      }
+
+      const [hour, minute] = startTime.split(":").map(Number);
+      const start = hour * 60 + minute;
+
+      const weekdayKeys = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+
+      const allowed = [];
+
+      for (let end = start + 15; end <= 1440; end += 5) {
+        const validEveryDay = this.selectedWeekdays.every((day) => {
+          const intervals =
+            this.operatingHours[weekdayKeys[Number(day) - 1]] || [];
+
+          return intervals.some((interval) => {
+            const [openHour, openMinute] =
+              interval.startTime.split(":").map(Number);
+
+            const [closeHour, closeMinute] =
+              interval.endTime.split(":").map(Number);
+
+            return (
+              start >= openHour * 60 + openMinute &&
+              end <= closeHour * 60 + closeMinute
+            );
+          });
+        });
+
+        if (validEveryDay && end < 1440) {
+          allowed.push(
+            `${String(Math.floor(end / 60)).padStart(2, "0")}:` +
+            `${String(end % 60).padStart(2, "0")}`,
+          );
+        }
+      }
+
+      return allowed;
+    },
   },
 
   watch: {
+    "form.localStartTime"(newStartTime) {
+      if (!newStartTime || !/^\d{2}:\d{2}$/.test(newStartTime)) {
+        this.form.localEndTime = "";
+        return;
+      }
+
+      const [hour, minute] = newStartTime.split(":").map(Number);
+      const endMinutes = hour * 60 + minute + 15;
+
+      this.form.localEndTime =
+        `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:` +
+        `${String(endMinutes % 60).padStart(2, "0")}`;
+    },
+
+    "editForm.startTime"(newStartTime, oldStartTime) {
+      if (
+        !this.editingReservation ||
+        !oldStartTime ||
+        newStartTime === oldStartTime
+      ) {
+        return;
+      }
+
+      if (
+        !newStartTime ||
+        !this.allowedEditStartTimes.includes(newStartTime)
+      ) {
+        this.editForm.endTime = "";
+        return;
+      }
+
+      const [hour, minute] = newStartTime.split(":").map(Number);
+      const endMinutes = hour * 60 + minute + 15;
+
+      this.editForm.endTime =
+        `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:` +
+        `${String(endMinutes % 60).padStart(2, "0")}`;
+    },
+
+    canCreateReservation(canCreate) {
+      if (!canCreate) {
+        this.showCreateForm = false;
+      }
+    },
+
     schoolId() {
       this.startListeners();
     },
@@ -734,17 +1292,32 @@ export default {
         this.form.localDate = this.selectedDate;
         this.suggestReservationTimes();
       } else {
-        this.form.localStartTime = "";
-        this.form.localEndTime = "";
+        this.suggestWeeklyReservationTimes();
+      }
+    },
+
+    selectedWeekdays() {
+      if (this.reservationMode === "weekly") {
+        this.suggestWeeklyReservationTimes();
       }
     },
   },
 
   mounted() {
     this.startListeners();
+
+    this.schoolCurrentTime = this.schoolNow();
+
+    this.schoolClockInterval = setInterval(() => {
+      this.schoolCurrentTime = this.schoolNow();
+    }, 30000);
   },
 
   beforeUnmount() {
+    if (this.schoolClockInterval !== null) {
+      clearInterval(this.schoolClockInterval);
+      this.schoolClockInterval = null;
+    }
     this.stopClassesListener();
     this.stopRoomsListener();
     this.stopReservationsListener();
@@ -767,6 +1340,7 @@ export default {
       this.editForm = {
         startTime: reservation.localStartTime,
         endTime: reservation.localEndTime,
+        notes: reservation.notes || "",
       };
     },
 
@@ -784,6 +1358,7 @@ export default {
       this.editForm = {
         startTime: reservation.localStartTime,
         endTime: reservation.localEndTime,
+        notes: reservation.notes || "",
       };
 
       this.editScope = "single";
@@ -830,6 +1405,35 @@ export default {
         return;
       }
 
+      const now = this.schoolNow();
+
+      if (
+        !now ||
+        reservation.localDate < now.date ||
+        (
+          reservation.localDate === now.date &&
+          startTime <= now.time
+        )
+      ) {
+        this.editError = this.$t(
+          "reservations.messages.reservationAlreadyStarted",
+        );
+        return;
+      }
+
+      // Refresh the available times before validating the edit.
+      this.schoolCurrentTime = now;
+
+      if (
+        !this.allowedEditStartTimes.includes(startTime) ||
+        !this.allowedEditEndTimes.includes(endTime)
+      ) {
+        this.editError = this.$t(
+          "reservations.messages.invalidReservationTime",
+        );
+        return;
+      }
+
       const confirmed = window.confirm(
         this.$t(
           scope === "future-series" ?
@@ -859,6 +1463,7 @@ export default {
           startTime,
           endTime,
           reservation.localDate,
+          this.editForm.notes,
         );
 
         if (this.schoolId !== schoolId) {
@@ -981,6 +1586,30 @@ export default {
         parts.find((item) => item.type === type)?.value;
 
       return `${part("year")}-${part("month")}-${part("day")}`;
+    },
+
+    schoolNow() {
+      if (!this.schoolTimeZone) {
+        return null;
+      }
+
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: this.schoolTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(new Date());
+
+      const part = (type) =>
+        parts.find((item) => item.type === type)?.value;
+
+      return {
+        date: `${part("year")}-${part("month")}-${part("day")}`,
+        time: `${part("hour")}:${part("minute")}`,
+      };
     },
 
     changeDate(days) {
@@ -1207,6 +1836,38 @@ export default {
 
       const isWeekly = this.reservationMode === "weekly";
 
+      if (!isWeekly) {
+        const now = this.schoolNow();
+
+        if (
+          !now ||
+          !this.form.localDate ||
+          this.form.localDate < now.date ||
+          (
+            this.form.localDate === now.date &&
+            this.form.localStartTime <= now.time
+          )
+        ) {
+          this.errorMessage = this.$t(
+            "reservations.messages.reservationAlreadyStarted",
+          );
+          return;
+        }
+
+        // Refresh the reactive clock before validating available times.
+        this.schoolCurrentTime = now;
+
+        if (
+          !this.allowedStartTimes.includes(this.form.localStartTime) ||
+          !this.allowedEndTimes.includes(this.form.localEndTime)
+        ) {
+          this.errorMessage = this.$t(
+            "reservations.messages.invalidReservationTime",
+          );
+          return;
+        }
+      }
+
       if (isWeekly) {
         if (!this.selectedClass.startDate || !this.selectedClass.endDate) {
           this.errorMessage = this.$t(
@@ -1221,6 +1882,43 @@ export default {
           );
           return;
         }
+
+        this.schoolCurrentTime = this.schoolNow();
+
+        if (
+          this.weeklyReservationDates.length === 0 ||
+          this.weeklyReservationDates.length > 60 ||
+          !this.allowedWeeklyStartTimes.includes(
+            this.form.localStartTime,
+          ) ||
+          !this.allowedWeeklyEndTimes.includes(
+            this.form.localEndTime,
+          )
+        ) {
+          this.errorMessage = this.$t(
+            "reservations.messages.invalidReservationTime",
+          );
+          return;
+        }
+
+        const now = this.schoolCurrentTime;
+
+        const hasFutureOccurrence =
+          this.weeklyReservationDates.some(
+            (date) =>
+              date > now.date ||
+              (
+                date === now.date &&
+                this.form.localStartTime > now.time
+              ),
+          );
+
+        if (!hasFutureOccurrence) {
+          this.errorMessage = this.$t(
+            "reservations.messages.reservationAlreadyStarted",
+          );
+          return;
+        }
       }
 
       const schoolId = this.schoolId;
@@ -1231,6 +1929,7 @@ export default {
         localDate: this.form.localDate,
         localStartTime: this.form.localStartTime,
         localEndTime: this.form.localEndTime,
+        notes: this.form.notes,
       };
 
       this.saving = true;
@@ -1247,6 +1946,7 @@ export default {
               weekdays: [...this.selectedWeekdays],
               localStartTime: reservation.localStartTime,
               localEndTime: reservation.localEndTime,
+              notes: reservation.notes,
             },
           );
         } else {
@@ -1269,6 +1969,7 @@ export default {
         this.form.localDate = this.selectedDate;
         this.form.localStartTime = "";
         this.form.localEndTime = "";
+        this.form.notes = "";
 
         if (isWeekly) {
           this.selectedWeekdays = [];
@@ -1308,6 +2009,7 @@ export default {
         }
 
         this.schoolTimeZone = timeZone;
+        this.schoolCurrentTime = this.schoolNow();
         this.selectedDate = this.schoolToday();
       } catch (error) {
         if (this.schoolId !== schoolId) {
@@ -1365,6 +2067,8 @@ export default {
           "reservations.messages.operatingHoursNotConfigured",
         INVALID_CLASS_PERIOD:
           "reservations.messages.invalidClassPeriod",
+        RESERVATION_OUTSIDE_CLASS_PERIOD:
+          "reservations.messages.outsideClassPeriod",
         INVALID_RESERVATION_WEEKDAYS:
           "reservations.messages.invalidWeekdays",
         RESERVATION_SERIES_TOO_LARGE:
@@ -1388,6 +2092,10 @@ export default {
     },
 
     toggleCreateForm() {
+      if (!this.canCreateReservation) {
+        return;
+      }
+
       this.showCreateForm = !this.showCreateForm;
 
       if (this.showCreateForm) {
@@ -1429,21 +2137,36 @@ export default {
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
     },
 
-    suggestReservationTimes() {
-      const intervals = this.getOperatingIntervalsForDate(
-        this.form.localDate,
-      );
+    suggestWeeklyReservationTimes() {
+      const startTime = this.allowedWeeklyStartTimes[0];
 
-      if (intervals.length === 0) {
+      if (!startTime) {
         this.form.localStartTime = "";
         this.form.localEndTime = "";
         return;
       }
 
-      const firstInterval = intervals[0];
+      this.form.localStartTime = startTime;
+      this.form.localEndTime =
+        this.allowedWeeklyEndTimes[0] || "";
+    },
 
-      this.form.localStartTime = firstInterval.startTime;
-      this.form.localEndTime = firstInterval.endTime;
+    suggestReservationTimes() {
+      const startTime = this.allowedStartTimes[0];
+
+      if (!startTime) {
+        this.form.localStartTime = "";
+        this.form.localEndTime = "";
+        return;
+      }
+
+      const [hour, minute] = startTime.split(":").map(Number);
+      const endMinutes = hour * 60 + minute + 15;
+
+      this.form.localStartTime = startTime;
+      this.form.localEndTime =
+        `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:` +
+        `${String(endMinutes % 60).padStart(2, "0")}`;
     },
   },
 };
@@ -1451,6 +2174,7 @@ export default {
 
 
 <style scoped>
+.reservation-notes-text {white-space: pre-wrap; overflow-wrap: anywhere;}
 .page {
   max-width: 1050px;
   margin: 0 auto;
@@ -1494,7 +2218,8 @@ export default {
 }
 
 .reservation-form input,
-.reservation-form select {
+.reservation-form select,
+.reservation-form textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 10px;

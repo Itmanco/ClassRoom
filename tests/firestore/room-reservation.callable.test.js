@@ -101,6 +101,8 @@ async function seedFixtures() {
   await schoolRef.collection("classes").doc(CLASS_ID).set({
     name: "Test Class A",
     roomId: ROOM_ID,
+    startDate: reservationMonday.minus({days: 7}).toISODate(),
+    endDate: reservationMonday.plus({days: 90}).toISODate(),
     active: true,
   });
 
@@ -151,6 +153,7 @@ async function run() {
   assert.equal(reservation.classId, CLASS_ID);
   assert.equal(reservation.roomId, ROOM_ID);
   assert.equal(reservation.status, "active");
+  assert.equal(reservation.notes, "");
   assert.equal(
       reservation.startsAt.toDate().toISOString(),
       reservationMonday.set({hour: 9}).toUTC().toISO(),
@@ -162,6 +165,15 @@ async function run() {
   );
 
   console.log("✓ Reservation created with correct UTC timestamps");
+
+  await expectError(
+    () => callCreate("reservation-admin", {notes: "x".repeat(1001)}),
+    "invalid-argument",
+  );
+  await expectError(
+    () => callCreate("reservation-admin", {notes: 123}),
+    "invalid-argument",
+  );
 
   console.log("Test 2: First reservation locks school time zone");
 

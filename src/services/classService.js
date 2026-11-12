@@ -1,3 +1,5 @@
+import {httpsCallable} from "firebase/functions";
+import {functions} from "../firebase-init";
 import { db } from "../firebase-init";
 import {
   collection,
@@ -391,89 +393,29 @@ export async function saveClass(
   return classRef.id;
 }
 
-export async function archiveClass(
-  schoolId,
-  classId,
-  options = {},
-) {
-  const normalizedId =
-    normalizeClassCode(classId);
+export async function previewClassUpdate(schoolId, classItem) {
+  const normalized = validateClass(classItem);
+  const callable = httpsCallable(functions, "updateClassWithReservations");
+  const result = await callable({schoolId, classId: normalized.code,
+    classData: normalized, mode: "preview"});
+  return result.data;
+}
 
-  const classRef = doc(
-    getClassesRef(schoolId),
-    normalizedId,
-  );
+export async function applyClassUpdate(schoolId, classItem, preview) {
+  const normalized = validateClass(classItem);
+  const callable = httpsCallable(functions, "updateClassWithReservations");
+  const result = await callable({schoolId, classId: normalized.code,
+    classData: normalized, mode: "apply",
+    confirmedIds: preview.affectedIds,
+    expectedUpdatedAt: preview.expectedUpdatedAt});
+  return result.data;
+}
 
-  const existing =
-    await getDoc(classRef);
-
-  if (!existing.exists()) {
-    throw new Error(
-      `Class ${normalizedId} does not exist.`,
-    );
-  }
-
-  const existingData =
-    existing.data();
-
-  const batch =
-    writeBatch(db);
-
-  batch.update(
-    classRef,
-    {
-      active: false,
-      updatedAt:
-        serverTimestamp(),
-    },
-  );
-
-  const auditWrite =
-    createAuditLogWrite(
-      schoolId,
-      {
-        action:
-          "class.archived",
-
-        entityType:
-          "class",
-
-        entityId:
-          normalizedId,
-
-        actorRole:
-          options.actorRole || "",
-
-        changedFields: [
-          "active",
-        ],
-
-        details: {
-          entityName:
-            existingData.name ||
-            normalizedId,
-
-          changes: {
-            active: {
-              before:
-                existingData.active !==
-                false,
-              after: false,
-            },
-          },
-        },
-
-        context: {
-          classId:
-            normalizedId,
-        },
-      },
-    );
-
-  batch.set(
-    auditWrite.ref,
-    auditWrite.data,
-  );
-
-  await batch.commit();
+export async function archiveClass(schoolId, classId) {
+  const callable = httpsCallable(functions, "archiveClassSafely");
+  const result = await callable({
+    schoolId,
+    classId: normalizeClassCode(classId),
+  });
+  return result.data;
 }

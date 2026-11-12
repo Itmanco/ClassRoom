@@ -617,13 +617,17 @@
       "archiveConfirm": "「{code} — {name}」をアーカイブしますか？",
       "archived": "クラス「{code}」をアーカイブしました。",
       "archiveError": "クラスをアーカイブできませんでした：{error}",
+      "archiveFutureReservationsError": "今後の教室予約があるため、このクラスをアーカイブできません。先に該当する予約をキャンセルしてください。",
       "teachersLoadError": "担当教師を読み込めませんでした：{error}",
       "noAssignedTeachers": "このクラスには担当教師が割り当てられていません。",
       "noAvailableTeachers": "追加できる教師はすべて割り当て済みです。",
       "mainTeacherNotAssigned": "主担当教師は、このクラスに割り当てられている教師から選択してください。",
       "addTeacherDescription": "このクラスに追加する教師を選択してください。",
       "noMatchingTeachers": "検索条件に一致する教師はいません。",
-      "teachersSelected": "{count}名選択中"
+      "teachersSelected": "{count}名選択中",
+      "periodCancellationConfirm": "この変更により、今後の予約{count}件がキャンセルされます。続行しますか？",
+      "periodConfirmationStale": "クラスまたは予約が変更されました。内容を確認して再度保存してください。",
+      "roomHasReservations": "今後の有効な予約があるため、教室を変更できません。"
     }
   },
   "enrollments": {

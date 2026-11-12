@@ -6625,3 +6625,260 @@ exports.updateRoomReservations = onCall(
       };
     },
 );
+
+
+/**
+ * Validates an existing class edit.
+ *
+ * @param {Object} input Submitted class fields.
+ * @param {string} classId Existing class ID.
+ * @return {Object} Normalized class fields.
+ */
+function normalizeClassEdit(input, classId) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_DATA");
+  }
+  const code = validateAvailabilityId(input.code, "Class code");
+  if (code !== classId || !/^[A-Z0-9_-]+$/.test(code)) {
+    throw new HttpsError("invalid-argument", "CLASS_CODE_IMMUTABLE");
+  }
+  const fields = ["name", "courseId", "roomId"];
+  const result = {code};
+  for (const field of fields) {
+    if (typeof input[field] !== "string" || !input[field].trim()) {
+      throw new HttpsError("invalid-argument", "INVALID_CLASS_DATA");
+    }
+    result[field] = input[field].trim();
+  }
+  for (const field of ["academicYear", "semester"]) {
+    result[field] = Number(input[field]);
+  }
+  if (!Number.isInteger(result.academicYear) ||
+      result.academicYear < 2000 || result.academicYear > 2100 ||
+      !Number.isInteger(result.semester) ||
+      result.semester < 1 || result.semester > 4) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_DATA");
+  }
+  for (const field of ["startDate", "endDate"]) {
+    const value = input[field] || "";
+    if (typeof value !== "string" ||
+        (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        !DateTime.fromISO(value, {zone: "utc"}).isValid))) {
+      throw new HttpsError("invalid-argument", "INVALID_CLASS_PERIOD");
+    }
+    result[field] = value;
+  }
+  if (Boolean(result.startDate) !== Boolean(result.endDate) ||
+      (result.startDate && result.startDate > result.endDate)) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_PERIOD");
+  }
+  if (!Array.isArray(input.teacherUids) ||
+      input.teacherUids.some((uid) => typeof uid !== "string" || !uid.trim())) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_TEACHERS");
+  }
+  result.teacherUids = [...new Set(input.teacherUids.map((uid) => uid.trim()))];
+  result.mainTeacherUid = input.mainTeacherUid || "";
+  if (typeof result.mainTeacherUid !== "string" ||
+      (result.mainTeacherUid &&
+       !result.teacherUids.includes(result.mainTeacherUid))) {
+    throw new HttpsError("invalid-argument", "MAIN_TEACHER_NOT_ASSIGNED");
+  }
+  result.active = input.active !== false;
+  return result;
+}
+
+/**
+ * Finds future reservations affected by a class edit.
+ *
+ * @param {Array} docs Reservation document snapshots.
+ * @param {Object} next Proposed class fields.
+ * @param {number} nowMillis Current time in milliseconds.
+ * @return {Object} Future and affected reservations.
+ */
+function classReservationImpact(docs, next, nowMillis) {
+  const future = docs.filter((doc) => {
+    const item = doc.data();
+    return item.status === "active" &&
+      Number.isFinite(item.startsAt?.toMillis?.()) &&
+      item.startsAt.toMillis() > nowMillis;
+  });
+  const affected = future.filter((doc) => {
+    const date = doc.data().localDate;
+    return !next.startDate || !next.endDate ||
+      typeof date !== "string" ||
+      date < next.startDate || date > next.endDate;
+  });
+  return {future, affected};
+}
+
+/** Previews or atomically applies an existing class edit. */
+exports.updateClassWithReservations = onCall(async (request) => {
+  const data = request.data || {};
+  const schoolId = validateAvailabilityId(data.schoolId, "School ID");
+  const classId = validateAvailabilityId(data.classId, "Class ID");
+  const next = normalizeClassEdit(data.classData, classId);
+  const actor = await requireSchoolAdmin(request, schoolId);
+  if (!["preview", "apply"].includes(data.mode)) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_UPDATE_MODE");
+  }
+  const schoolRef = db.collection("schools").doc(schoolId);
+  const classRef = schoolRef.collection("classes").doc(classId);
+  const query = schoolRef.collection("roomReservations")
+      .where("classId", "==", classId);
+  const nowMillis = Date.now();
+  const inspect = (classSnap, reservationsSnap) => {
+    if (!classSnap.exists) {
+      throw new HttpsError("not-found", "CLASS_NOT_FOUND");
+    }
+    const previous = classSnap.data();
+    const {future, affected} = classReservationImpact(
+        reservationsSnap.docs, next, nowMillis);
+    if (future.length && next.active === false) {
+      throw new HttpsError(
+          "failed-precondition", "CLASS_HAS_FUTURE_RESERVATIONS");
+    }
+    if (future.length && previous.roomId !== next.roomId) {
+      throw new HttpsError(
+          "failed-precondition", "CLASS_ROOM_HAS_RESERVATIONS");
+    }
+    if (affected.length > 60) {
+      throw new HttpsError("resource-exhausted", "CLASS_TOO_MANY_RESERVATIONS");
+    }
+    return {previous, affected};
+  };
+  if (data.mode === "preview") {
+    const [classSnap, reservationsSnap] = await Promise.all([
+      classRef.get(), query.get(),
+    ]);
+    const {affected} = inspect(classSnap, reservationsSnap);
+    return {success: true, affectedIds: affected.map((doc) => doc.id).sort(),
+      expectedUpdatedAt: classSnap.updateTime?.toMillis?.() || null};
+  }
+  if (!Array.isArray(data.confirmedIds) ||
+      data.confirmedIds.length > 60 ||
+      data.confirmedIds.some((id) => typeof id !== "string")) {
+    throw new HttpsError("invalid-argument", "INVALID_CLASS_CONFIRMATION");
+  }
+  const expected = [...data.confirmedIds].sort();
+  const auditRef = schoolRef.collection("auditLogs").doc();
+  const result = await db.runTransaction(async (tx) => {
+    const classSnap = await tx.get(classRef);
+    const reservationsSnap = await tx.get(query);
+    const {previous, affected} = inspect(classSnap, reservationsSnap);
+    const actual = affected.map((doc) => doc.id).sort();
+    if (JSON.stringify(expected) !== JSON.stringify(actual) ||
+        data.expectedUpdatedAt !==
+          (classSnap.updateTime?.toMillis?.() || null)) {
+      throw new HttpsError("failed-precondition", "CLASS_CONFIRMATION_STALE");
+    }
+    const dayGroups = new Map();
+    for (const doc of affected) {
+      const reservation = doc.data();
+      const dayId = `${reservation.roomId}_${reservation.localDate}`;
+      if (!dayGroups.has(dayId)) dayGroups.set(dayId, new Set());
+      dayGroups.get(dayId).add(doc.id);
+    }
+    const dayUpdates = [];
+    for (const [dayId, ids] of dayGroups) {
+      const dayRef = schoolRef.collection("roomReservationDays").doc(dayId);
+      const daySnap = await tx.get(dayRef);
+      if (!daySnap.exists || !Array.isArray(daySnap.data().intervals)) {
+        throw new HttpsError(
+            "failed-precondition", "ROOM_RESERVATION_INDEX_MISSING");
+      }
+      const intervals = daySnap.data().intervals;
+      for (const id of ids) {
+        if (intervals.filter(
+            (interval) => interval.reservationId === id).length !== 1) {
+          throw new HttpsError(
+              "failed-precondition", "ROOM_RESERVATION_INDEX_MISMATCH");
+        }
+      }
+      dayUpdates.push({ref: dayRef, intervals: intervals.filter(
+          (interval) => !ids.has(interval.reservationId))});
+    }
+    tx.update(classRef, {...next, updatedAt: FieldValue.serverTimestamp()});
+    for (const day of dayUpdates) {
+      tx.update(day.ref, {intervals: day.intervals,
+        updatedAt: FieldValue.serverTimestamp()});
+    }
+    for (const doc of affected) {
+      tx.update(doc.ref, {status: "cancelled",
+        cancelledAt: FieldValue.serverTimestamp(),
+        cancelledByUid: actor.uid,
+        updatedAt: FieldValue.serverTimestamp()});
+    }
+    const fields = Object.keys(next).filter((key) =>
+      JSON.stringify(previous[key]) !== JSON.stringify(next[key]));
+    tx.set(auditRef, {action: "class.updated", entityType: "class",
+      entityId: classId, schoolId, actorUid: actor.uid, actorRole: actor.role,
+      changedFields: fields, details: {entityName: next.name,
+        cancelledCount: affected.length, reservationIds: actual,
+        changes: Object.fromEntries(fields.map((field) => [field,
+          {before: previous[field] ?? null, after: next[field]}]))},
+      context: {classId}, createdAt: FieldValue.serverTimestamp()});
+    return {success: true, classId, cancelledCount: affected.length};
+  });
+  return result;
+});
+
+
+/**
+ * Archives a class only when no future active reservations exist.
+ *
+ * @param {Object} request Callable request.
+ * @return {Promise<Object>} Archive result.
+ */
+exports.archiveClassSafely = onCall(async (request) => {
+  const data = request.data || {};
+  const schoolId = validateAvailabilityId(data.schoolId, "School ID");
+  const classId = validateAvailabilityId(data.classId, "Class ID");
+  const actor = await requireSchoolAdmin(request, schoolId);
+  const schoolRef = db.collection("schools").doc(schoolId);
+  const classRef = schoolRef.collection("classes").doc(classId);
+  const reservationsQuery = schoolRef.collection("roomReservations")
+      .where("classId", "==", classId);
+  const auditRef = schoolRef.collection("auditLogs").doc();
+  return db.runTransaction(async (tx) => {
+    const classSnap = await tx.get(classRef);
+    if (!classSnap.exists) {
+      throw new HttpsError("not-found", "CLASS_NOT_FOUND");
+    }
+    const reservationsSnap = await tx.get(reservationsQuery);
+    const nowMillis = Date.now();
+    const hasFuture = reservationsSnap.docs.some((doc) => {
+      const reservation = doc.data();
+      return reservation.status === "active" &&
+        Number.isFinite(reservation.startsAt?.toMillis?.()) &&
+        reservation.startsAt.toMillis() > nowMillis;
+    });
+    if (hasFuture) {
+      throw new HttpsError(
+          "failed-precondition", "CLASS_HAS_FUTURE_RESERVATIONS");
+    }
+    const previous = classSnap.data();
+    if (previous.active === false) {
+      return {success: true, classId, alreadyArchived: true};
+    }
+    tx.update(classRef, {
+      active: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    tx.set(auditRef, {
+      action: "class.archived",
+      entityType: "class",
+      entityId: classId,
+      schoolId,
+      actorUid: actor.uid,
+      actorRole: actor.role,
+      changedFields: ["active"],
+      details: {
+        entityName: previous.name || classId,
+        changes: {active: {before: true, after: false}},
+      },
+      context: {classId},
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    return {success: true, classId, alreadyArchived: false};
+  });
+});

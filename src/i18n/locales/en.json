@@ -617,13 +617,17 @@
       "archiveConfirm": "Archive {code} — {name}?",
       "archived": "Class {code} was archived.",
       "archiveError": "Unable to archive class: {error}",
+      "archiveFutureReservationsError": "Cannot archive this class because it has future room reservations. Please cancel those reservations before archiving the class.",
       "teachersLoadError": "Unable to load teachers: {error}",
       "noAssignedTeachers": "No teachers are assigned to this class.",
       "noAvailableTeachers": "All available teachers are already assigned.",
       "mainTeacherNotAssigned": "The main teacher must be one of the assigned teachers.",
       "addTeacherDescription": "Select one or more teachers to add to this class.",
       "noMatchingTeachers": "No teachers match your search.",
-      "teachersSelected": "{count} selected"
+      "teachersSelected": "{count} selected",
+      "periodCancellationConfirm": "This change will cancel {count} future reservation(s). Continue?",
+      "periodConfirmationStale": "Class or reservations changed. Please review and save again.",
+      "roomHasReservations": "Cannot change the assigned room while future active reservations exist."
     }
   },
   "enrollments": {

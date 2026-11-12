@@ -474,11 +474,11 @@ service cloud.firestore {
           if canAdministerSchool(schoolId)
             || isAssignedTeacherToClass(schoolId);
 
-        allow create, delete:
+        allow create:
           if canAdministerSchool(schoolId);
 
-        allow update:
-          if canAdministerSchool(schoolId);
+        // Existing class changes require protected backend operations.
+        allow update, delete: if false;
 
         match /enrollments/{enrollmentId} {
 

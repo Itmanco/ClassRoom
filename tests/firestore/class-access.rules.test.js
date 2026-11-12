@@ -1327,11 +1327,11 @@ console.log(
       "✓ school admin can read classes"
     );
 
-    console.log(
-      "School Admin: mainTeacherUid update allowed"
+        console.log(
+      "School Admin: direct class update denied"
     );
 
-    await assertSucceeds(
+    await assertFails(
       updateDoc(
         doc(
           adminDb,
@@ -1351,7 +1351,89 @@ console.log(
     );
 
     console.log(
-      "✓ school admin can change main teacher"
+      "✓ school admin cannot bypass class update callable"
+    );
+
+        console.log(
+      "School Admin: class creation allowed"
+    );
+
+    await assertSucceeds(
+      setDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_ADMIN_NEW"
+        ),
+        {
+          code: "CLASS_ADMIN_NEW",
+          name: "Admin Created Class",
+          courseId: "course-1",
+          roomId: "room-1",
+          academicYear: 2026,
+          semester: 1,
+          active: true,
+          teacherUids: [],
+          mainTeacherUid: "",
+        }
+      )
+    );
+
+    console.log(
+      "✓ school admin can create classes"
+    );
+
+    console.log(
+      "School Admin: direct class deletion denied"
+    );
+
+    await assertFails(
+      deleteDoc(
+        doc(
+          adminDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_ADMIN_NEW"
+        )
+      )
+    );
+
+    console.log(
+      "✓ school admin cannot delete classes directly"
+    );
+
+    console.log(
+      "Assigned teacher: class creation denied"
+    );
+
+    await assertFails(
+      setDoc(
+        doc(
+          teacherDb,
+          "schools",
+          schoolId,
+          "classes",
+          "CLASS_TEACHER_NEW"
+        ),
+        {
+          code: "CLASS_TEACHER_NEW",
+          name: "Teacher Created Class",
+          courseId: "course-1",
+          roomId: "room-1",
+          academicYear: 2026,
+          semester: 1,
+          active: true,
+          teacherUids: [assignedTeacherUid],
+          mainTeacherUid: assignedTeacherUid,
+        }
+      )
+    );
+
+    console.log(
+      "✓ assigned teacher cannot create classes"
     );
 
     console.log(

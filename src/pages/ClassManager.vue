@@ -598,6 +598,8 @@ import ClassReservationCalendar from "../components/ClassReservationCalendar.vue
 import {
   archiveClass,
   saveClass,
+  previewClassUpdate,
+  applyClassUpdate,
   watchClasses,
   watchTeacherClasses,
 } from "../services/classService";
@@ -1121,14 +1123,24 @@ export default {
             ),
           );
 
-        const id = await saveClass(
-          this.schoolId,
-          this.form,
-          {
+        let id;
+        if (this.editingClassId) {
+          const preview = await previewClassUpdate(this.schoolId, this.form);
+          if (preview.affectedIds.length > 0) {
+            const confirmed = window.confirm(this.$t(
+              "classes.messages.periodCancellationConfirm",
+              {count: preview.affectedIds.length},
+            ));
+            if (!confirmed) return;
+          }
+          await applyClassUpdate(this.schoolId, this.form, preview);
+          id = this.editingClassId;
+        } else {
+          id = await saveClass(this.schoolId, this.form, {
             actorRole: this.actorRole,
             teacherNames,
-          },
-        );
+          });
+        }
 
         this.message = this.$t(
           "classes.messages.saved",
@@ -1155,6 +1167,10 @@ export default {
           this.errorMessage = this.$t(
             "classes.messages.periodInvalidRange",
           );
+        } else if (error.message?.includes("CLASS_CONFIRMATION_STALE")) {
+          this.errorMessage = this.$t("classes.messages.periodConfirmationStale");
+        } else if (error.message?.includes("CLASS_ROOM_HAS_RESERVATIONS")) {
+          this.errorMessage = this.$t("classes.messages.roomHasReservations");
         } else {
           this.errorMessage = this.$t(
             "classes.messages.saveError",
@@ -1210,12 +1226,23 @@ export default {
           this.resetForm();
         }
       } catch (error) {
-        this.errorMessage = this.$t(
-          "classes.messages.archiveError",
-          {
-            error: error.message,
-          },
-        );
+        const hasFutureReservations =
+          error.message?.includes(
+            "CLASS_HAS_FUTURE_RESERVATIONS",
+          );
+
+        if (hasFutureReservations) {
+          this.errorMessage = this.$t(
+            "classes.messages.archiveFutureReservationsError",
+          );
+        } else {
+          this.errorMessage = this.$t(
+            "classes.messages.archiveError",
+            {
+              error: error.message,
+            },
+          );
+        }
       }
     },
 

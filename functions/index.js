@@ -39,10 +39,6 @@ const {
 } = require("./lib/weeklyReservationDates");
 
 const {
-  reservationFitsAvailability,
-} = require("./lib/reservationAvailability");
-
-const {
   validateSchoolOperatingHours,
   reservationFitsSchoolHours,
 } = require("./lib/schoolOperatingHours");
@@ -390,15 +386,6 @@ async function requireClassTeacherDirectoryAccess(
 }
 
 
-const AVAILABILITY_DAYS = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
 /**
  * Validates a school or room document ID.
  *
@@ -420,95 +407,6 @@ function validateAvailabilityId(value, name) {
 
   return value.trim();
 }
-
-/**
- * Validates and normalizes weekly room availability.
- *
- * @param {Object} input Room availability configuration.
- * @param {Object} schoolTimeZone school timezone configuration.
- * @return {Object} Normalized weekly availability.
- */
-function validateWeeklyAvailability(input) {
-  if (
-    !input ||
-    typeof input !== "object" ||
-    Array.isArray(input) ||
-    !input.weeklyHours ||
-    typeof input.weeklyHours !== "object" ||
-    Array.isArray(input.weeklyHours) ||
-    Object.keys(input).some(
-        (key) => key !== "weeklyHours",
-    ) ||
-    Object.keys(input.weeklyHours).some(
-        (day) => !AVAILABILITY_DAYS.includes(day),
-    )
-  ) {
-    throw new HttpsError(
-        "invalid-argument",
-        "Invalid room availability.",
-    );
-  }
-
-  const weeklyHours = {};
-  const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-  for (const day of AVAILABILITY_DAYS) {
-    const windows = input.weeklyHours[day];
-
-    if (!Array.isArray(windows) || windows.length > 20) {
-      throw new HttpsError(
-          "invalid-argument",
-          `Invalid availability for ${day}.`,
-      );
-    }
-
-    const normalized = windows.map((window) => {
-      if (
-        !window ||
-        typeof window !== "object" ||
-        Array.isArray(window) ||
-        Object.keys(window).some(
-            (key) => !["start", "end"].includes(key),
-        ) ||
-        typeof window.start !== "string" ||
-        typeof window.end !== "string" ||
-        !timePattern.test(window.start) ||
-        !timePattern.test(window.end) ||
-        window.start >= window.end
-      ) {
-        throw new HttpsError(
-            "invalid-argument",
-            `Invalid time window for ${day}.`,
-        );
-      }
-
-      return {
-        start: window.start,
-        end: window.end,
-      };
-    });
-
-    normalized.sort(
-        (a, b) => a.start.localeCompare(b.start),
-    );
-
-    for (let i = 1; i < normalized.length; i++) {
-      if (normalized[i].start < normalized[i - 1].end) {
-        throw new HttpsError(
-            "invalid-argument",
-            `Overlapping availability for ${day}.`,
-        );
-      }
-    }
-
-    weeklyHours[day] = normalized;
-  }
-
-  return {
-    weeklyHours,
-  };
-}
-
 
 /**
  * Verifies that the caller may access Dashboard Activity
@@ -4672,142 +4570,6 @@ exports.setSystemRole =
         };
       },
   );
-
-exports.saveRoomAvailability = onCall(
-    async (request) => {
-      const data = request.data || {};
-
-      const schoolId = validateAvailabilityId(
-          data.schoolId,
-          "School ID",
-      );
-
-      const roomId = validateAvailabilityId(
-          data.roomId,
-          "Room ID",
-      );
-
-      const actor = await requireSchoolAdmin(
-          request,
-          schoolId,
-      );
-
-      const schoolRef = db
-          .collection("schools")
-          .doc(schoolId);
-
-      const schoolSnapshot = await schoolRef.get();
-
-      if (!schoolSnapshot.exists) {
-        throw new HttpsError(
-            "not-found",
-            "SCHOOL_NOT_FOUND",
-        );
-      }
-
-      const availability = validateWeeklyAvailability(
-          data.availability,
-      );
-
-      const roomRef = schoolRef
-          .collection("rooms")
-          .doc(roomId);
-
-      const roomSnapshot = await roomRef.get();
-
-      if (
-        !roomSnapshot.exists ||
-        roomSnapshot.data().active === false
-      ) {
-        throw new HttpsError(
-            "failed-precondition",
-            "ROOM_NOT_AVAILABLE",
-        );
-      }
-
-      const availabilityRef = schoolRef
-          .collection("roomAvailability")
-          .doc(roomId);
-
-      const auditRef = schoolRef
-          .collection("auditLogs")
-          .doc();
-
-      await db.runTransaction(async (transaction) => {
-        const now = new Date();
-
-        const reservationsQuery = schoolRef
-            .collection("roomReservations")
-            .where("roomId", "==", roomId)
-            .where("status", "==", "active")
-            .where("endsAt", ">", now);
-
-        const reservationsSnapshot =
-            await transaction.get(reservationsQuery);
-
-        const timeZone =
-            schoolSnapshot.data().timeZone || "Asia/Tokyo";
-
-        for (const reservationDoc of reservationsSnapshot.docs) {
-          const reservation = reservationDoc.data();
-
-          const date = DateTime.fromISO(reservation.localDate, {
-            zone: timeZone,
-          });
-
-          if (!date.isValid) {
-            throw new HttpsError(
-                "failed-precondition",
-                "INVALID_EXISTING_RESERVATION_DATE",
-            );
-          }
-
-          const fits = reservationFitsAvailability(
-              {
-                weekday: date.toFormat("cccc").toLowerCase(),
-                startTime: reservation.localStartTime,
-                endTime: reservation.localEndTime,
-              },
-              availability.weeklyHours,
-          );
-
-          if (!fits) {
-            throw new HttpsError(
-                "failed-precondition",
-                "ROOM_AVAILABILITY_CONFLICT",
-            );
-          }
-        }
-
-        transaction.set(availabilityRef, {
-          ...availability,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-
-        transaction.set(auditRef, {
-          action: "roomAvailability.updated",
-          entityType: "roomAvailability",
-          entityId: roomId,
-          schoolId,
-          actorUid: actor.uid,
-          actorRole: actor.role,
-          changedFields: ["weeklyHours"],
-          details: {
-            roomId,
-          },
-          context: {
-            roomId,
-          },
-          createdAt: FieldValue.serverTimestamp(),
-        });
-      });
-
-      return {
-        success: true,
-        roomId,
-      };
-    },
-);
 
 /**
  * Saves school-wide weekly operating hours.

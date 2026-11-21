@@ -4987,6 +4987,7 @@ exports.createRoomReservation = onCall(
               throw new HttpsError(
                   "already-exists",
                   "ROOM_RESERVATION_CONFLICT",
+                  {localDate: request.data.localDate},
               );
             }
 
@@ -5279,6 +5280,7 @@ exports.createWeeklyRoomReservations = onCall(
                 throw new HttpsError(
                     "already-exists",
                     "ROOM_RESERVATION_CONFLICT",
+                    {localDate: item.localDate},
                 );
               }
 

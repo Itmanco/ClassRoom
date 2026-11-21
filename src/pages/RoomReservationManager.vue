@@ -1285,8 +1285,10 @@ export default {
     },
 
     reservationMode(newMode) {
-      this.message = "";
-      this.errorMessage = "";
+      if (this.showCreateForm) {
+        this.message = "";
+        this.errorMessage = "";
+      }
 
       if (newMode === "single") {
         this.form.localDate = this.selectedDate;
@@ -1723,6 +1725,7 @@ export default {
         localDate: "",
         localStartTime: "",
         localEndTime: "",
+        notes: "",
       };
       this.message = "";
       this.errorMessage = "";
@@ -1921,6 +1924,10 @@ export default {
         }
       }
 
+      const intendedDate = isWeekly ?
+      this.weeklyReservationDates[0] :
+      this.form.localDate;
+
       const schoolId = this.schoolId;
 
       const reservation = {
@@ -1960,22 +1967,38 @@ export default {
           return;
         }
 
+        // Navigate to the first created reservation date.
+        if (intendedDate) {
+          this.selectedDate = intendedDate;
+        }
+
+        // Close the form and reset its inputs.
+        this.showCreateForm = false;
+        this.resetReservationForm();
+
+        // Display only the latest success message.
+        this.errorMessage = "";
         this.message = isWeekly
           ? this.$t("reservations.messages.weeklyCreated", {
             count: result.occurrenceCount,
           })
           : this.$t("reservations.messages.created");
-
-        this.form.localDate = this.selectedDate;
-        this.form.localStartTime = "";
-        this.form.localEndTime = "";
-        this.form.notes = "";
-
-        if (isWeekly) {
-          this.selectedWeekdays = [];
-        }
       } catch (error) {
         if (this.schoolId === schoolId) {
+          const conflictDate = error?.details?.localDate;
+
+          const targetDate =
+            typeof conflictDate === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(conflictDate) ?
+              conflictDate : intendedDate;
+
+          if (targetDate) {
+            const originalFormDate = this.form.localDate;
+            this.selectedDate = targetDate;
+            this.form.localDate = originalFormDate;
+          }
+
+          this.message = "";
           this.errorMessage = this.reservationErrorMessage(error);
         }
       } finally {
@@ -2096,20 +2119,17 @@ export default {
         return;
       }
 
-      this.showCreateForm = !this.showCreateForm;
-
       if (this.showCreateForm) {
-        if (this.selectedDate) {
-          this.form.localDate = this.selectedDate;
-        }
-
-        if (this.reservationMode === "single") {
-          this.suggestReservationTimes();
-        }
-
-        this.message = "";
-        this.errorMessage = "";
+        this.showCreateForm = false;
+        return;
       }
+
+      this.resetReservationForm();
+      this.showCreateForm = true;
+      this.message = "";
+      this.errorMessage = "";
+
+      this.suggestReservationTimes();
     },
 
     getOperatingIntervalsForDate(localDate) {
@@ -2167,6 +2187,18 @@ export default {
       this.form.localEndTime =
         `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:` +
         `${String(endMinutes % 60).padStart(2, "0")}`;
+    },
+
+    resetReservationForm() {
+      this.reservationMode = "single";
+      this.selectedWeekdays = [];
+      this.form = {
+        classId: "",
+        localDate: this.selectedDate || "",
+        localStartTime: "",
+        localEndTime: "",
+        notes: "",
+      };
     },
   },
 };
